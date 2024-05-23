@@ -164,7 +164,7 @@ stages:
         app_location: ui-extracted
         skip_app_build: true
         skip_api_build: true    
-        azure_static_web_apps_api_token: $(SiteDeploymentToken)
+        azure_static_web_apps_api_token: $(siteDeploymentToken)
 
     - task: PowerShell@2 
       displayName: 'Load API Docker Image'

@@ -74,9 +74,22 @@ npm run dev --prefix src\UI
 19. Select **Bitbucket Cloud**
 20. Select your repository
 21. Add the following variables
-    |Name                        |Secret|Value|
-    |----------------------------|------|---------------------------------------------------------|
-    |containerRegistryLoginServer|      |containerRegistryLoginServer from building infrastructure|
-    |resourceGroup               |      |resourceGroupName from building infrastructure           |
+    |Name                        |Secret|Value                                                                                                       |
+    |----------------------------|------|------------------------------------------------------------------------------------------------------------|
+    |containerRegistryLoginServer|      |Output containerRegistryLoginServer from building infrastructure                                            |
+    |resourceGroup               |      |Output resourceGroupName from building infrastructure                                                       |
+    |siteDeploymentToken         |Y     |Extracted from Azure UI by going to Static Web Apps, selecting site and going to **Manage deployment token**| 
 22. Click **Run**
-23. 
+    > [!WARNING]
+    > The build should pass but the deploy will fail. 
+    > This is expected on the first run as a Docker image needs to be deployed to the container registry.
+    > Another infrastructure deploy is needed to create the Azure Container App.
+23. Run the deploy as before in the **Build Infrastructure** step but instead run
+    ```
+    New-AzSubscriptionDeployment -Location westeurope -TemplateFile .\deploy\main.bicep -TemplateParameterObject @{"isContainerImagePresent"=$true}
+    ```
+    A new output value of **containerAppName** should be provided.
+24. Edit the build pipeline and add the following variable
+    |Name             |Secret|Value                                      |
+    |-----------------|------|-------------------------------------------|
+    |containerAppName |      |Output containerAppName from previous step |

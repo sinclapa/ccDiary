@@ -6,7 +6,7 @@ param name string
 param environment string
 param adminUser string
 param adminUserSID string
-param imageName string = 'azureapi'
+param imageName string = 'ccdiaryapi'
 param location string = deployment().location
 param isContainerImagePresent bool = false
 
