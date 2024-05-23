@@ -93,3 +93,5 @@ npm run dev --prefix src\UI
     |Name             |Secret|Value                                      |
     |-----------------|------|-------------------------------------------|
     |containerAppName |      |Output containerAppName from previous step |
+25. Modify **src\ui\.env.production** to point at correct URL for the Container App
+

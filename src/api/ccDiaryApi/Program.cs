@@ -1,6 +1,10 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using ccDiaryApi.Data.Context;
+using ccDiaryApi.Data.Migration;
 using ccDiaryApi.Extensions;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +14,16 @@ var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{environment}.json", optional: true)
     .Build();
+
+
+var connStrBuilder = new SqlConnectionStringBuilder(
+    configuration.GetConnectionString("SqlConnection"));
+if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
+{
+    connStrBuilder.Password = builder.Configuration["SA_PASSWORD"];
+}
+builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
+    opts.UseSqlServer(connStrBuilder.ConnectionString));
 
 builder.Services.AddApiVersioning(options =>
 {
@@ -35,7 +49,6 @@ builder.Services.AddSwaggerGen(
         // Add a swagger document for each discovered API version  
         foreach (var description in provider.ApiVersionDescriptions)
         {
-            //var x = this.GetType().Name;
             options.SwaggerDoc(description.GroupName, new Microsoft.OpenApi.Models.OpenApiInfo
             {                
                 Title = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyProductAttribute>()?.Product}",  
@@ -56,6 +69,8 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 // Add our services
 
 var app = builder.Build();
+
+app.MigrateDatabase();
 
 app.UseSwagger();
 app.AddSwaggerUI(configuration);
