@@ -1,0 +1,36 @@
+version: '3.4'
+
+services:
+  ccdiary:
+    image: "mcr.microsoft.com/mssql/server:2022-latest" 
+    container_name: ccdiarydb
+    hostname: ccdiarydb    
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "51433:1433"
+    volumes:
+      - ccdiarydbvolume:/var/opt/mssql
+    healthcheck:
+        test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" || exit 1
+        interval: 10s
+        timeout: 3s
+        retries: 10
+        start_period: 10s
+    networks:
+      - ccdiarynet
+  ccdiaryapi:
+    image: ${DOCKER_REGISTRY-}ccdiaryapi
+    container_name: ccdiaryapi
+    build:
+      context: .
+      dockerfile: ccDiaryApi/Dockerfile
+    networks:
+      - ccdiarynet
+volumes:
+  ccdiarydbvolume:
+networks:
+  ccdiarynet:
+    name: ccdiary_network  
+    driver: bridge  
