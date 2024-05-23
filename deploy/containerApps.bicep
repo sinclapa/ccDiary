@@ -19,7 +19,7 @@ resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
     configuration: {
       ingress: {
         external: true
-        targetPort: 80
+        targetPort: 8080
         allowInsecure: false
         traffic: [
           {
