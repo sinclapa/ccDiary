@@ -30,26 +30,26 @@ stages:
       inputs:
         targetType: inline
         script: |
-          $NewContent = (Get-Content -Path src/UI/.env -Raw) -replace '(?<=VITE_BUILDNUMBER.*=.*")\d+(?=")', '$(Build.BuildId)'
-          Set-Content -Path src/UI/.env -Value $NewContent
+          $NewContent = (Get-Content -Path src/ui/.env -Raw) -replace '(?<=VITE_BUILDNUMBER.*=.*")\d+(?=")', '$(Build.BuildId)'
+          Set-Content -Path src/ui/.env -Value $NewContent
 
     - task: Npm@1
       displayName: "NPM Install"
       inputs:    
         command: 'install'
-        workingDir: 'src/UI'
+        workingDir: 'src/ui'
 
     - task: Npm@1
       displayName: "NPM Build"
       inputs:    
         command: 'custom'
         customCommand: 'run build'
-        workingDir: 'src/UI'
+        workingDir: 'src/ui'
 
     - task: ArchiveFiles@2
       displayName: Package UI
       inputs:
-        rootFolderOrFile: 'src/UI/dist'
+        rootFolderOrFile: 'src/ui/dist'
         includeRootFolder: false
         archiveType: 'zip'
         archiveFile: '$(Build.ArtifactStagingDirectory)/uiPackage.zip'
