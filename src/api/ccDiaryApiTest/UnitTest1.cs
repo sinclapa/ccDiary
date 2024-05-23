@@ -1,4 +1,4 @@
-using ccDiaryApi.Controllers;
+using ccDiaryApi.Controllers.v1;
 using Microsoft.Extensions.Logging;
 using Moq;
 

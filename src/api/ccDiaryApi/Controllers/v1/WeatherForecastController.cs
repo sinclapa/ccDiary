@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace ccDiaryApi.Controllers
+namespace ccDiaryApi.Controllers.v1
 {
     [ApiController]
     [Route("[controller]")]
