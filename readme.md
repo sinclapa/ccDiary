@@ -36,33 +36,39 @@ npm run dev --prefix src\UI
 
 # Setup Azure Pipeline
 ## Build Infrastructure
-1. Get UserPincipalName and Id by running below. These are needed for following step providing adminUser (UserPincipalName) and adminUserSID (Id). 
+1. Login to Azure
+   ```bash
+   Connect-AzAccount
+   ```
+2. Get UserPincipalName and Id by running below. These are needed for following step providing adminUser (UserPincipalName) and adminUserSID (Id). 
     ```bash
     Get-AzADUser
     ```
 
-2. Deploy infrastructure with initial setup. This first execution will not deploy the API hosting app as the first image needs to be deployed. 
+3. Deploy infrastructure with initial setup. This first execution will not deploy the API hosting app as the first image needs to be deployed.
     ```
     New-AzSubscriptionDeployment -Location westeurope -TemplateFile .\deploy\main.bicep
     ```
+    > [!NOTE]
+    > adminUser is set to UserPrincipalName and adminUserSID is set to Id
 
 ## Setup BuildPipeline
-3. Go to https://dev.azure.com and add **New project**
-4. Open **Project settings**
-5. Open **Pipeline > Service connections**
-6. Click on **New service connection**
-7. Select **Docker Registry**
-8. Select Registry Type **Azure Container Registry**
-9. Set Authentication Type to **Service Principal**
-10. Select your Azure Subscription
-11. Select the **Azure container registry** that was output from deploying the infrastructure (containerRegistryName)
-12. Set **Service connection name** to "azure-container-registry"
-13. Check *Grant access permission to all pipelines*
-14. Select Pipelines from the left menu
-15. Click on **Create Pipeline**
-16. Select **Bitbucket Cloud**
-17. Select your repository
-18. Add the following variables
+1. Go to https://dev.azure.com and add **New project**
+2. Open **Project settings**
+3. Open **Pipeline | Service connections**
+4. Click on **Create service connection**
+5. Select **Docker Registry** and press **Next**
+6. Select Registry Type **Azure Container Registry**
+7. Set Authentication Type to **Service Principal**
+8. Select your Azure Subscription
+9. Select the **Azure container registry** that was output from deploying the infrastructure (containerRegistryName)
+10. Set **Service connection name** to "azure-container-registry"
+11. Check **Grant access permission to all pipelines**
+12. Select Pipelines from the left menu
+13. Click on **Create Pipeline**
+14. Select **Bitbucket Cloud**
+15. Select your repository
+16. Add the following variables
     |Name                        |Secret|Value|
     |----------------------------|------|---------------------------------------------------------|
     |containerRegistryLoginServer|      |containerRegistryLoginServer from building infrastructure|
