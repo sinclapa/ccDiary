@@ -65,11 +65,18 @@ npm run dev --prefix src\UI
 10. Set **Service connection name** to "azure-container-registry"
 11. Check **Grant access permission to all pipelines**
 12. Select Pipelines from the left menu
-13. Click on **Create Pipeline**
-14. Select **Bitbucket Cloud**
-15. Select your repository
-16. Add the following variables
+13. Click on **New service connection**
+14. Select **Azure Resource Manager** and press **Next**
+15. Select **Workload Identity federation (automatic)** and press **Next**
+16. Set **Service connection name** to "Azure Subscription"
+17. Check **Grant access permission to all pipelines**
+18. Click on **Create Pipeline**
+19. Select **Bitbucket Cloud**
+20. Select your repository
+21. Add the following variables
     |Name                        |Secret|Value|
     |----------------------------|------|---------------------------------------------------------|
     |containerRegistryLoginServer|      |containerRegistryLoginServer from building infrastructure|
     |resourceGroup               |      |resourceGroupName from building infrastructure           |
+22. Click **Run**
+23. 

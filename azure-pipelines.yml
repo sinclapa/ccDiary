@@ -189,7 +189,7 @@ stages:
     - task: AzureContainerApps@1    
       displayName: 'Deploy to Azure Container App'
       inputs:
-        azureSubscription: 'Cooking Code Subscription'
+        azureSubscription: 'Azure Subscription'
         containerAppName: $(containerAppName)
         resourceGroup: $(resourceGroup)
         imageToDeploy: '$(containerRegistryLoginServer)/$(dockerImageName):$(tag)'
