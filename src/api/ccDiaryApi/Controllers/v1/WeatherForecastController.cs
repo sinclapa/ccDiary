@@ -1,9 +1,11 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ccDiaryApi.Controllers.v1
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/v{version:apiVersion}/[controller]/[action]")]
+    [ApiVersion("1.0")]
     public class WeatherForecastController : ControllerBase
     {
         private static readonly string[] Summaries = new[]
