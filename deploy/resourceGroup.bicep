@@ -71,6 +71,16 @@ resource databaseServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }    
 }
 
+resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
+  name: 'AllowAllWindowsAzureIps'
+  parent: databaseServer
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
+  }
+
+}
+
 resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   name: '${name}-${environment}'
   location: location
