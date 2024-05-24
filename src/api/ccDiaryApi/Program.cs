@@ -25,6 +25,7 @@ if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 // builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
 //opts.UseSqlServer(connStrBuilder.ConnectionString));
 
+Console.WriteLine(connStrBuilder.ToString());
 builder.Services.AddApiVersioning(options =>
 {
     options.ReportApiVersions = true;
