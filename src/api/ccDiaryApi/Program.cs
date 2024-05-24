@@ -23,11 +23,10 @@ if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 {
     connStrBuilder.Password = builder.Configuration["SA_PASSWORD"];
 }
-// builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
-//opts.UseSqlServer(connStrBuilder.ConnectionString));
+builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
+    opts.UseSqlServer(connStrBuilder.ConnectionString));
 
 Console.WriteLine(connStrBuilder.ToString());
-Console.WriteLine(Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING"));
 builder.Services.AddApiVersioning(options =>
 {
     options.ReportApiVersions = true;
