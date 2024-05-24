@@ -22,8 +22,8 @@ if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 {
     connStrBuilder.Password = builder.Configuration["SA_PASSWORD"];
 }
-builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
-    opts.UseSqlServer(connStrBuilder.ConnectionString));
+// builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
+//opts.UseSqlServer(connStrBuilder.ConnectionString));
 
 builder.Services.AddApiVersioning(options =>
 {
@@ -70,7 +70,7 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 
 var app = builder.Build();
 
-app.MigrateDatabase();
+// app.MigrateDatabase();
 
 app.UseSwagger();
 app.AddSwaggerUI(configuration);
