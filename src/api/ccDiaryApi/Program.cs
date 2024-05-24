@@ -72,7 +72,7 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 
 var app = builder.Build();
 
-// app.MigrateDatabase();
+app.MigrateDatabase();
 
 app.UseSwagger();
 app.AddSwaggerUI(configuration);
