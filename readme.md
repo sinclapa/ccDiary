@@ -78,23 +78,11 @@ npm run dev --prefix src\UI
     |----------------------------|------|------------------------------------------------------------------------------------------------------------|
     |containerRegistryLoginServer|      |Output containerRegistryLoginServer from building infrastructure                                            |
     |resourceGroup               |      |Output resourceGroupName from building infrastructure                                                       |
-    |siteDeploymentToken         |Y     |Extracted from Azure UI by going to Static Web Apps, selecting site and going to **Manage deployment token**| 
+    |siteDeploymentToken         |Y     |Extracted from Azure UI by going to Static Web Apps, selecting site and going to **Manage deployment token**|
+    |containerAppName            |      |Output containerAppName from  building infrastructure                                                       | 
 22. Click **Run**
-    > [!WARNING]
-    > The build should pass but the deploy will fail. 
-    > This is expected on the first run as a Docker image needs to be deployed to the container registry.
-    > Another infrastructure deploy is needed to create the Azure Container App.
-23. Run the deploy as before in the **Build Infrastructure** step but instead run
-    ```
-    New-AzSubscriptionDeployment -Location westeurope -TemplateFile .\deploy\main.bicep -TemplateParameterObject @{"isContainerImagePresent"=$true}
-    ```
-    A new output value of **containerAppName** should be provided.
-24. Edit the build pipeline and add the following variable
-    |Name             |Secret|Value                                      |
-    |-----------------|------|-------------------------------------------|
-    |containerAppName |      |Output containerAppName from previous step |
-25. Modify **src\ui\.env.production** to point at correct URL for the Container App
-26. On the databae that has been created run the following SQL with your container app name
+23. Modify **src\ui\.env.production** to point at correct URL for the Container App
+24. On the database that has been created run the following SQL with your container app name
     ```SQL
     CREATE USER <your-app-service-name> FROM EXTERNAL PROVIDER;
     ALTER ROLE db_datareader ADD MEMBER <your-app-service-name>;
