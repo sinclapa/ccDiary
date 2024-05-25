@@ -190,7 +190,6 @@ stages:
       inputs:
         azureSubscription: 'Azure Subscription'
         targetPort: '8080'
-        
-        containerAppName: 'api' #$(containerAppName)
+        containerAppName: $(containerAppName)
         resourceGroup: $(resourceGroup)
         imageToDeploy: '$(containerRegistryLoginServer)/$(dockerImageName):$(tag)'
