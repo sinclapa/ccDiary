@@ -5,8 +5,6 @@ param environment string
 param adminUser string
 param adminUserSID string
 param location string = resourceGroup().location
-param imageName string
-param isContainerImagePresent bool = false
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: 'acr${name}${uniqueString(resourceGroup().id)}'
@@ -122,12 +120,11 @@ resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
   }  
 }
 
-module containerAppModule 'containerApps.bicep' = if (isContainerImagePresent){
+module containerAppModule 'containerApps.bicep' = {
   name: 'containerApps'
   params: {
     name: name
     environment: environment
-    imageName: imageName
     location: location
     containerAppsEnvironmentId: containerAppEnvironment.id
     containerRegistryLoginServer: containerRegistry.properties.loginServer
@@ -136,7 +133,7 @@ module containerAppModule 'containerApps.bicep' = if (isContainerImagePresent){
   }
 }
 
-output containerAppName string = (isContainerImagePresent) ? containerAppModule.outputs.containerAppsName : ''
+output containerAppName string = containerAppModule.outputs.containerAppsName
 output containerRegistryName string = containerRegistry.name
 output containerRegistryLoginServer string = containerRegistry.properties.loginServer
 output databaseServer string = databaseServer.properties.fullyQualifiedDomainName

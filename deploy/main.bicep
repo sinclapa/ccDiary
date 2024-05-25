@@ -6,9 +6,7 @@ param name string
 param environment string
 param adminUser string
 param adminUserSID string
-param imageName string = 'ccdiaryapi'
 param location string = deployment().location
-param isContainerImagePresent bool = false
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
   name: 'rg-${name}-${environment}'
@@ -23,9 +21,7 @@ module resourceGroupModule 'resourceGroup.bicep' = {
     environment: environment
     adminUser: adminUser
     adminUserSID: adminUserSID
-    imageName: imageName
-    location: resourceGroup.location
-    isContainerImagePresent: isContainerImagePresent    
+    location: resourceGroup.location    
   }  
 }
 

@@ -94,4 +94,12 @@ npm run dev --prefix src\UI
     |-----------------|------|-------------------------------------------|
     |containerAppName |      |Output containerAppName from previous step |
 25. Modify **src\ui\.env.production** to point at correct URL for the Container App
+26. On the databae that has been created run the following SQL with your container app name
+    ```SQL
+    CREATE USER <your-app-service-name> FROM EXTERNAL PROVIDER;
+    ALTER ROLE db_datareader ADD MEMBER <your-app-service-name>;
+    ALTER ROLE db_datawriter ADD MEMBER <your-app-service-name>;
+    ALTER ROLE db_ddladmin ADD MEMBER <your-app-service-name>;
+    GO
+    ```
 
