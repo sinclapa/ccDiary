@@ -2,21 +2,22 @@ using ccDiaryApi.Controllers.v1;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace ccDiaryApiTest
+namespace ccDiaryApiTest.v1
 {
     [TestClass]
-    public class UnitTest1
+    public class WeatherForecastControllerTest
     {
         [TestMethod]
         public void TestMethod1()
         {
             // Arrange                  
             var loggerMock = new Mock<ILogger<WeatherForecastController>>();
-            
+
             var controller = new WeatherForecastController(loggerMock.Object);
 
             // Act
             var response = controller.Get();
+            Assert.AreEqual(5, response.Count());
         }
     }
 }

@@ -1,0 +1,58 @@
+﻿using ccDiaryApi.Data.Context;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ccDiaryApiTest
+{
+    public class CustomWebApplicationFactory<TProgram>
+         : WebApplicationFactory<TProgram> where TProgram : class
+    {
+        public string DefaultUserId { get; set; } = "TestUser";
+
+        private readonly SqliteConnection _connection;
+        public CustomWebApplicationFactory()
+        {            
+            _connection = new SqliteConnection($"Data Source=:memory:");
+            _connection.Open();
+        }
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseEnvironment("Development");
+            builder.ConfigureServices(services =>
+            {
+                var dbContextDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(DbContextOptions<DiaryDatabaseContext>));
+                if (dbContextDescriptor != null)
+                    services.Remove(dbContextDescriptor);
+
+                var dbConnectionDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(DbConnection));
+                if (dbConnectionDescriptor != null)
+                    services.Remove(dbConnectionDescriptor);
+
+                services.AddDbContext<DiaryDatabaseContext>(options =>
+                {
+                    options.UseSqlite(_connection);
+                });
+            });
+            /*builder.ConfigureTestServices(services =>
+            {
+                services.Configure<TestAuthHandlerOptions>(options => options.DefaultUserId = DefaultUserId);
+
+                services.AddAuthentication(TestAuthHandler.AuthenticationScheme)
+                    .AddScheme<TestAuthHandlerOptions, TestAuthHandler>(TestAuthHandler.AuthenticationScheme, options => { });
+            });*/
+        }
+    }
+}

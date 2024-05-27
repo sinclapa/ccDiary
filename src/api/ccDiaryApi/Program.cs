@@ -5,8 +5,12 @@ using ccDiaryApi.Data.Migration;
 using ccDiaryApi.Extensions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
+using Serilog;
 using System.Reflection;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using ccDiaryApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +20,15 @@ var configuration = new ConfigurationBuilder()
     .AddJsonFile($"appsettings.{environment}.json", optional: true)
     .Build();
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Debug()
+    .WriteTo.Console()
+    .ReadFrom.Configuration(configuration)
+    .CreateLogger();
 
 var connStrBuilder = new SqlConnectionStringBuilder(
     configuration.GetConnectionString("SqlConnection"));
@@ -26,22 +39,23 @@ if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
     opts.UseSqlServer(connStrBuilder.ConnectionString));
 
-Console.WriteLine(connStrBuilder.ToString());
 builder.Services.AddApiVersioning(options =>
-{
-    options.ReportApiVersions = true;
-    options.ApiVersionReader = new UrlSegmentApiVersionReader();
-})
-.AddMvc() 
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
+    {
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    })
+    .AddMvc() 
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
 
 // Add services to the container.
+builder.Services.AddScoped<IDiaryService, DiaryService>();
 
 builder.Services.AddControllers();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(
@@ -74,14 +88,16 @@ var app = builder.Build();
 
 app.MigrateDatabase();
 
-app.UseSwagger();
-app.AddSwaggerUI(configuration);
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     //app.UseSwagger();
     //app.UseSwaggerUI();
 }
+
+app.UseSwagger();
+
+app.AddSwaggerUI(configuration);
 
 app.UseHttpsRedirection();
 
@@ -92,3 +108,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+#pragma warning disable S1118 // Utility classes should not have public constructors
+public partial class Program { }
+#pragma warning restore S1118 // Utility classes should not have public constructors

@@ -10,7 +10,13 @@ namespace ccDiaryApi.Data.Model
         public Guid DiaryId { get; set; }
 
         [Required]
-        public required string Name { get; set; }
+        [MaxLength(50, ErrorMessage = "Length must not exceed 50 characters")]
+        [MinLength(5, ErrorMessage = "Length must be at least 5 characters")]
+        public required string Title { get; set; }
+
+        [Required]
+        [MaxLength(50, ErrorMessage = "Length must not exceed 50 characters")]
+        public required string Author { get; set; }
 
         public string? Description { get; set; } 
     }

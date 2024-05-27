@@ -11,5 +11,7 @@ namespace ccDiaryApi.Data.Context
         }
 
         public DbSet<DiaryDTO> Diaries { get; set; }
+
+        public DbSet<DiaryEntryDTO> DiaryEntries { get; set; }
     }
 }
