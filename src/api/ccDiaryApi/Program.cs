@@ -53,6 +53,7 @@ builder.Services.AddApiVersioning(options =>
 
 // Add services to the container.
 builder.Services.AddScoped<IDiaryService, DiaryService>();
+builder.Services.AddScoped<IDiaryEntryService, DiaryEntryService>();
 
 builder.Services.AddControllers();
 

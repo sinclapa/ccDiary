@@ -12,11 +12,15 @@ namespace ccDiaryApi.Data.Model
         [Required]
         public DateTime Date { get; set; }
 
+        [Required]
         public string? Location { get; set; }
 
+        [Required]
         public string? Entry { get; set; }
 
         [ForeignKey(nameof(DiaryDTO))]
         public Guid DiaryId { get; set; }
+
+        public DiaryDTO? Diary { get; set; }
     }
 }

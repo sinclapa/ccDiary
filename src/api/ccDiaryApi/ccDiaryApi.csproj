@@ -9,7 +9,7 @@
     <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <FileVersion>1.0.0</FileVersion>
-    <Description>Weather Forecast App</Description>
+    <Description>Cooking Code Diary App</Description>
   </PropertyGroup>
 
   <ItemGroup>
