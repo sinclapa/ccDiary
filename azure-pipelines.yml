@@ -8,6 +8,7 @@ trigger:
   branches:
     include:
     - main
+    - ccdiary-*
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -47,6 +48,7 @@ stages:
         workingDir: 'src/ui'
 
     - task: ArchiveFiles@2
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       displayName: Package UI
       inputs:
         rootFolderOrFile: 'src/ui/dist'
@@ -55,6 +57,7 @@ stages:
         archiveFile: '$(Build.ArtifactStagingDirectory)/uiPackage.zip'
 
     - publish: $(Build.ArtifactStagingDirectory)/uiPackage.zip
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       displayName: Publish UI Package
       artifact: ui-package
   
@@ -127,6 +130,7 @@ stages:
         failIfCoverageEmpty : true
 
     - task: PowerShell@2 
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       displayName: 'Save API Docker Image'
       inputs:
         targetType: inline        
@@ -134,10 +138,12 @@ stages:
           docker image save $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -o $(Build.ArtifactStagingDirectory)/$(dockerImageName).tar
 
     - publish:  $(Build.ArtifactStagingDirectory)/$(dockerImageName).tar
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       displayName: Publish API Docker Image
       artifact: api-docker-image
 
 - stage: Deploy
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
   - job: Deploy_UI_API
     steps:
