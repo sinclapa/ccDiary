@@ -11,6 +11,10 @@ using Serilog;
 using System.Reflection;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using ccDiaryApi.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Identity.Web;
+using Microsoft.OpenApi.Models;
+using ccDiaryApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,8 +40,12 @@ if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 {
     connStrBuilder.Password = builder.Configuration["SA_PASSWORD"];
 }
+
 builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
     opts.UseSqlServer(connStrBuilder.ConnectionString));
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("Entra"));
 
 builder.Services.AddApiVersioning(options =>
     {
@@ -76,7 +84,22 @@ builder.Services.AddSwaggerGen(
             });
         }
 
-        
+        options.OperationFilter<AuthorizeCheckOperationFilter>();
+        var scopes = new Dictionary<string, string>();
+        scopes.Add($"api://{configuration["Entra:ClientId"]}/Diary.Update", "Diary.Update");
+        options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new OpenApiOAuthFlows()
+            {
+                AuthorizationCode = new OpenApiOAuthFlow()
+                {
+                    AuthorizationUrl = new Uri($"{configuration["Entra:Instance"]}{configuration["Entra:TenantId"]}/oauth2/v2.0/authorize"),
+                    TokenUrl = new Uri($"{configuration["Entra:Instance"]}{configuration["Entra:TenantId"]}/oauth2/v2.0/token"),
+                    Scopes = scopes
+                }
+            }
+        });        
     });
 
 builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
@@ -104,6 +127,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("cors");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

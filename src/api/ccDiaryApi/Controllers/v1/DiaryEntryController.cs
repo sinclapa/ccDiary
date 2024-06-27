@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using ccDiaryApi.Data.Model;
 using ccDiaryApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ccDiaryApi.Controllers.v1
@@ -8,6 +9,7 @@ namespace ccDiaryApi.Controllers.v1
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]/[action]")]
     [ApiVersion("1.0")]
+    [Authorize]
     public class DiaryEntryController : ControllerBase
     {
         private readonly IDiaryEntryService _diaryEntryService;
@@ -18,6 +20,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryId:guid}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<List<int>> Search(Guid diaryId)
         {
@@ -27,6 +30,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryId:guid}/{year:int}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<List<int>> Search(Guid diaryId, int year)
         {
@@ -37,6 +41,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryId:guid}/{year:int}/{month:int}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<List<int>> Search(Guid diaryId, int year, int month)
         {
@@ -47,6 +52,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryId:guid}/{year:int}/{month:int}/{day:int}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<List<DiaryEntryDTO>> Search(Guid diaryId, int year, int month, int day)
         {
@@ -57,6 +63,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryEntryId:guid}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<DiaryEntryDTO> Get(Guid diaryEntryId)
         {
@@ -70,6 +77,7 @@ namespace ccDiaryApi.Controllers.v1
 
 
         [Route("{diaryId:guid}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<IEnumerable<DiaryEntryDTO>> GetDiaryEntries(Guid diaryId)
         {
@@ -90,7 +98,7 @@ namespace ccDiaryApi.Controllers.v1
             var retDiaryEntry = _diaryEntryService.UpdateDiaryEntry(diaryEntry);
             return Ok(retDiaryEntry);
         }
-
+        
         [Route("{diaryEntryId:guid}")]
         [HttpDelete()]
         public ActionResult Delete(Guid diaryEntryId)
@@ -103,6 +111,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryId:guid}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<DateTime> GetMinDate(Guid diaryId)
         {
@@ -111,6 +120,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [Route("{diaryId:guid}")]
+        [AllowAnonymous]
         [HttpGet()]
         public ActionResult<DateTime> GetMaxDate(Guid diaryId)
         {

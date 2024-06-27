@@ -15,8 +15,11 @@ namespace ccDiaryApi.Extensions
                     {
                         options.SwaggerEndpoint($"/swagger/{groupName}/swagger.json",
                             groupName.ToUpperInvariant());
-                    }                    
+                    }
                     options.DisplayRequestDuration();
+                    options.OAuthAppName("ccDiaryAPI Swagger Client");
+                    options.OAuthClientId(configuration["Entra:ClientId"]);
+                    options.OAuthUsePkce();
                 });
     }
 }
