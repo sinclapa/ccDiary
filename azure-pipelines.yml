@@ -89,8 +89,9 @@ stages:
 
     - task: FileTransform@1
       inputs:
-        folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi/appsettings.json'
+        folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi'
         fileType: 'json'
+        targetFiles: 'appsettings.json'
 
     - task: Docker@2
       displayName: 'Build API Docker Image'
