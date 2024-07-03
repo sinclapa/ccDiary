@@ -20,13 +20,12 @@ variables:
   tag: '$(Build.BuildId)'
   dotNetSolution: 'src/api/ccDiary.sln'
   containerRegistry: 'azure-container-registry'
-  Entra.ClientId: '$(VITE_CLIENTID)'
+
 stages:
 - stage: Build
   jobs:
-  - job: Build_UI
+  - job: Build_UI    
     steps:
-
     - task: PowerShell@2
       displayName: 'Set UI Version'
       inputs:
@@ -63,6 +62,9 @@ stages:
       artifact: ui-package
   
   - job: Build_API
+    variables:
+      Entra.ClientId: '$(VITE_CLIENTID)'
+      Entra.TenantId: '$(VITE_TENANTID)'
     steps:  
     - task: PowerShell@2
       displayName: 'Set API Version'
