@@ -89,7 +89,7 @@ stages:
 
     - task: FileTransform@1
       inputs:
-        folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi/appsettings*.json'
+        folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi/appsettings.json'
         fileType: 'json'
 
     - task: Docker@2
