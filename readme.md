@@ -34,7 +34,7 @@ Start the UI
 npm run dev --prefix src\UI
 ```
 
-# Setup Azure Pipeline
+# Setup Azure
 ## Build Infrastructure
 1. Login to Azure
    ```bash
@@ -45,12 +45,41 @@ npm run dev --prefix src\UI
     Get-AzADUser
     ```
 
-3. Deploy infrastructure with initial setup. This first execution will not deploy the API hosting app as the first image needs to be deployed.
+3. Deploy infrastructure with initial setup.
     ```
     New-AzSubscriptionDeployment -Location westeurope -TemplateFile .\deploy\main.bicep
     ```
     > [!NOTE]
     > adminUser is set to UserPrincipalName and adminUserSID is set to Id
+
+## Setup Microsfot Entra Id
+1. Go to https://portal.azure.com/#home and select Azure service **Microsfot Entra ID**
+2. Open **Manage | App registrations**
+3. Click **New registration**
+4. Provide Name and select **Supported account types** to be "Accounts in this organizational directory only (Default Directory only - Single tenant)"
+5. Click **Register**
+6. Go to **Manage | Authentication**
+7. Press **Add a platform**
+   1. Select **Web**
+   2. Enter the following redirect URI "https://localhost:54629/"
+   3. Add extra redirect URIs based on infrastructure "{Azure Container App}"
+8. Press **Add a platform**
+   1. Select **Single-page application**
+   2. Enter the following redirect URI "http://localhost:8080/" 
+   3. Add extra redirect URIs for "https://localhost:54629/swagger/oauth2-redirect.html" and based on infrastructure "{Azure Static App}" and "{Azure Container App}/swagger/oauth2-redirect.html" 
+9. Go to **Manage | Expose an API**
+10. Select **Add** next to **Application ID URI** and press **Save**
+11. Click on **Add a scope**
+    1.  Scope name = Diary.Update
+    2.  Who can consent? = Admins only
+    3.  Admin consent display name = Update diary details
+    4.  Admin consent description = Update diary details within the ccDiary API
+    5.  Press **Add scope**
+12. Go to **Manage | Add owners**
+    1.  Select your account
+13. Take note of the following values from **Overview**
+    * Application (client) ID
+    * Directory (tenant) ID
 
 ## Setup BuildPipeline
 1. Go to https://dev.azure.com and add **New project**
@@ -76,10 +105,13 @@ npm run dev --prefix src\UI
 21. Add the following variables
     |Name                        |Secret|Value                                                                                                       |
     |----------------------------|------|------------------------------------------------------------------------------------------------------------|
+    |containerAppName            |      |Output containerAppName from  building infrastructure                                                       | 
     |containerRegistryLoginServer|      |Output containerRegistryLoginServer from building infrastructure                                            |
     |resourceGroup               |      |Output resourceGroupName from building infrastructure                                                       |
     |siteDeploymentToken         |Y     |Extracted from Azure UI by going to Static Web Apps, selecting site and going to **Manage deployment token**|
-    |containerAppName            |      |Output containerAppName from  building infrastructure                                                       | 
+    |VITE_CLIENTID               |N     |Extracted Microsoft Entra Id setup as **Application (client) ID**                                           |
+    |VITE_TENANTID               |N     |Extracted Microsoft Entra Id setup as **Directory (tenant) ID**                                           |
+    
 22. Click **Run**
 23. Modify **src\ui\.env.production** to point at correct URL for the Container App
 24. On the database that has been created run the following SQL with your container app name

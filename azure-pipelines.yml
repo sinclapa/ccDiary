@@ -20,7 +20,7 @@ variables:
   tag: '$(Build.BuildId)'
   dotNetSolution: 'src/api/ccDiary.sln'
   containerRegistry: 'azure-container-registry'
-  
+  Entra.ClientId: '$(VITE_CLIENTID)'
 stages:
 - stage: Build
   jobs:
@@ -86,6 +86,11 @@ stages:
               echo "Skipping $($path)"
             }
           }
+
+    - task: FileTransform@1
+      inputs:
+        folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi/appsettings*.json'
+        fileType: 'json'
 
     - task: Docker@2
       displayName: 'Build API Docker Image'
