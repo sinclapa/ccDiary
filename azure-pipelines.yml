@@ -24,7 +24,11 @@ variables:
 stages:
 - stage: Build
   jobs:
-  - job: Build_UI    
+  - job: Build_UI
+    variables:
+      VITE_CLIENTID: '$(entraClientId)'
+      VITE_TENANTID: '$(entraTenantId)'  
+        
     steps:
     - task: PowerShell@2
       displayName: 'Set UI Version'
@@ -63,8 +67,9 @@ stages:
   
   - job: Build_API
     variables:
-      Entra.ClientId: '$(VITE_CLIENTID)'
-      Entra.TenantId: '$(VITE_TENANTID)'
+      Entra.ClientId: '$(entraClientId)'
+      Entra.TenantId: '$(entraTenantId)'
+
     steps:  
     - task: PowerShell@2
       displayName: 'Set API Version'

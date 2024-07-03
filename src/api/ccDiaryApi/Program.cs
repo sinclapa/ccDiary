@@ -31,11 +31,12 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug()
     .WriteTo.Console()
-    .ReadFrom.Configuration(configuration)
+    .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
 var connStrBuilder = new SqlConnectionStringBuilder(
     configuration.GetConnectionString("SqlConnection"));
+
 if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 {
     connStrBuilder.Password = builder.Configuration["SA_PASSWORD"];
@@ -86,7 +87,7 @@ builder.Services.AddSwaggerGen(
 
         options.OperationFilter<AuthorizeCheckOperationFilter>();
         var scopes = new Dictionary<string, string>();
-        scopes.Add($"api://{configuration["Entra:ClientId"]}/Diary.Update", "Diary.Update");
+        scopes.Add($"api://{builder.Configuration["Entra:ClientId"]}/Diary.Update", "Diary.Update");
         options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.OAuth2,
@@ -94,8 +95,8 @@ builder.Services.AddSwaggerGen(
             {
                 AuthorizationCode = new OpenApiOAuthFlow()
                 {
-                    AuthorizationUrl = new Uri($"{configuration["Entra:Instance"]}{configuration["Entra:TenantId"]}/oauth2/v2.0/authorize"),
-                    TokenUrl = new Uri($"{configuration["Entra:Instance"]}{configuration["Entra:TenantId"]}/oauth2/v2.0/token"),
+                    AuthorizationUrl = new Uri($"{builder.Configuration["Entra:Instance"]}{builder.Configuration["Entra:TenantId"]}/oauth2/v2.0/authorize"),
+                    TokenUrl = new Uri($"{builder.Configuration["Entra:Instance"]}{builder.Configuration["Entra:TenantId"]}/oauth2/v2.0/token"),
                     Scopes = scopes
                 }
             }
@@ -121,7 +122,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseSwagger();
 
-app.AddSwaggerUI(configuration);
+app.AddSwaggerUI(builder.Configuration);
 
 app.UseHttpsRedirection();
 
