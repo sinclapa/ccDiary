@@ -27,7 +27,10 @@ module resourceGroupModule 'resourceGroup.bicep' = {
 
 output resourceGroupName string = resourceGroup.name
 output containerAppName string = resourceGroupModule.outputs.containerAppName
+output containerAppUrl string = resourceGroupModule.outputs.containerAppUrl
 output containerRegistryName string = resourceGroupModule.outputs.containerRegistryName
 output containerRegistryLoginServer string = resourceGroupModule.outputs.containerRegistryLoginServer
 output databaseServer string = resourceGroupModule.outputs.databaseServer
 output databaseName string = resourceGroupModule.outputs.databaseName
+output staticSiteName string = resourceGroupModule.outputs.staticSiteName
+output staticSiteUrl string = resourceGroupModule.outputs.staticSiteUrl

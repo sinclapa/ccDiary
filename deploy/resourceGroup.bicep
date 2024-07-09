@@ -133,8 +133,11 @@ module containerAppModule 'containerApps.bicep' = {
   }
 }
 
-output containerAppName string = containerAppModule.outputs.containerAppsName
+output containerAppName string = containerAppModule.outputs.containerAppName
+output containerAppUrl string = containerAppModule.outputs.containerAppUrl
 output containerRegistryName string = containerRegistry.name
 output containerRegistryLoginServer string = containerRegistry.properties.loginServer
 output databaseServer string = databaseServer.properties.fullyQualifiedDomainName
 output databaseName string = database.name
+output staticSiteName string = staticSite.name
+output staticSiteUrl string = staticSite.properties.defaultHostname

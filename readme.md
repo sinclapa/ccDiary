@@ -11,29 +11,6 @@ It is recommended to install the following applications
 * Azure CLI (https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli)
 * Docker (https://www.docker.com/get-started/)
 
-# Running Local Development 
-## Initial Setup
-Set password for database in user-secrets
-```
-cd src\api\ccDiaryAPI\
-dotnet user-secrets set "SA_PASSWORD" "<password>"
-```
-
-Create .env file to hold database password for docker-compose in .\src\api
-```
-DB_PASSWORD=<password>
-```
-
-## Running 
-Start the API
-```bash
-docker compose --project-directory src\API up
-```
-Start the UI
-```bash
-npm run dev --prefix src\UI
-```
-
 # Setup Azure
 ## Build Infrastructure
 1. Login to Azure
@@ -44,13 +21,44 @@ npm run dev --prefix src\UI
     ```bash
     Get-AzADUser
     ```
-
 3. Deploy infrastructure with initial setup.
-    ```
+    ```bash
     New-AzSubscriptionDeployment -Location westeurope -TemplateFile .\deploy\main.bicep
     ```
     > [!NOTE]
     > adminUser is set to UserPrincipalName and adminUserSID is set to Id
+4. Take note of the following values
+   * resourceGroupName
+   * containerAppName
+   * containerAppUrl
+   * containerRegistryName
+   * containerRegistryLoginServer
+   * databaseServer
+   * databaseName
+   * staticSiteName
+   * staticSiteUrl
+5. Get the Static Web App Deployment Token
+   ```bash
+   az staticwebapp secrets list --resource-group <resourceGroupName> --name <staticSiteName> --query properties.apiKey
+   ```
+
+> [!TIP]
+> To make it easier to run New-AzSubscriptionDeployment a parameter file can be created here **.\deploy\main.bicepparam** with following content
+> ```
+> using './main.bicep'
+> 
+> param name = '<Name of application>'
+> param environment = '<Environment>>'
+> param adminUser = '<adminUser>'
+> param adminUserSID = '<adminUserSID>'
+> ```
+> Then run the following command
+> ```bash
+> New-AzSubscriptionDeployment -Location westeurope -TemplateFile .\deploy\main.bicep -TemplateParameterFile .\deploy\main.bicepparam
+> ```
+
+> [!TIP]
+> See this guide for extracting ouput into PowerShell variables https://yobyot.com/powershell/azure-arm-templates-powershell/2019/11/05/ 
 
 ## Setup Microsfot Entra Id
 1. Go to https://portal.azure.com/#home and select Azure service **Microsfot Entra ID**
@@ -105,21 +113,51 @@ npm run dev --prefix src\UI
 21. Add the following variables
     |Name                        |Secret|Value                                                                                                       |
     |----------------------------|------|------------------------------------------------------------------------------------------------------------|
-    |containerAppName            |      |Output containerAppName from  building infrastructure                                                       | 
-    |containerRegistryLoginServer|      |Output containerRegistryLoginServer from building infrastructure                                            |
-    |resourceGroup               |      |Output resourceGroupName from building infrastructure                                                       |
-    |siteDeploymentToken         |Y     |Extracted from Azure UI by going to Static Web Apps, selecting site and going to **Manage deployment token**|
-    |VITE_CLIENTID               |N     |Extracted Microsoft Entra Id setup as **Application (client) ID**                                           |
-    |VITE_TENANTID               |N     |Extracted Microsoft Entra Id setup as **Directory (tenant) ID**                                           |
+    |containerAppName            |N     |Output containerAppName from building infrastructure                                                        | 
+    |containerRegistryLoginServer|N     |Output containerRegistryLoginServer from building infrastructure                                            |
+    |resourceGroup               |N     |Output resourceGroupName from building infrastructure                                                       |
+    |siteDeploymentToken         |Y     |**Static Web App Deployment Token** from building infrastructure                                            |
+    |entraClientId               |N     |Extracted Microsoft Entra Id setup as **Application (client) ID**                                           |
+    |entraTenantId               |N     |Extracted Microsoft Entra Id setup as **Directory (tenant) ID**                                             |
     
 22. Click **Run**
 23. Modify **src\ui\.env.production** to point at correct URL for the Container App
 24. On the database that has been created run the following SQL with your container app name
     ```SQL
-    CREATE USER <your-app-service-name> FROM EXTERNAL PROVIDER;
-    ALTER ROLE db_datareader ADD MEMBER <your-app-service-name>;
-    ALTER ROLE db_datawriter ADD MEMBER <your-app-service-name>;
-    ALTER ROLE db_ddladmin ADD MEMBER <your-app-service-name>;
+    CREATE USER <containerAppName> FROM EXTERNAL PROVIDER;
+    ALTER ROLE db_datareader ADD MEMBER <containerAppName>;
+    ALTER ROLE db_datawriter ADD MEMBER <containerAppName>;
+    ALTER ROLE db_ddladmin ADD MEMBER <containerAppName>;
     GO
     ```
 
+# Running Local Development 
+## Initial Setup
+Set password for database in user-secrets
+```
+cd src\api\ccDiaryAPI\
+dotnet user-secrets set "SA_PASSWORD" "<password>"
+dotnet user-secrets set "Entra:ClientId" "<Application (client) ID>"
+dotnet user-secrets set "Entra:TenantId" "<Directory (tenant) ID>"
+```
+
+Create .env file to hold database password for docker-compose in .\src\api
+```
+DB_PASSWORD=<password>
+```
+
+Create **.env.dev.local** file in .\src\ui
+```
+VITE_CLIENTID="<Application (client) ID>"
+VITE_TENANTID="<Directory (tenant) ID>"
+```
+
+## Running 
+Start the API
+```bash
+docker compose --project-directory src\API up
+```
+Start the UI
+```bash
+npm run dev --prefix src\UI
+```

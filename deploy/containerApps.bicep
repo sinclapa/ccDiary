@@ -8,7 +8,7 @@ param containerRegistryName string
 @secure()
 param containerRegistryPassword string
 param location string = resourceGroup().location
-param containerApppName string = 'app-${name}-${environment}' 
+param containerAppName string = 'app-${name}-${environment}' 
 
 @description('This module seeds the ACR with the public version of the app')
 module acrImportImage 'br/public:deployment-scripts/import-acr:3.0.1' = {
@@ -21,7 +21,7 @@ module acrImportImage 'br/public:deployment-scripts/import-acr:3.0.1' = {
 }
 
 resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
-  name: containerApppName
+  name: containerAppName
   location: location
   properties: {
     workloadProfileName: 'Consumption'
@@ -55,10 +55,9 @@ resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
     }    
           
     template: {
-      revisionSuffix: 'firstversion'
       containers: [
         {
-          name: containerApppName      
+          name: containerAppName      
           image: acrImportImage.outputs.importedImages[0].acrHostedImage               
           resources: {
             cpu: json('0.25')
@@ -77,4 +76,5 @@ resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
   }
 }
 
-output containerAppsName string = containerApps.name
+output containerAppName string = containerApps.name
+output containerAppUrl string = containerApps.properties.configuration.ingress.fqdn
