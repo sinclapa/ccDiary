@@ -70,7 +70,7 @@ stages:
     variables:
       Entra.ClientId: '$(entraClientId)'
       Entra.TenantId: '$(entraTenantId)'
-      Entra.ApplicationIdURI: '$(entraApplicationIdURI)'
+      Entra.ApplicationIdUri: '$(entraApplicationIdURI)'
 
     steps:  
     - task: PowerShell@2
