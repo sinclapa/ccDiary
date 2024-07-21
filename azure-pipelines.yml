@@ -27,7 +27,8 @@ stages:
   - job: Build_UI
     variables:
       VITE_CLIENTID: '$(entraClientId)'
-      VITE_TENANTID: '$(entraTenantId)'  
+      VITE_TENANTID: '$(entraTenantId)'
+      VITE_APPLICATIONID_URI: '$(entraApplicationIdURI)'   
         
     steps:
     - task: PowerShell@2
@@ -69,6 +70,7 @@ stages:
     variables:
       Entra.ClientId: '$(entraClientId)'
       Entra.TenantId: '$(entraTenantId)'
+      Entra.ApplicationIdURI: '$(entraApplicationIdURI)'
 
     steps:  
     - task: PowerShell@2

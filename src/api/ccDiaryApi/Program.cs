@@ -87,7 +87,7 @@ builder.Services.AddSwaggerGen(
 
         options.OperationFilter<AuthorizeCheckOperationFilter>();
         var scopes = new Dictionary<string, string>();
-        scopes.Add($"api://{builder.Configuration["Entra:ClientId"]}/Diary.Update", "Diary.Update");
+        scopes.Add($"{builder.Configuration["Entra:ApplicationIdUri"]}/Diary.Update", "Diary.Update");
         options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.OAuth2,

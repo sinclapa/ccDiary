@@ -13,7 +13,7 @@ async function login() {
 
     const response = await auth.msalInstance.acquireTokenSilent({
         account: auth.account,
-        scopes: [`api://${import.meta.env.VITE_CLIENTID}/Diary.Update`]
+        scopes: [`${import.meta.env.VITE_APPLICATIONID_URI}/Diary.Update`]
     });
 
     auth.token = response.accessToken;

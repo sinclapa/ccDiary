@@ -58,7 +58,7 @@ It is recommended to install the following applications
 > ```
 
 > [!TIP]
-> See this guide for extracting ouput into PowerShell variables https://yobyot.com/powershell/azure-arm-templates-powershell/2019/11/05/ 
+> See this guide for extracting output into PowerShell variables https://yobyot.com/powershell/azure-arm-templates-powershell/2019/11/05/ 
 
 ## Setup Microsfot Entra Id
 1. Go to https://portal.azure.com/#home and select Azure service **Microsfot Entra ID**

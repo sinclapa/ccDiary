@@ -133,6 +133,16 @@ module containerAppModule 'containerApps.bicep' = {
   }
 }
 
+module entraAppModule 'entraApp.bicep' = {
+  name: 'entraApp'
+  params: {
+    name: name
+    environment: environment
+    staticSiteUrl: staticSite.properties.defaultHostname
+    containerAppUrl: containerAppModule.outputs.containerAppUrl
+  }
+}
+
 output containerAppName string = containerAppModule.outputs.containerAppName
 output containerAppUrl string = containerAppModule.outputs.containerAppUrl
 output containerRegistryName string = containerRegistry.name
@@ -141,3 +151,6 @@ output databaseServer string = databaseServer.properties.fullyQualifiedDomainNam
 output databaseName string = database.name
 output staticSiteName string = staticSite.name
 output staticSiteUrl string = staticSite.properties.defaultHostname
+output entraApplicationIdURI string = entraAppModule.outputs.entraApplicationIdURI
+output entraClientId string = entraAppModule.outputs.entraClientId
+output entraTenantId string = entraAppModule.outputs.entraTenantId
