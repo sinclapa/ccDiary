@@ -194,6 +194,8 @@ stages:
         targetType: inline
         script: |
           docker load --input $(Pipeline.Workspace)/api-docker-image/$(dockerImageName).tar
+          docker tag $(containerRegistryLoginServer)/$(dockerImageName):$(tag) $(containerRegistryLoginServer)/$(dockerImageName):latest
+
 
     - task: Docker@2
       displayName: 'Push API Docker Image to Azure Container Registry'
@@ -205,7 +207,7 @@ stages:
         containerRegistry: $(containerRegistry)
         addPipelineData: true
         addBaseImageData: true
-        tags: '$(tag)'
+        tags: '$(tag),latest'
 
     - task: AzureContainerApps@1    
       displayName: 'Deploy to Azure Container App'

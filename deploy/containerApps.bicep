@@ -5,20 +5,11 @@ param environment string
 param containerAppsEnvironmentId string
 param containerRegistryLoginServer string
 param containerRegistryName string
+param imageName string
 @secure()
 param containerRegistryPassword string
 param location string = resourceGroup().location
 param containerAppName string = 'app-${name}-${environment}' 
-
-@description('This module seeds the ACR with the public version of the app')
-module acrImportImage 'br/public:deployment-scripts/import-acr:3.0.1' = {
-  name: 'importContainerImage'
-  params: {
-    acrName: containerRegistryName
-    location: location
-    images: array('mcr.microsoft.com/azuredocs/containerapps-helloworld:latest')
-  }
-}
 
 resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
   name: containerAppName
@@ -58,7 +49,7 @@ resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
       containers: [
         {
           name: containerAppName      
-          image: acrImportImage.outputs.importedImages[0].acrHostedImage               
+          image: imageName
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'

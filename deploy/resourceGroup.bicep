@@ -5,6 +5,15 @@ param environment string
 param adminUser string
 param adminUserSID string
 param location string = resourceGroup().location
+var apiImageName = 'ccdiaryapi'
+var userAssignedIdentityName = 'configDeployer'
+var roleAssignmentName = guid(resourceGroup().id, 'contributor')
+var contributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+
+resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
+  name: userAssignedIdentityName
+  location: resourceGroup().location
+}
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: 'acr${name}${uniqueString(resourceGroup().id)}'
@@ -14,6 +23,56 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
   }
   sku: {
     name: 'Basic'
+  }
+}
+
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: roleAssignmentName
+  properties: {
+    roleDefinitionId: contributorRoleDefinitionId
+    principalId: userAssignedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource ccdiaryApiImageExists 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'ccdiaryApiImageExists'
+  kind: 'AzurePowerShell'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userAssignedIdentity.id}': {}
+    }
+  }
+  location: location
+  properties: {
+    retentionInterval: 'PT1H'
+    azPowerShellVersion: '12.0'
+    cleanupPreference: 'OnSuccess'
+    arguments: '-AcrName ${containerRegistry.name} -ImageName ${apiImageName}'
+    scriptContent: '''
+      param (
+        [string] $AcrName,
+        [string] $ImageName
+      )
+      $acrList = Get-AzContainerRegistryRepository -RegistryName $AcrName
+      $exists = $acrList -contains $ImageName
+      $DeploymentScriptOutputs = @{}
+      $DeploymentScriptOutputs['Exists'] = $exists
+    '''
+  }
+  dependsOn: [
+    roleAssignment
+  ]
+}
+
+@description('This module seeds the ACR with the public version of the app')
+module acrImportImage 'br/public:deployment-scripts/import-acr:3.0.1' = {
+  name: 'importContainerImage'
+  params: {
+    acrName: containerRegistry.name
+    location: location
+    images: array(ccdiaryApiImageExists.properties.outputs.Exists ? '${containerRegistry.properties.loginServer}/${apiImageName}:latest' : 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest')
   }
 }
 
@@ -130,6 +189,7 @@ module containerAppModule 'containerApps.bicep' = {
     containerRegistryLoginServer: containerRegistry.properties.loginServer
     containerRegistryName: containerRegistry.name
     containerRegistryPassword: containerRegistry.listCredentials().passwords[0].value
+    imageName: acrImportImage.outputs.importedImages[0].acrHostedImage
   }
 }
 
@@ -154,3 +214,4 @@ output staticSiteUrl string = staticSite.properties.defaultHostname
 output entraApplicationIdURI string = entraAppModule.outputs.entraApplicationIdURI
 output entraClientId string = entraAppModule.outputs.entraClientId
 output entraTenantId string = entraAppModule.outputs.entraTenantId
+output ccdiaryApiImageExists bool = ccdiaryApiImageExists.properties.outputs.Exists

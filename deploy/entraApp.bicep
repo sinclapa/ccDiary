@@ -18,7 +18,7 @@ resource entraAppRegistration 'Microsoft.Graph/applications@v1.0' = {
   }
   spa: {
     redirectUris: [
-      'https://localhost:54629/swagger/oauth2-redirect.html', 'http://localhost:8080/', 'https://${staticSiteUrl}/', 'http://${containerAppUrl}/swagger/oauth2-redirect.html'
+      'https://localhost:54629/swagger/oauth2-redirect.html', 'http://localhost:8080/', 'https://${staticSiteUrl}/', 'https://${containerAppUrl}/swagger/oauth2-redirect.html'
     ]
   }
   requiredResourceAccess: [

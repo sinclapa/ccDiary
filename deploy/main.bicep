@@ -37,3 +37,4 @@ output staticSiteUrl string = resourceGroupModule.outputs.staticSiteUrl
 output entraApplicationIdURI string = resourceGroupModule.outputs.entraApplicationIdURI
 output entraClientId string = resourceGroupModule.outputs.entraClientId
 output entraTenantId string = resourceGroupModule.outputs.entraTenantId
+output ccdiaryApiImageExists bool = resourceGroupModule.outputs.ccdiaryApiImageExists
