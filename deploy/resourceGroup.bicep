@@ -214,4 +214,3 @@ output staticSiteUrl string = staticSite.properties.defaultHostname
 output entraApplicationIdURI string = entraAppModule.outputs.entraApplicationIdURI
 output entraClientId string = entraAppModule.outputs.entraClientId
 output entraTenantId string = entraAppModule.outputs.entraTenantId
-output ccdiaryApiImageExists bool = ccdiaryApiImageExists.properties.outputs.Exists
