@@ -1,6 +1,9 @@
 {
     "cSpell.words": [
         "msal",
-        "VITE"
+        "pinia",
+        "unplugin",
+        "VITE",
+        "vuetify"
     ]
 }
