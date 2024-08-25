@@ -1,6 +1,6 @@
 <template>
   <header>
-    <button v-if="state.isAuthenticated" @click="data" class="btn">Data</button><br/>
+    <v-btn v-if="state.isAuthenticated" @click="data" class="btn">Data</v-btn><br/>
     {{ api }}<br/>
     {{ weather }}<br/>
   </header>

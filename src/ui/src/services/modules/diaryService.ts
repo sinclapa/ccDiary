@@ -37,7 +37,7 @@ export default class DiaryAPIService {
   }
 
   async deleteDiary(diaryId: string) : Promise<boolean> {
-    const api = new URL('v1/Diary/Delete/' + diaryId, import.meta.env.VITE_API)
+    const api = new URL(`v1/Diary/Delete/${diaryId}`, import.meta.env.VITE_API)
     const request = {
       method: 'DELETE'
     }
@@ -53,6 +53,15 @@ export default class DiaryAPIService {
     await fetch(api)
       .then(response => response.json())
       .then(data => output = data as Diary[])
+    return output;
+  }
+
+  async getDiary(diaryId: string) : Promise<Diary | undefined> {
+    const api = new URL(`v1/Diary/Get/${diaryId}`, import.meta.env.VITE_API)
+    let output : Diary | undefined = undefined
+    await fetch(api)
+      .then(response => response.json())
+      .then(data => output = data as Diary)
     return output;
   }
 }
