@@ -36,7 +36,7 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-prev
 }
 
 resource ccdiaryApiImageExists 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: 'ccdiaryApiImageExists'
+  name: 'ccdiaryApiImageExists'  
   kind: 'AzurePowerShell'
   identity: {
     type: 'UserAssigned'
@@ -47,7 +47,7 @@ resource ccdiaryApiImageExists 'Microsoft.Resources/deploymentScripts@2023-08-01
   location: location
   properties: {
     retentionInterval: 'PT1H'
-    azPowerShellVersion: '12.0'
+    azPowerShellVersion: '12.2'
     cleanupPreference: 'OnSuccess'
     arguments: '-AcrName ${containerRegistry.name} -ImageName ${apiImageName}'
     scriptContent: '''

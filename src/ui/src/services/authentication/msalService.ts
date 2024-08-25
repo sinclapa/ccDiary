@@ -1,4 +1,4 @@
-import { msalInstance, state } from './msalConfig'
+import { msalInstance, state } from '@/services/authentication/msalConfig'
 
 export function msalService() {
     const initialize = async () => {

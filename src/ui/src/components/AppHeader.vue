@@ -15,8 +15,8 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { msalService } from '@/config/msalService';
-import { state } from '@/config/msalConfig';
+import { msalService } from '@/services/authentication/msalService';
+import { state } from '@/services/authentication/msalConfig';
 
 const { initialize: initializeAuth, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor } = msalService();
 
