@@ -71,6 +71,7 @@ stages:
       Entra.ClientId: '$(entraClientId)'
       Entra.TenantId: '$(entraTenantId)'
       Entra.ApplicationIdUri: '$(entraApplicationIdURI)'
+      DOCKER_BUILDKIT: 1
 
     steps:  
     - task: PowerShell@2
