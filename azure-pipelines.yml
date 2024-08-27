@@ -101,7 +101,7 @@ stages:
       inputs:
         folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi'
         jsonTargetFiles: 'appsettings.json'
-        xmlTargetFiles: ''
+        xmlTransformationRules: '' # disabled
 
     - task: Docker@2
       displayName: 'Build API Docker Image'
