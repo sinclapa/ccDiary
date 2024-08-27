@@ -97,9 +97,10 @@ stages:
           }
 
     - task: FileTransform@2
+      displayName: 'Update appsettings.json'
       inputs:
         folderPath: '$(System.DefaultWorkingDirectory)/src/api/ccDiaryApi'
-        jsonTargetFiles: 'appsettings.json'
+        jsonTargetFiles: '**/appsettings.json'
 
     - task: Docker@2
       displayName: 'Build API Docker Image'
