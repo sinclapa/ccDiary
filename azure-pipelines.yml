@@ -62,8 +62,7 @@ stages:
     - task: PublishCodeCoverageResults@2
       displayName: Publish UI Code Coverage
       inputs:
-        pathToSources: 'src/ui'
-        summaryFileLocation: 'coverage/cobertura-coverage.xml'
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/src/ui/coverage/cobertura-coverage.xml'
         failIfCoverageEmpty : true
         
     - task: ArchiveFiles@2
