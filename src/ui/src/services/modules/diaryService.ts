@@ -1,69 +1,68 @@
 import Diary from '@/services/models/diary'
 
 export default class DiaryAPIService {
-
-  async createDiary(diary: Diary) : Promise<Diary | null> {
+  async createDiary (diary: Diary) : Promise<Diary | null> {
     const api = new URL('v1/Diary/Create', import.meta.env.VITE_API)
     const request = {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(diary)
+      body: JSON.stringify(diary),
     }
     let output : Diary | null = null
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as Diary)
-    return output;
+    return output
   }
 
-  async updateDiary(diary: Diary) : Promise<Diary | null> {
+  async updateDiary (diary: Diary) : Promise<Diary | null> {
     const api = new URL('v1/Diary/Update', import.meta.env.VITE_API)
     const request = {
       method: 'PUT',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(diary)
+      body: JSON.stringify(diary),
     }
     let output : Diary | null = null
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as Diary)
-    return output;
+    return output
   }
 
-  async deleteDiary(diaryId: string) : Promise<boolean> {
+  async deleteDiary (diaryId: string) : Promise<boolean> {
     const api = new URL(`v1/Diary/Delete/${diaryId}`, import.meta.env.VITE_API)
     const request = {
-      method: 'DELETE'
+      method: 'DELETE',
     }
     let output : boolean = false
     await fetch(api, request)
       .then(response => response.ok ? output = true : output = false)
-    return output;
+    return output
   }
 
-  async getDiaries() : Promise<Diary[]> {
+  async getDiaries () : Promise<Diary[]> {
     const api = new URL('v1/Diary/Get', import.meta.env.VITE_API)
     let output : Diary[] = []
     await fetch(api)
       .then(response => response.json())
       .then(data => output = data as Diary[])
-    return output;
+    return output
   }
 
-  async getDiary(diaryId: string) : Promise<Diary | undefined> {
+  async getDiary (diaryId: string) : Promise<Diary | undefined> {
     const api = new URL(`v1/Diary/Get/${diaryId}`, import.meta.env.VITE_API)
-    let output : Diary | undefined = undefined
+    let output : Diary | undefined
     await fetch(api)
       .then(response => response.json())
       .then(data => output = data as Diary)
-    return output;
+    return output
   }
 }
 
-export const diaryAPI = new DiaryAPIService();
+export const diaryAPI = new DiaryAPIService()
