@@ -56,9 +56,20 @@ stages:
       displayName: "NPM Test"
       inputs:    
         command: 'custom'
-        customCommand: 'run coverage'
+        customCommand: 'run test:ci'
         workingDir: 'src/ui'
 
+    - task: PublishTestResults@2
+      displayName: Publish UI Test Results
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: 'junit.xml'
+        searchFolder: '$(System.DefaultWorkingDirectory)/src/ui/reports'
+        testRunTitle: 'UI Test Results'
+        failTaskOnFailedTests: true
+        failTaskOnMissingResultsFile: true
+        failTaskOnFailureToPublishResults: true
+          
     - task: PublishCodeCoverageResults@2
       displayName: Publish UI Code Coverage
       inputs:
@@ -148,7 +159,7 @@ stages:
         testResultsFormat: 'VSTest'
         testResultsFiles: 'testresults.trx'
         searchFolder: '$(Build.ArtifactStagingDirectory)/testresults'
-        testRunTitle: 'Publish Test Results *.trx'
+        testRunTitle: 'API Test Results'
         failTaskOnFailedTests: true
         failTaskOnMissingResultsFile: true
         failTaskOnFailureToPublishResults: true

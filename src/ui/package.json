@@ -7,6 +7,7 @@
     "preview": "vite preview",
     "lint": "eslint . --fix --ignore-path .gitignore",
     "test": "vitest",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=reports/junit.xml --coverage",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {

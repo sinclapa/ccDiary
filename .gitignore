@@ -52,3 +52,4 @@ buildInfrastructure.settings
 
 # Test
 coverage/
+reports/
