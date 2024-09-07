@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { expect, test } from 'vitest'
+import { expect, it, test, vi } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -12,7 +12,9 @@ const vuetify = createVuetify({
 
 global.ResizeObserver = require('resize-observer-polyfill')
 
-test('displays message', () => {
+test('Display AppFooter', () => {
+  vi.stubEnv('VITE_VERSION', '1.2.3')
+  vi.stubEnv('VITE_BUILDNUMBER', '789')
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
   }, {
@@ -26,5 +28,5 @@ test('displays message', () => {
   })
 
   // Assert the rendered text of the component
-  expect(wrapper.text()).toContain('CookingCode.com')
+  expect(wrapper.text()).toContain(`Version 1.2.3.789 © 2023-${new Date().getFullYear()} CookingCode.com`)
 })

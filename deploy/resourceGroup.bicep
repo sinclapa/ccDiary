@@ -150,7 +150,7 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     availabilityZone: 'NoPreference'
     autoPauseDelay: 60
     readScale: 'Disabled' 
-    minCapacity: json('0.5')     
+    //minCapacity: json('0.5')     
     requestedBackupStorageRedundancy: 'Local'
     catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
     isLedgerOn: false
@@ -158,11 +158,15 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     freeLimitExhaustionBehavior: 'AutoPause'
   }
   sku: {
+    name: 'Basic'
+    tier: 'Basic'
+  }
+  /*sku: {
     name: 'GP_S_Gen5'
     tier: 'GeneralPurpose'
     family: 'Gen5'
     capacity: 1         
-  } 
+  } */
 }
 
 resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {

@@ -73,8 +73,9 @@ export default defineConfig({
     port: 8080,
   },
   test: {
+    unstubEnvs: true,
     globals: true,
-    environment: 'jsdom',
+    environment: 'happy-dom',
     server: {
       deps: {
         inline: ['vuetify'],
