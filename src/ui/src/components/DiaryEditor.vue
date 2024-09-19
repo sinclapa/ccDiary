@@ -33,8 +33,8 @@
           <v-row>
             <v-col>
               <v-btn
-                block
                 id="close"
+                block
                 text="Close"
                 variant="plain"
                 @click="close"
@@ -42,8 +42,8 @@
             </v-col>
             <v-col>
               <v-btn
-                block
                 id="save"
+                block
                 color="primary"
                 text="Save"
                 type="submit"
@@ -87,7 +87,7 @@
   }
 
   async function submit (submitEventPromise: SubmitEventPromise) {
-    const {valid} = await submitEventPromise
+    const { valid } = await submitEventPromise
     if (valid) {
       emit('submit', { title: title.value, author: author.value, description: description.value })
     }

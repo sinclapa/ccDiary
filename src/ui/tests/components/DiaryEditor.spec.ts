@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { expect, describe, test, vi } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -12,12 +12,12 @@ const vuetify = createVuetify({
 
 global.ResizeObserver = require('resize-observer-polyfill')
 describe('DiaryEditor', () => {
-  test('Pass Props', async() =>  {
+  test('Pass Props', async () => {
     const wrapper = mount(DiaryEditor, {
       props: {
         title: 'Original Title',
         author: 'Original Author',
-        description: 'Original Description'
+        description: 'Original Description',
       },
       global: {
         plugins: [vuetify],
@@ -30,12 +30,12 @@ describe('DiaryEditor', () => {
     expect(wrapper.find('#description').attributes('value')).equals('Original Description')
   })
 
-  test('ChangeValuesAndSubmit', async() =>  {
+  test('ChangeValuesAndSubmit', async () => {
     const wrapper = mount(DiaryEditor, {
       props: {
         title: 'Original Title',
         author: 'Original Author',
-        description: 'Original Description'
+        description: 'Original Description',
       },
       global: {
         plugins: [vuetify],
@@ -53,18 +53,18 @@ describe('DiaryEditor', () => {
 
     // Submit Form
     wrapper.find('#save').trigger('submit')
-    await flushPromises();
+    await flushPromises()
     expect(wrapper.emitted().submit).toHaveLength(1)
     expect(wrapper.emitted().submit[0]).toEqual([
       {
         title: 'New Title',
         author: 'New Author',
-        description: 'New Description'
-      }
+        description: 'New Description',
+      },
     ])
   })
 
-  test('CloseForm', async() =>  {
+  test('CloseForm', async () => {
     const wrapper = mount(DiaryEditor, {
       global: {
         plugins: [vuetify],
@@ -76,7 +76,7 @@ describe('DiaryEditor', () => {
     expect(wrapper.emitted().close).toHaveLength(1)
   })
 
-  test('ValidationFailureTitleTooShort', async() =>  {
+  test('ValidationFailureTitleTooShort', async () => {
     const wrapper = mount(DiaryEditor, {
       global: {
         plugins: [vuetify],
@@ -89,11 +89,11 @@ describe('DiaryEditor', () => {
     // Change Bad values
     title.setValue('1234')
     wrapper.find('#save').trigger('submit')
-    await flushPromises();
+    await flushPromises()
     expect(wrapper.find('#title-messages').text()).toContain('Title must be at least 5 characters')
   })
 
-  test('ValidationFailureAuthorTooShort', async() =>  {
+  test('ValidationFailureAuthorTooShort', async () => {
     const wrapper = mount(DiaryEditor, {
       global: {
         plugins: [vuetify],
@@ -106,7 +106,7 @@ describe('DiaryEditor', () => {
     // Change Bad values
     title.setValue('1234')
     wrapper.find('#save').trigger('submit')
-    await flushPromises();
+    await flushPromises()
     expect(wrapper.find('#author-messages').text()).toContain('Author must be at least 5 characters')
   })
 })

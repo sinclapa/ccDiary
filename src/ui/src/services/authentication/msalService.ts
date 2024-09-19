@@ -1,7 +1,7 @@
 import { msalInstance, state } from '@/services/authentication/msalConfig'
 
 export function msalService () {
-  const initialize = async () => {
+  const initializeInstance = async () => {
     try {
       await msalInstance.initialize() // Call the initialize function
     } catch (error) {
@@ -38,8 +38,10 @@ export function msalService () {
   const handleRedirect = async () => {
     try {
       await msalInstance.handleRedirectPromise()
-      state.isAuthenticated = msalInstance.getAllAccounts().length > 0
-      state.user = msalInstance.getAllAccounts()[0]
+      if (msalInstance.getAllAccounts()) {
+        state.isAuthenticated = msalInstance.getAllAccounts().length > 0
+        state.user = msalInstance.getAllAccounts()[0]
+      }
     } catch (error) {
       console.error('Redirect error:', error)
     }
@@ -87,5 +89,5 @@ export function msalService () {
     }
   }
 
-  return { initialize, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor }
+  return { initializeInstance, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor }
 }
