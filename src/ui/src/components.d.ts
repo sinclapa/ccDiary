@@ -9,7 +9,9 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppHeader: typeof import('./components/AppHeader.vue')['default']
+    copy: typeof import('./components/DiaryEditor copy.vue')['default']
     DiaryEditor: typeof import('./components/DiaryEditor.vue')['default']
+    DiaryEntryEditor: typeof import('./components/DiaryEntryEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

@@ -11,7 +11,7 @@ namespace ccDiaryApi.Data.Model
 
         [Required]
         public DateTime Date { get; set; }
-
+ 
         [Required]
         public string? Location { get; set; }
 
