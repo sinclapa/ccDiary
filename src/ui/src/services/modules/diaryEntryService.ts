@@ -1,4 +1,5 @@
 import DiaryEntry from '@/services/models/diaryEntry'
+import dayjs from 'dayjs'
 
 export default class DiaryEntryAPIService {
   async createDiaryEntry (diaryEntry: DiaryEntry) : Promise<DiaryEntry | null> {
@@ -34,16 +35,17 @@ export default class DiaryEntryAPIService {
   }
 
   async searchDiaryEntryForDay (diaryId: string, year: number, month: number, day: number) : Promise<DiaryEntry[]> {
-    let api = new URL(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}`, import.meta.env.VITE_API)
+    const utcOffsetMinutes : number = dayjs(new Date(year, month, day)).utcOffset()
+    const api = new URL(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}/${utcOffsetMinutes}`, import.meta.env.VITE_API)
     let output : DiaryEntry[] = []
     await fetch(api)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry[])
-    return output
+    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId))
   }
 
   async getMinDate (diaryId: string) : Promise<Date> {
-    let api = new URL(`v1/DiaryEntry/GetMinDate/${diaryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/GetMinDate/${diaryId}`, import.meta.env.VITE_API)
     let output : Date = new Date(0, 0, 1)
     await fetch(api)
       .then(response => response.json())
@@ -52,7 +54,7 @@ export default class DiaryEntryAPIService {
   }
 
   async getMaxDate (diaryId: string) : Promise<Date> {
-    let api = new URL(`v1/DiaryEntry/GetMaxDate/${diaryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/GetMaxDate/${diaryId}`, import.meta.env.VITE_API)
     let output : Date = new Date(9999, 0, 1)
     await fetch(api)
       .then(response => response.json())
@@ -74,6 +76,17 @@ export default class DiaryEntryAPIService {
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry)
+    return output
+  }
+
+  async deleteDiaryEntry (diaryEntryId: string) : Promise<boolean> {
+    const api = new URL(`v1/DiaryEntry/Delete/${diaryEntryId}`, import.meta.env.VITE_API)
+    const request = {
+      method: 'DELETE',
+    }
+    let output : boolean = false
+    await fetch(api, request)
+      .then(response => response.ok ? output = true : output = false)
     return output
   }
 }

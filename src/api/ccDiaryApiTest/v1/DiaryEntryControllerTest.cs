@@ -162,15 +162,15 @@ namespace ccDiaryApiTest.v1
 
             // Act
             var id = Guid.NewGuid();
-            var response = controller.Search(id, 2022, 5, 23);
+            var response = controller.Search(id, 2022, 5, 23, 0);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(new DateTime(2022, 5, 23), from);
-            Assert.AreEqual(new DateTime(2022, 5, 24).Subtract(new TimeSpan(1)), to);
+            Assert.AreEqual(new DateTime(2022, 5, 23).ToUniversalTime(), from);
+            Assert.AreEqual(new DateTime(2022, 5, 24).Subtract(new TimeSpan(1)).ToUniversalTime(), to);
         }
     }
 }

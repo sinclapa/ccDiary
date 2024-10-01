@@ -1,5 +1,6 @@
 <template>
   <v-sheet class="mx-auto" width="400">
+    {{ date }} {{ time }}
     <v-form @submit.prevent="submit">
       <v-card
         prepend-icon="mdi-pen"
@@ -8,19 +9,19 @@
         <v-card-text>
           <v-row>
             <v-col>
-          <v-date-input
-            prepend-icon=""
-            prepend-inner-icon="$calendar"
-            v-model="date"
-            :min="new Date(1900, 0, 1)"
-          />
-        </v-col>
-        <v-col>
-          <v-text-field
-            v-model="time"
-            type="time"
-          />
-        </v-col>
+              <v-date-input
+                v-model="date"
+                :min="new Date(1900, 0, 1)"
+                prepend-icon=""
+                prepend-inner-icon="$calendar"
+              />
+            </v-col>
+            <v-col>
+              <v-text-field
+                v-model="time"
+                type="time"
+              />
+            </v-col>
           </v-row>
           <v-text-field
             id="location"
@@ -31,8 +32,8 @@
           <v-textarea
             id="entry"
             v-model="entry"
-            label="Entry"
             auto-grow
+            label="Entry"
           />
         </v-card-text>
         <v-divider />
@@ -67,12 +68,12 @@
 </template>
 
 <script setup lang="ts">
-  import dayjs from 'dayjs';
+  import dayjs from 'dayjs'
   import { SubmitEventPromise } from 'vuetify'
   import { VDateInput } from 'vuetify/labs/VDateInput'
   const props = defineProps<{date: Date, location: string, entry: string}>()
-  const date = ref<Date>(props.date)
-  const time = ref<string>(dayjs(props.date).format("HH:mm"))
+  const date = ref<Date>(new Date(props.date))
+  const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const location = ref<string>(props.location)
   const entry = ref<string>(props.entry)
   const emit = defineEmits({

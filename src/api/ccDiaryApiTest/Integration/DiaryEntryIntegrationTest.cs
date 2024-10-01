@@ -332,7 +332,7 @@ namespace ccDiaryApiTest.Integration
             var result13 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 13, 0, 0));
 
             // Act
-            var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17");
+            var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17/0");
             var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
 
             // Assert
