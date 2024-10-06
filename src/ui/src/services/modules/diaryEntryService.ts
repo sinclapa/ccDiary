@@ -1,5 +1,6 @@
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
+import { request } from 'http'
 
 export default class DiaryEntryAPIService {
   async createDiaryEntry (diaryEntry: DiaryEntry) : Promise<DiaryEntry | null> {
@@ -36,9 +37,14 @@ export default class DiaryEntryAPIService {
 
   async searchDiaryEntryForDay (diaryId: string, year: number, month: number, day: number) : Promise<DiaryEntry[]> {
     const utcOffsetMinutes : number = dayjs(new Date(year, month, day)).utcOffset()
-    const api = new URL(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}/${utcOffsetMinutes}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}`, import.meta.env.VITE_API)
     let output : DiaryEntry[] = []
-    await fetch(api)
+    const request = {
+      headers: {
+        'x-utc-offset': `${utcOffsetMinutes}`,
+      }
+    }
+    await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry[])
     return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId))

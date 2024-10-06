@@ -332,7 +332,8 @@ namespace ccDiaryApiTest.Integration
             var result13 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 13, 0, 0));
 
             // Act
-            var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17/0");
+            _httpClient.DefaultRequestHeaders.Add("x-utc-offset", "0");
+            var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17");
             var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
 
             // Assert
@@ -340,6 +341,25 @@ namespace ccDiaryApiTest.Integration
             Assert.AreEqual(2, result.Count());
             Assert.AreEqual(result13.DiaryEntryId, result.ElementAt(0).DiaryEntryId);
             Assert.AreEqual(result14.DiaryEntryId, result.ElementAt(1).DiaryEntryId);
+        }
+
+        [TestMethod]
+        public async Task SearchDay_UTCOffset60()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            var result22 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 16, 22, 0, 0, DateTimeKind.Utc));
+            var result23 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 16, 23, 0, 0, DateTimeKind.Utc));
+
+            // Act
+            _httpClient.DefaultRequestHeaders.Add("x-utc-offset", "60");
+            var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17");
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.Count());
+            Assert.AreEqual(result23.DiaryEntryId, result.ElementAt(0).DiaryEntryId);
         }
 
         [TestMethod]

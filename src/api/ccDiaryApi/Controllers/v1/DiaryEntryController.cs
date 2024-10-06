@@ -3,6 +3,7 @@ using ccDiaryApi.Data.Model;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel;
 using System.Globalization;
 
 namespace ccDiaryApi.Controllers.v1
@@ -55,17 +56,9 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}/{year:int}/{month:int}/{day:int}")]
         [AllowAnonymous]
         [HttpGet()]
-        public ActionResult<List<DiaryEntryDTO>> Search(Guid diaryId, int year, int month, int day)
+        public ActionResult<List<DiaryEntryDTO>> Search(Guid diaryId, int year, int month, int day, [FromHeader(Name="x-utc-offset")] int utcOffsetMinutes)
         {
-            return Search(diaryId, year, month, day, 0);
-        }
-
-        [Route("{diaryId:guid}/{year:int}/{month:int}/{day:int}/{utcOffsetMinutes:int}")]
-        [AllowAnonymous]
-        [HttpGet()]
-        public ActionResult<List<DiaryEntryDTO>> Search(Guid diaryId, int year, int month, int day, int utcOffsetMinutes)
-        {
-            DateTime from = new DateTime(year, month, day, 0, 0, 0).AddMinutes(-1 * utcOffsetMinutes);
+            DateTime from = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc).AddMinutes(-1 * utcOffsetMinutes);
             DateTime to = from.AddDays(1).Subtract(new TimeSpan(1));
             var searchResult = _diaryEntryService.GetDiaryEntries(diaryId, from.ToUniversalTime(), to.ToUniversalTime());
             return Ok(searchResult);

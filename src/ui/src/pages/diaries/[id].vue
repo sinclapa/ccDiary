@@ -47,8 +47,7 @@
         </v-dialog>
       </v-col>
       <v-col>
-
-        <v-timeline align="start" side="end">
+        <v-timeline :align="'start'" side="end">
           <v-timeline-item
             v-for="(diaryEntry, i) in diaryEntries"
             :key="i"
@@ -59,7 +58,7 @@
               <div
                 :class="`pt-1 headline font-weight-bold text-${'red'}`"
                 v-text="dayjs(diaryEntry.date).format('ddd HH:mm:ss')"
-              />
+              ></div>
               {{ diaryEntry.date }}
             </template>
             <div>
@@ -140,7 +139,11 @@
 
   async function editItem (item?: DiaryEntry) {
     if (item === undefined) {
-      editedItem.value = new DiaryEntry(diaryId, selectedDate.value ?? new Date(), '', '')
+      let date = selectedDate.value ?? new Date()
+      if (diaryEntries.value && diaryEntries.value.length > 0) {
+        date = diaryEntries.value[diaryEntries.value.length - 1].date
+      }
+      editedItem.value = new DiaryEntry(diaryId, date, '', '')
     } else {
       editedItem.value = Object.assign({}, item)
     }
