@@ -12,9 +12,15 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class DiaryEntryIntegrationTest
     {
-        private static HttpClient _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
+        private HttpClient _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
 
-        public async Task<DiaryDTO> CreateDiary()
+        [TestInitialize]
+        public void CreateHttpClient()
+        {
+            _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
+        }
+
+        public async Task<DiaryDTO> CreateDiary(HttpClient httpClient = null)
         {
             var diary = new DiaryDTO
             {

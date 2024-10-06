@@ -151,7 +151,7 @@ namespace ccDiaryApiTest.v1
             Guid diaryId = Guid.Empty;
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
-            var diaryEntry = new DiaryEntryDTO { Date = new DateTime(2022, 5, 23, 14, 25, 7), 
+            var diaryEntry = new DiaryEntryDTO { Date = new DateTime(2022, 5, 23, 14, 25, 7, DateTimeKind.Utc), 
                 DiaryId = Guid.NewGuid(), DiaryEntryId = Guid.NewGuid(), 
                 Entry = "Test entry", Location = "Test location" };
             diaryEntryServiceMock.Setup(h => h.GetDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -169,8 +169,8 @@ namespace ccDiaryApiTest.v1
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
-            Assert.AreEqual(new DateTime(2022, 5, 23).ToUniversalTime(), from);
-            Assert.AreEqual(new DateTime(2022, 5, 24).Subtract(new TimeSpan(1)).ToUniversalTime(), to);
+            Assert.AreEqual(new DateTime(2022, 5, 23, 0, 0, 0, DateTimeKind.Utc).ToUniversalTime(), from);
+            Assert.AreEqual(new DateTime(2022, 5, 24, 0, 0, 0, DateTimeKind.Utc).Subtract(new TimeSpan(1)).ToUniversalTime(), to);
         }
     }
 }
