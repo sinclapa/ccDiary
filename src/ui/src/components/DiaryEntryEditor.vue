@@ -1,6 +1,5 @@
 <template>
   <v-sheet class="mx-auto" width="400">
-    {{ date }} {{ time }}
     <v-form @submit.prevent="submit">
       <v-card
         prepend-icon="mdi-pen"

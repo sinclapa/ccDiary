@@ -1,9 +1,9 @@
-using Asp.Versioning;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-
 namespace ccDiaryApi.Controllers.v1
 {
+    using Asp.Versioning;
+    using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Mvc;
+
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]/[action]")]
     [ApiVersion("1.0")]

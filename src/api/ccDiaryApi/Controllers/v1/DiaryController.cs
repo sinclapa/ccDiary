@@ -1,14 +1,19 @@
-﻿using Asp.Versioning;
-using ccDiaryApi.Data.Model;
-using ccDiaryApi.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿// <copyright file="DiaryController.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApi.Controllers.v1
 {
+    using Asp.Versioning;
+    using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Services;
+    using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Mvc;
+
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]/[action]")]
     [ApiVersion("1.0")]
+    [Authorize]
     public class DiaryController : ControllerBase
     {
         private readonly IDiaryService _diaryService;
@@ -18,14 +23,16 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public ActionResult<IEnumerable<DiaryDTO>> Get()
         {
             var diaries = _diaryService.Get();
             return Ok(diaries);
         }
 
-        [Route("{diaryId:guid}")]        
-        [HttpGet()]
+        [Route("{diaryId:guid}")]
+        [HttpGet]
+        [AllowAnonymous]
         public ActionResult<DiaryDTO> Get(Guid diaryId)
         {
             var diary = _diaryService.Get(diaryId);
@@ -55,6 +62,7 @@ namespace ccDiaryApi.Controllers.v1
             {
                 return NotFound();
             }
+
             _diaryService.Delete(diary);
             return Ok();
         }

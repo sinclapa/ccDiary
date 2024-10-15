@@ -1,8 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿// <copyright file="DiaryEntryDTO.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApi.Data.Model
 {
+    using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
+    using System.Text.Json.Serialization;
+
     [Table("DiaryEntry")]
     public class DiaryEntryDTO
     {
@@ -21,6 +26,7 @@ namespace ccDiaryApi.Data.Model
         [ForeignKey(nameof(DiaryDTO))]
         public Guid DiaryId { get; set; }
 
+        [JsonIgnore]
         public DiaryDTO? Diary { get; set; }
     }
 }

@@ -1,8 +1,8 @@
-﻿using ccDiaryApi.Data.Context;
-using ccDiaryApi.Data.Model;
-
-namespace ccDiaryApi.Services
+﻿namespace ccDiaryApi.Services
 {
+    using ccDiaryApi.Data.Context;
+    using ccDiaryApi.Data.Model;
+
     public class DiaryEntryService : IDiaryEntryService
     {
         private readonly DiaryDatabaseContext _context;
@@ -109,14 +109,15 @@ namespace ccDiaryApi.Services
             return _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
                 .Min(x => x.Date);
-
         }
+
         public DateTime MaxDiaryEntryDate(Guid diaryId)
         {
             if (_context.DiaryEntries.Count(x => x.DiaryId == diaryId) == 0)
             {
                 return DateTime.UtcNow;
             }
+
             return _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
                 .Max(x => x.Date);

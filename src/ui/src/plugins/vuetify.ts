@@ -16,4 +16,7 @@ export default createVuetify({
   theme: {
     defaultTheme: 'dark',
   },
+  locale: {
+    locale: 'en-UK',
+  },
 })

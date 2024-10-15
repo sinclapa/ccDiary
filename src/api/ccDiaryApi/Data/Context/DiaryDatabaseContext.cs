@@ -1,8 +1,12 @@
-﻿using ccDiaryApi.Data.Model;
-using Microsoft.EntityFrameworkCore;
+﻿// <copyright file="DiaryDatabaseContext.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApi.Data.Context
 {
+    using ccDiaryApi.Data.Model;
+    using Microsoft.EntityFrameworkCore;
+
     public class DiaryDatabaseContext : DbContext
     {
         public DiaryDatabaseContext(DbContextOptions options)
