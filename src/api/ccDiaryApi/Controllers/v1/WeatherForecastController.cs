@@ -1,3 +1,7 @@
+// <copyright file="WeatherForecastController.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
 namespace ccDiaryApi.Controllers.v1
 {
     using Asp.Versioning;
@@ -12,7 +16,7 @@ namespace ccDiaryApi.Controllers.v1
     {
         private static readonly string[] Summaries = new[]
         {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching",
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
@@ -29,7 +33,7 @@ namespace ccDiaryApi.Controllers.v1
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
                 TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)],
             })
             .ToArray();
         }

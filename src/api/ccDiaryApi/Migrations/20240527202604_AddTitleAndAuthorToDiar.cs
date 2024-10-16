@@ -1,10 +1,14 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿// <copyright file="20240527202604_AddTitleAndAuthorToDiar.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 #nullable disable
 
 namespace ccDiaryApi.Migrations
 {
+    using System;
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class AddTitleAndAuthorToDiar : Migration
     {
@@ -21,7 +25,7 @@ namespace ccDiaryApi.Migrations
                 type: "nvarchar(50)",
                 maxLength: 50,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: string.Empty);
 
             migrationBuilder.AddColumn<string>(
                 name: "Title",
@@ -29,7 +33,7 @@ namespace ccDiaryApi.Migrations
                 type: "nvarchar(50)",
                 maxLength: 50,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: string.Empty);
 
             migrationBuilder.CreateTable(
                 name: "DiaryEntry",
@@ -39,7 +43,7 @@ namespace ccDiaryApi.Migrations
                     Date = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Entry = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DiaryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    DiaryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -66,7 +70,7 @@ namespace ccDiaryApi.Migrations
                 table: "Diary",
                 type: "nvarchar(max)",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: string.Empty);
         }
     }
 }

@@ -1,8 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿// <copyright file="DiaryDTO.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApi.Data.Model
 {
+    using System.ComponentModel.DataAnnotations;
+    using System.ComponentModel.DataAnnotations.Schema;
+
     [Table("Diary")]
     public class DiaryDTO
     {
@@ -12,12 +16,12 @@ namespace ccDiaryApi.Data.Model
         [Required]
         [MaxLength(50, ErrorMessage = "Length must not exceed 50 characters")]
         [MinLength(5, ErrorMessage = "Length must be at least 5 characters")]
-        public required string Title { get; set; }
+        required public string Title { get; set; }
 
         [Required]
         [MaxLength(50, ErrorMessage = "Length must not exceed 50 characters")]
-        public required string Author { get; set; }
+        required public string Author { get; set; }
 
-        public string? Description { get; set; } 
+        public string? Description { get; set; }
     }
 }

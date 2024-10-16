@@ -1,4 +1,8 @@
-﻿namespace ccDiaryApi.Controllers.v1
+﻿// <copyright file="DiaryArchiveController.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
+namespace ccDiaryApi.Controllers.v1
 {
     using Asp.Versioning;
     using ccDiaryApi.Data.Model;
@@ -26,6 +30,11 @@
         public ActionResult<DiaryExportDTO> Export(Guid diaryId)
         {
             var diary = _diaryService.Get(diaryId);
+            if (diary == null)
+            {
+                return NotFound();
+            }
+
             var diaryEntries = _diaryEntryService.GetDiaryEntries(diaryId);
             DiaryExportDTO export = new DiaryExportDTO() { Diary = diary, DiaryEntries = diaryEntries };
             return Ok(export);

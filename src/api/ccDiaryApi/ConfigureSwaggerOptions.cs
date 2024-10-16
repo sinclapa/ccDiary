@@ -1,4 +1,8 @@
-﻿namespace ccDiaryApi
+﻿// <copyright file="ConfigureSwaggerOptions.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
+namespace ccDiaryApi
 {
     using System.Reflection;
     using Asp.Versioning.ApiExplorer;

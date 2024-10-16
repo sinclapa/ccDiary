@@ -17,6 +17,7 @@ namespace ccDiaryApi.Controllers.v1
     public class DiaryController : ControllerBase
     {
         private readonly IDiaryService _diaryService;
+
         public DiaryController(IDiaryService diaryService)
         {
             _diaryService = diaryService;

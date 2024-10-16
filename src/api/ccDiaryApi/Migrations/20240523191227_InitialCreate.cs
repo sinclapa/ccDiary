@@ -1,4 +1,8 @@
-﻿namespace ccDiaryApi.Migrations
+﻿// <copyright file="20240523191227_InitialCreate.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
+namespace ccDiaryApi.Migrations
 {
     using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -14,7 +18,7 @@
                 {
                     DiaryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                 },
                 constraints: table =>
                 {

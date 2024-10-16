@@ -1,4 +1,8 @@
-﻿namespace ccDiaryApi.Services
+﻿// <copyright file="DiaryEntryService.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
+namespace ccDiaryApi.Services
 {
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
@@ -15,7 +19,10 @@
         public DiaryEntryDTO CreateDiaryEntry(DiaryEntryDTO diaryEntry)
         {
             if (diaryEntry.Date == DateTime.MinValue)
+            {
                 throw new ApplicationException($"Date has to be not null and greater than {DateTime.MinValue}.");
+            }
+
             _context.Add(diaryEntry);
             _context.SaveChanges();
             return diaryEntry;
@@ -94,7 +101,10 @@
         public DiaryEntryDTO UpdateDiaryEntry(DiaryEntryDTO diaryEntry)
         {
             if (diaryEntry.Date == DateTime.MinValue)
+            {
                 throw new ApplicationException($"Date has to be not null and greater than {DateTime.MinValue}.");
+            }
+
             _context.Update(diaryEntry);
             _context.SaveChanges();
             return diaryEntry;
@@ -106,6 +116,7 @@
             {
                 return DateTime.UtcNow;
             }
+
             return _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
                 .Min(x => x.Date);

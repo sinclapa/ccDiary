@@ -81,7 +81,6 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(diaryEntry);
         }
 
-
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
@@ -104,13 +103,13 @@ namespace ccDiaryApi.Controllers.v1
             var retDiaryEntry = _diaryEntryService.UpdateDiaryEntry(diaryEntry);
             return Ok(retDiaryEntry);
         }
-        
+
         [Route("{diaryEntryId:guid}")]
         [HttpDelete]
         public ActionResult Delete(Guid diaryEntryId)
         {
             var diaryEntry = _diaryEntryService.GetDiaryEntry(diaryEntryId);
-            if (diaryEntry == null) 
+            if (diaryEntry == null)
             {
                 return NotFound();
             }

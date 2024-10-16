@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿// <copyright file="20240527210247_AddDiaryAndMadeLocationAndEntryRequiredToDiaryEntry.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 #nullable disable
 
 namespace ccDiaryApi.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class AddDiaryAndMadeLocationAndEntryRequiredToDiaryEntry : Migration
     {
@@ -15,7 +19,7 @@ namespace ccDiaryApi.Migrations
                 table: "DiaryEntry",
                 type: "nvarchar(max)",
                 nullable: false,
-                defaultValue: "",
+                defaultValue: string.Empty,
                 oldClrType: typeof(string),
                 oldType: "nvarchar(max)",
                 oldNullable: true);
@@ -25,7 +29,7 @@ namespace ccDiaryApi.Migrations
                 table: "DiaryEntry",
                 type: "nvarchar(max)",
                 nullable: false,
-                defaultValue: "",
+                defaultValue: string.Empty,
                 oldClrType: typeof(string),
                 oldType: "nvarchar(max)",
                 oldNullable: true);

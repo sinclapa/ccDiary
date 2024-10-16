@@ -1,6 +1,5 @@
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
-import { request } from 'http'
 
 export default class DiaryEntryAPIService {
   async createDiaryEntry (diaryEntry: DiaryEntry) : Promise<DiaryEntry | null> {
@@ -42,7 +41,7 @@ export default class DiaryEntryAPIService {
     const request = {
       headers: {
         'x-utc-offset': `${utcOffsetMinutes}`,
-      }
+      },
     }
     await fetch(api, request)
       .then(response => response.json())

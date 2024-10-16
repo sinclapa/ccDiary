@@ -34,7 +34,7 @@ namespace ccDiaryApi
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.SecurityScheme,
-                            Id = "oauth2"
+                            Id = "oauth2",
                         },
                     }, new List<string>()
                 },

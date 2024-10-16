@@ -1,7 +1,11 @@
-﻿using ccDiaryApi.Data.Model;
+﻿// <copyright file="IDiaryEntryService.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApi.Services
 {
+    using ccDiaryApi.Data.Model;
+
     public interface IDiaryEntryService
     {
         List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime to, SearchType searchType);

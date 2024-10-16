@@ -1,3 +1,7 @@
+// <copyright file="Program.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
 using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
@@ -82,7 +86,6 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
     builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
 }));
 
-
 var app = builder.Build();
 
 app.MigrateDatabase();
@@ -104,5 +107,11 @@ app.MapAllActuators();
 app.Run();
 
 #pragma warning disable S1118 // Utility classes should not have public constructors
-public partial class Program { }
+
+/// <summary>
+/// /// Create partial class to aid unit testing.
+/// </summary>
+public partial class Program
+{
+}
 #pragma warning restore S1118 // Utility classes should not have public constructors

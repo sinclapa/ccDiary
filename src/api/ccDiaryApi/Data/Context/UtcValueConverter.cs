@@ -1,4 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+﻿// <copyright file="UtcValueConverter.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 public class UtcValueConverter : ValueConverter<DateTime, DateTime>
 {

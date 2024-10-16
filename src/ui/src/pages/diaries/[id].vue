@@ -58,7 +58,7 @@
               <div
                 :class="`pt-1 headline font-weight-bold text-${'red'}`"
                 v-text="dayjs(diaryEntry.date).format('ddd HH:mm:ss')"
-              ></div>
+              />
             </template>
             <div>
               <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">

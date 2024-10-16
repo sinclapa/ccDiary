@@ -1,9 +1,12 @@
-﻿using ccDiaryApi.Data.Context;
-using ccDiaryApi.Data.Model;
-using Microsoft.EntityFrameworkCore;
+﻿// <copyright file="DiaryService.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApi.Services
 {
+    using ccDiaryApi.Data.Context;
+    using ccDiaryApi.Data.Model;
+
     public class DiaryService : IDiaryService
     {
         private readonly DiaryDatabaseContext _context;

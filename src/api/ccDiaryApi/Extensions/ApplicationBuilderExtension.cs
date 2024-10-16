@@ -1,8 +1,12 @@
-﻿namespace ccDiaryApi.Extensions
+﻿// <copyright file="ApplicationBuilderExtension.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
+namespace ccDiaryApi.Extensions
 {
     using Asp.Versioning.ApiExplorer;
 
-    public static class ApplicationBuilderExtensions
+    public static class ApplicationBuilderExtension
     {
         public static IApplicationBuilder AddSwaggerUI(this IApplicationBuilder applicationBuilder, IConfigurationRoot configuration)
             => applicationBuilder.UseSwaggerUI(options =>

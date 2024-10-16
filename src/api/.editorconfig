@@ -1,7 +1,13 @@
 ﻿[*.cs]
 
 # SA1101: Prefix local calls with this
-dotnet_diagnostic.SA1101.severity = suggestion
+dotnet_diagnostic.SA1101.severity = silent
 
 # SA1600: Elements should be documented
 dotnet_diagnostic.SA1600.severity = silent
+
+# SA1300: Element should begin with upper-case letter
+dotnet_diagnostic.SA1300.severity = silent
+
+# SA1309: Field names should not begin with underscore
+dotnet_diagnostic.SA1309.severity = silent

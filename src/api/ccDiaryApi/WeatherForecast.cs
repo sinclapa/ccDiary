@@ -1,3 +1,7 @@
+// <copyright file="WeatherForecast.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
+
 namespace ccDiaryApi
 {
     public class WeatherForecast
