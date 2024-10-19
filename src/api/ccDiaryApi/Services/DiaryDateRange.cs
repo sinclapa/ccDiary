@@ -6,8 +6,8 @@ namespace ccDiaryApi.Services
 {
     public class DiaryDateRange
     {
-        public DateTime minDateTime { get; set; }
+        public DateTime MinDateTime { get; set; }
 
-        public DateTime maxDateTime { get; set; }
+        public DateTime MaxDateTime { get; set; }
     }
 }

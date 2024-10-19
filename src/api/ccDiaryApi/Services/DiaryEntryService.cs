@@ -48,7 +48,7 @@ namespace ccDiaryApi.Services
                 .Select(d => d.Date).AsEnumerable()
                 .FirstOrDefault(DateTime.MinValue);
 
-            return new DiaryDateRange { maxDateTime = maxDate, minDateTime = minDate };
+            return new DiaryDateRange { MaxDateTime = maxDate, MinDateTime = minDate };
         }
 
         public List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime to, SearchType searchType)
@@ -112,7 +112,7 @@ namespace ccDiaryApi.Services
 
         public DateTime MinDiaryEntryDate(Guid diaryId)
         {
-            if (_context.DiaryEntries.Count(x => x.DiaryId == diaryId) == 0)
+            if (!_context.DiaryEntries.Any(x => x.DiaryId == diaryId))
             {
                 return DateTime.UtcNow;
             }
@@ -124,7 +124,7 @@ namespace ccDiaryApi.Services
 
         public DateTime MaxDiaryEntryDate(Guid diaryId)
         {
-            if (_context.DiaryEntries.Count(x => x.DiaryId == diaryId) == 0)
+            if (!_context.DiaryEntries.Any(x => x.DiaryId == diaryId))
             {
                 return DateTime.UtcNow;
             }

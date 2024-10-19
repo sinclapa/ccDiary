@@ -1,14 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Json;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using ccDiaryApi.Data.Model;
+﻿// <copyright file="DiaryEntryIntegrationTest.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApiTest.Integration
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http.Json;
+    using System.Threading.Tasks;
+    using ccDiaryApi.Data.Model;
+
     [TestClass]
     public class DiaryEntryIntegrationTest
     {
@@ -25,7 +28,7 @@ namespace ccDiaryApiTest.Integration
             var diary = new DiaryDTO
             {
                 Author = $"Author{DateTime.UtcNow.Ticks}",
-                Title = $"Title{DateTime.UtcNow.Ticks}"
+                Title = $"Title{DateTime.UtcNow.Ticks}",
             };
 
             var response = await _httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
@@ -52,7 +55,7 @@ namespace ccDiaryApiTest.Integration
                 Date = date,
                 DiaryId = diaryId,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
-                Entry = $"Notes{DateTime.UtcNow.Ticks}"
+                Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
             return await CreateDiaryEntry(diaryEntry);
         }
@@ -61,7 +64,6 @@ namespace ccDiaryApiTest.Integration
         {
             return await CreateDiaryEntry(diaryId, DateTime.UtcNow);
         }
-
 
         [TestMethod]
         public async Task Get()
@@ -117,7 +119,7 @@ namespace ccDiaryApiTest.Integration
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
                 DiaryId = diary.DiaryId,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
-                Entry = $"Notes{DateTime.UtcNow.Ticks}"
+                Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
 
@@ -141,7 +143,7 @@ namespace ccDiaryApiTest.Integration
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
                 DiaryId = Guid.NewGuid(),
                 Location = $"Location{DateTime.UtcNow.Ticks}",
-                Entry = $"Notes{DateTime.UtcNow.Ticks}"
+                Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
 
@@ -160,7 +162,7 @@ namespace ccDiaryApiTest.Integration
             {
                 DiaryId = diary.DiaryId,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
-                Entry = $"Notes{DateTime.UtcNow.Ticks}"
+                Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
 
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
@@ -180,7 +182,7 @@ namespace ccDiaryApiTest.Integration
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
                 DiaryId = diary.DiaryId,
-                Entry = $"Notes{DateTime.UtcNow.Ticks}"
+                Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
 
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
@@ -200,7 +202,7 @@ namespace ccDiaryApiTest.Integration
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
                 DiaryId = diary.DiaryId,
-                Location = $"Location{DateTime.UtcNow.Ticks}"
+                Location = $"Location{DateTime.UtcNow.Ticks}",
             };
 
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
@@ -354,7 +356,7 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            var result22 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 16, 22, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 16, 22, 0, 0, DateTimeKind.Utc));
             var result23 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 16, 23, 0, 0, DateTimeKind.Utc));
 
             // Act
@@ -392,7 +394,7 @@ namespace ccDiaryApiTest.Integration
                 Date = new DateTime(2021, 5, 16, 13, 0, 0),
                 DiaryId = diary.DiaryId,
                 Location = $"UpdatedLocation{DateTime.UtcNow.Ticks}",
-                Entry = $"UpdatedNotes{DateTime.UtcNow.Ticks}"
+                Entry = $"UpdatedNotes{DateTime.UtcNow.Ticks}",
             };
             var response = await _httpClient.PutAsJsonAsync("/api/v1/DiaryEntry/Update", updateDiaryEntry);
 

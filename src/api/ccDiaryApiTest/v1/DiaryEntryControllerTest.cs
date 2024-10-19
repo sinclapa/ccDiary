@@ -1,23 +1,24 @@
-﻿using ccDiaryApi.Controllers.v1;
-using ccDiaryApi.Data.Model;
-using ccDiaryApi.Services;
-using Microsoft.AspNetCore.Mvc;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// <copyright file="DiaryEntryControllerTest.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApiTest.v1
 {
+    using System;
+    using System.Collections.Generic;
+    using ccDiaryApi.Controllers.v1;
+    using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Services;
+    using Microsoft.AspNetCore.Mvc;
+    using Moq;
+
     [TestClass]
     public class DiaryEntryControllerTest
     {
         [TestMethod]
         public void GetValid()
         {
-            // Arrange      
+            // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
 
             Guid id = Guid.NewGuid();
@@ -61,10 +62,16 @@ namespace ccDiaryApiTest.v1
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
             diaryEntryServiceMock.Setup(h => h.GetDiaryDateRange(It.IsAny<Guid>()))
-                .Returns(new DiaryDateRange { maxDateTime = DateTime.MaxValue, minDateTime = DateTime.MinValue});
+                .Returns(new DiaryDateRange { MaxDateTime = DateTime.MaxValue, MinDateTime = DateTime.MinValue });
             diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>()))
-                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) => { diaryId = d; from = f; to = t; searchType = s; })
-                .Returns(new List<int> { 2022, 2023});
+                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) =>
+                {
+                    diaryId = d;
+                    from = f;
+                    to = t;
+                    searchType = s;
+                })
+                .Returns([2022, 2023]);
 
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
 
@@ -93,8 +100,14 @@ namespace ccDiaryApiTest.v1
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
             diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>()))
-                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) => { diaryId = d; from = f; to = t; searchType = s; })
-                .Returns(new List<int> { 04, 05, 08 });
+                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) =>
+                {
+                    diaryId = d;
+                    from = f;
+                    to = t;
+                    searchType = s;
+                })
+                .Returns([04, 05, 08]);
 
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
 
@@ -123,8 +136,14 @@ namespace ccDiaryApiTest.v1
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
             diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>()))
-                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) => { diaryId = d; from = f; to = t; searchType = s; })
-                .Returns(new List<int> { 7, 13, 23, 30 });
+                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) =>
+                {
+                    diaryId = d;
+                    from = f;
+                    to = t;
+                    searchType = s;
+                })
+                .Returns([7, 13, 23, 30]);
 
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
 
@@ -151,12 +170,22 @@ namespace ccDiaryApiTest.v1
             Guid diaryId = Guid.Empty;
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
-            var diaryEntry = new DiaryEntryDTO { Date = new DateTime(2022, 5, 23, 14, 25, 7, DateTimeKind.Utc), 
-                DiaryId = Guid.NewGuid(), DiaryEntryId = Guid.NewGuid(), 
-                Entry = "Test entry", Location = "Test location" };
+            var diaryEntry = new DiaryEntryDTO
+            {
+                Date = new DateTime(2022, 5, 23, 14, 25, 7, DateTimeKind.Utc),
+                DiaryId = Guid.NewGuid(),
+                DiaryEntryId = Guid.NewGuid(),
+                Entry = "Test entry",
+                Location = "Test location",
+            };
             diaryEntryServiceMock.Setup(h => h.GetDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-                .Callback<Guid, DateTime, DateTime>((d, f, t) => { diaryId = d; from = f; to = t; })
-                .Returns(new List<DiaryEntryDTO>() { diaryEntry });
+                .Callback<Guid, DateTime, DateTime>((d, f, t) =>
+                {
+                    diaryId = d;
+                    from = f;
+                    to = t;
+                })
+                .Returns([diaryEntry]);
 
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
 

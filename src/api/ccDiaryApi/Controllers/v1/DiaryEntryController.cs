@@ -30,7 +30,7 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<List<int>> Search(Guid diaryId)
         {
             var range = _diaryEntryService.GetDiaryDateRange(diaryId);
-            var years = _diaryEntryService.SearchDiaryEntries(diaryId, range.minDateTime, range.maxDateTime, SearchType.Year);
+            var years = _diaryEntryService.SearchDiaryEntries(diaryId, range.MinDateTime, range.MaxDateTime, SearchType.Year);
             return Ok(years);
         }
 

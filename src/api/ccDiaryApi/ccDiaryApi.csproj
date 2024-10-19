@@ -11,8 +11,7 @@
     <FileVersion>1.0.0</FileVersion>
     <Description>Cooking Code Diary App</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <DocumentationFile></DocumentationFile>
-    
+ 
     <!--
     CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
     -->    
@@ -24,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="stylecop.json" />
+    <AdditionalFiles Include="..\stylecop.json" />
   </ItemGroup>
 
   <ItemGroup>

@@ -36,7 +36,7 @@ namespace ccDiaryApi.Controllers.v1
             }
 
             var diaryEntries = _diaryEntryService.GetDiaryEntries(diaryId);
-            DiaryExportDTO export = new DiaryExportDTO() { Diary = diary, DiaryEntries = diaryEntries };
+            DiaryExportDTO export = new () { Diary = diary, DiaryEntries = diaryEntries };
             return Ok(export);
         }
     }

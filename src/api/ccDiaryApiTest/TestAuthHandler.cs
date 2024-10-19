@@ -1,21 +1,17 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading.Tasks;
+﻿// <copyright file="TestAuthHandler.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApiTest
 {
-    public class TestAuthHandlerOptions : AuthenticationSchemeOptions
-    {
-        public string DefaultUserId { get; set; } = null!;
-    }
+    using System.Collections.Generic;
+    using System.Security.Claims;
+    using System.Text.Encodings.Web;
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authentication;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
+    using Microsoft.Extensions.Primitives;
 
     public class TestAuthHandler : AuthenticationHandler<TestAuthHandlerOptions>
     {
@@ -27,14 +23,15 @@ namespace ccDiaryApiTest
         public TestAuthHandler(
             IOptionsMonitor<TestAuthHandlerOptions> options,
             ILoggerFactory logger,
-            UrlEncoder encoder) : base(options, logger, encoder)
+            UrlEncoder encoder)
+            : base(options, logger, encoder)
         {
             _defaultUserId = options.CurrentValue.DefaultUserId;
         }
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var claims = new List<Claim> { new Claim(ClaimTypes.Name, "Test user") };
+            var claims = new List<Claim> { new (ClaimTypes.Name, "Test user") };
 
             // Extract User ID from the request headers if it exists,
             // otherwise use the default User ID from the options.

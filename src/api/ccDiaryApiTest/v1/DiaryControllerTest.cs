@@ -1,25 +1,29 @@
-﻿using ccDiaryApi.Controllers.v1;
-using ccDiaryApi.Data.Context;
-using ccDiaryApi.Data.Model;
-using ccDiaryApi.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// <copyright file="DiaryControllerTest.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApiTest.v1
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using ccDiaryApi.Controllers.v1;
+    using ccDiaryApi.Data.Context;
+    using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Services;
+    using Microsoft.AspNetCore.Http.HttpResults;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.EntityFrameworkCore;
+
     [TestClass]
     public class DiaryControllerTest
     {
         public DiaryDatabaseContext GetMemoryContext()
         {
             var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
-                .UseInMemoryDatabase(databaseName: "InMemoryDatabase")                
+                .UseInMemoryDatabase(databaseName: "InMemoryDatabase")
                 .EnableSensitiveDataLogging()
                 .Options;
             return new DiaryDatabaseContext(options);
@@ -30,7 +34,9 @@ namespace ccDiaryApiTest.v1
         {
             var db = GetMemoryContext();
             if (db.Database.IsInMemory())
+            {
                 db.Database.EnsureDeleted();
+            }
         }
 
         [TestMethod]
@@ -157,12 +163,12 @@ namespace ccDiaryApiTest.v1
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
             var controller = new DiaryController(diaryService);
-            
+
             // Act
             var response = controller.Delete(Guid.NewGuid());
 
             // Assert
-            Assert.IsInstanceOfType(response, typeof(NotFoundResult));            
+            Assert.IsInstanceOfType(response, typeof(NotFoundResult));
         }
 
         [TestMethod]

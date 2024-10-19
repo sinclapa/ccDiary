@@ -24,8 +24,6 @@ namespace ccDiaryApi
             operation.Responses.Add("401", new OpenApiResponse { Description = "Unauthorized" });
             operation.Responses.Add("403", new OpenApiResponse { Description = "Forbidden" });
 
-            operation.Security = new List<OpenApiSecurityRequirement>();
-
             var security = new OpenApiSecurityRequirement
             {
                 {

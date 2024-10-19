@@ -1,31 +1,27 @@
-﻿using Microsoft.VisualStudio.TestPlatform.TestHost;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Json;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using ccDiaryApi.Data.Model;
+﻿// <copyright file="DiaryIntegrationTest.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApiTest.Integration
 {
+    using System.Net;
+    using System.Net.Http.Json;
+    using ccDiaryApi.Data.Model;
+
     [TestClass]
     public class DiaryIntegrationTest
     {
-        //private static HttpClient _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
-
-        public async Task<DiaryDTO> CreateDiary(HttpClient httpClient)
+        public static async Task<DiaryDTO> CreateDiary(HttpClient httpClient)
         {
-            DiaryDTO diary = new DiaryDTO()
+            DiaryDTO diary = new ()
             {
                 Author = $"Author{DateTime.UtcNow.Ticks}",
-                Title = $"Title{DateTime.UtcNow.Ticks}"
+                Title = $"Title{DateTime.UtcNow.Ticks}",
             };
             return await CreateDiary(httpClient, diary);
         }
 
-        public async Task<DiaryDTO> CreateDiary(HttpClient httpClient, DiaryDTO diary)
+        public static async Task<DiaryDTO> CreateDiary(HttpClient httpClient, DiaryDTO diary)
         {
             var diaryResponse = await httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
             var diaryResult = await diaryResponse.Content.ReadFromJsonAsync<DiaryDTO>();
@@ -97,10 +93,10 @@ namespace ccDiaryApiTest.Integration
             var webAppFactory = new CustomWebApplicationFactory<Program>();
             var httpClient = webAppFactory.CreateDefaultClient();
 
-            DiaryDTO diary = new DiaryDTO
+            DiaryDTO diary = new ()
             {
                 Author = "ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ",
-                Title = "12345678901234567890123456789012345678901234567890"
+                Title = "12345678901234567890123456789012345678901234567890",
             };
 
             // Act
@@ -136,10 +132,10 @@ namespace ccDiaryApiTest.Integration
             var webAppFactory = new CustomWebApplicationFactory<Program>();
             var httpClient = webAppFactory.CreateDefaultClient();
 
-            DiaryDTO diary = new DiaryDTO
+            DiaryDTO diary = new ()
             {
                 Author = "Paul",
-                Title = "1234"
+                Title = "1234",
             };
 
             // Act
@@ -156,10 +152,10 @@ namespace ccDiaryApiTest.Integration
             var webAppFactory = new CustomWebApplicationFactory<Program>();
             var httpClient = webAppFactory.CreateDefaultClient();
 
-            DiaryDTO diary = new DiaryDTO
+            DiaryDTO diary = new ()
             {
                 Author = "Paul",
-                Title = "123456789012345678901234567890123456789012345678901"
+                Title = "123456789012345678901234567890123456789012345678901",
             };
 
             // Act
@@ -176,10 +172,10 @@ namespace ccDiaryApiTest.Integration
             var webAppFactory = new CustomWebApplicationFactory<Program>();
             var httpClient = webAppFactory.CreateDefaultClient();
 
-            DiaryDTO diary = new DiaryDTO
+            DiaryDTO diary = new ()
             {
                 Author = "123456789012345678901234567890123456789012345678901",
-                Title = "Title"
+                Title = "Title",
             };
 
             // Act
