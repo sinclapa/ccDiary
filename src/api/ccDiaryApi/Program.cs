@@ -66,19 +66,27 @@ builder.Services.AddApiVersioning(options =>
 
 // Add services to the container.
 builder.Services.AddScoped<IDiaryService, DiaryService>();
+
 builder.Services.AddScoped<IDiaryEntryService, DiaryEntryService>();
+
 builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
+
 builder.Services.AddControllers();
 
 // Add Steeltoe actuators
 builder.Services.AddHealthActuator();
+
 builder.Services.AddInfoActuator();
+
 builder.Services.AddMetricsActuator();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen();
+
 builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+
 builder.Services.Add(new ServiceDescriptor(typeof(IWebHostEnvironment), builder.Environment));
 
 builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
@@ -99,19 +107,18 @@ app.UseHttpsRedirection();
 app.UseCors("cors");
 
 app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();
+
 app.MapAllActuators();
 
 app.Run();
 
-#pragma warning disable S1118 // Utility classes should not have public constructors
-
 /// <summary>
-/// /// Create partial class to aid unit testing.
+/// Create partial class to aid unit testing.
 /// </summary>
 public partial class Program
 {
 }
-#pragma warning restore S1118 // Utility classes should not have public constructors

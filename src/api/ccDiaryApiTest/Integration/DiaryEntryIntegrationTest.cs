@@ -20,7 +20,7 @@ namespace ccDiaryApiTest.Integration
             _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
         }
 
-        public async Task<DiaryDTO> CreateDiary(HttpClient httpClient = null)
+        public async Task<DiaryDTO> CreateDiary()
         {
             var diary = new DiaryDTO
             {

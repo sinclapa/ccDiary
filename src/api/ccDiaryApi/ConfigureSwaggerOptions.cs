@@ -44,8 +44,12 @@ namespace ccDiaryApi
             }
 
             options.OperationFilter<AuthorizeCheckOperationFilter>();
-            var scopes = new Dictionary<string, string>();
-            scopes.Add($"{_configuration["Entra:ApplicationIdUri"]}/Diary.Update", "Diary.Update");
+            var scopes = new Dictionary<string, string>
+            {
+                {
+                    $"{_configuration["Entra:ApplicationIdUri"]}/Diary.Update", "Diary.Update"
+                },
+            };
             options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.OAuth2,
