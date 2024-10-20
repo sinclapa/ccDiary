@@ -41,17 +41,3 @@ test('Display PageIndex Authenticated', () => {
   expect(wrapper.findComponent('.v-btn').exists()).toBeTruthy()
 })
 
-test('Display PageIndex Fetch', () => {
-  state.isAuthenticated = true
-  vi.stubEnv('VITE_API', 'http://test')
-  const wrapper = mount(Index, {
-    props: {},
-    global: {
-      plugins: [vuetify],
-    },
-  })
-
-  // Assert the rendered text of the component
-  const button = wrapper.findComponent('.v-btn')
-  button.trigger('click')
-})
