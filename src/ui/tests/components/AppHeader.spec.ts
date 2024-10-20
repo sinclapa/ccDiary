@@ -59,4 +59,22 @@ describe('AppHeader', () => {
     expect(logoutButton.length).equals(1)
     logoutButton[0].trigger('click')
   })
+
+  test('ShowDrawer', async () => {
+
+    const wrapper = mount({
+      template: '<v-layout><app-header></app-header></v-layout>',
+    }, {
+      props: {},
+      global: {
+        components: {
+          AppHeader,
+        },
+        plugins: [vuetify],
+      },
+    })
+
+    const drawerButton = wrapper.findComponent('.v-app-bar-nav-icon')
+    drawerButton.trigger('click')
+  })
 })
