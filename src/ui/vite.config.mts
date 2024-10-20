@@ -82,8 +82,8 @@ export default defineConfig({
       },
     },
     coverage: {
-      reporter: ['cobertura', 'text'],
-      provider: 'istanbul',
+      reporter: ['cobertura', 'text', 'html'],
+      provider: 'v8',
     },
   },
 })

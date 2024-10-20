@@ -87,18 +87,13 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-11-02-preview' = {
+resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: 'env-${name}-${environment}'
   location: location
   properties: {
     zoneRedundant: false
     appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalytics.properties.customerId
-        sharedKey: 'null'
-        dynamicJsonColumns: false
-      }
+      destination: 'azure-monitor'
     }    
     workloadProfiles: [
       {
