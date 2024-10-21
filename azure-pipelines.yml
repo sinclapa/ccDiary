@@ -10,10 +10,6 @@ trigger:
     - main
     - feature/*
 
-    
-pool:
-  vmImage: 'ubuntu-latest'
-
 variables:
   dockerImageName: 'ccdiaryapi'
   buildConfiguration: 'Release'
@@ -23,6 +19,11 @@ variables:
 
 stages:
 - stage: Build
+  displayName: 'Build web application'
+  pool:
+    vmImage: 'ubuntu-latest'
+    demands:
+    - npm
   jobs:
   - job: Build_UI
     variables:
@@ -185,61 +186,66 @@ stages:
       artifact: api-docker-image
 
 - stage: Deploy
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  displayName: 'Deploy the web application'
+  dependsOn: Build
+  #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   jobs:
-  - job: Deploy_UI_API
-    steps:
+  - deployment: Deploy
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: Production
+    strategy:
+      runOnce:
+        deploy:          
+          steps:
+          - download: current
+            displayName: Extract UI Artifcats
+            artifact: ui-package
 
-    - checkout: none
+          - download: current
+            displayName: Extract API Artifcats
+            artifact: api-docker-image
 
-    - download: current
-      displayName: Extract UI Artifcats
-      artifact: ui-package
+          - task: ExtractFiles@1
+            displayName: Extract UI
+            inputs:
+              archiveFilePatterns: $(Pipeline.Workspace)/ui-package/uiPackage.zip
+              destinationFolder: ui-extracted
 
-    - download: current
-      displayName: Extract API Artifcats
-      artifact: api-docker-image
+          - task: AzureStaticWebApp@0
+            displayName: Publish UI to Azure Static Web App
+            inputs:
+              app_location: ui-extracted
+              skip_app_build: true
+              skip_api_build: true    
+              azure_static_web_apps_api_token: $(siteDeploymentToken)
 
-    - task: ExtractFiles@1
-      displayName: Extract UI
-      inputs:
-        archiveFilePatterns: $(Pipeline.Workspace)/ui-package/uiPackage.zip
-        destinationFolder: ui-extracted
+          - task: PowerShell@2 
+            displayName: 'Load API Docker Image'
+            inputs:
+              targetType: inline
+              script: |
+                docker load --input $(Pipeline.Workspace)/api-docker-image/$(dockerImageName).tar
+                docker tag $(containerRegistryLoginServer)/$(dockerImageName):$(tag) $(containerRegistryLoginServer)/$(dockerImageName):latest
 
-    - task: AzureStaticWebApp@0
-      displayName: Publish UI to Azure Static Web App
-      inputs:
-        app_location: ui-extracted
-        skip_app_build: true
-        skip_api_build: true    
-        azure_static_web_apps_api_token: $(siteDeploymentToken)
+          - task: Docker@2
+            displayName: 'Push API Docker Image to Azure Container Registry'
+            inputs:    
+              command: Push
+              repository: '$(dockerImageName)'
+              Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
+              buildContext: 'src/api'
+              containerRegistry: $(containerRegistry)
+              addPipelineData: true
+              addBaseImageData: true
+              tags: '$(tag),latest'
 
-    - task: PowerShell@2 
-      displayName: 'Load API Docker Image'
-      inputs:
-        targetType: inline
-        script: |
-          docker load --input $(Pipeline.Workspace)/api-docker-image/$(dockerImageName).tar
-          docker tag $(containerRegistryLoginServer)/$(dockerImageName):$(tag) $(containerRegistryLoginServer)/$(dockerImageName):latest
-
-
-    - task: Docker@2
-      displayName: 'Push API Docker Image to Azure Container Registry'
-      inputs:    
-        command: Push
-        repository: '$(dockerImageName)'
-        Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
-        buildContext: 'src/api'
-        containerRegistry: $(containerRegistry)
-        addPipelineData: true
-        addBaseImageData: true
-        tags: '$(tag),latest'
-
-    - task: AzureContainerApps@1    
-      displayName: 'Deploy to Azure Container App'
-      inputs:
-        azureSubscription: 'Azure Subscription'
-        targetPort: '8080'
-        containerAppName: $(containerAppName)
-        resourceGroup: $(resourceGroup)
-        imageToDeploy: '$(containerRegistryLoginServer)/$(dockerImageName):$(tag)'
+          - task: AzureContainerApps@1    
+            displayName: 'Deploy to Azure Container App'
+            inputs:
+              azureSubscription: 'Azure Subscription'
+              targetPort: '8080'
+              containerAppName: $(containerAppName)
+              resourceGroup: $(resourceGroup)
+              imageToDeploy: '$(containerRegistryLoginServer)/$(dockerImageName):$(tag)'
