@@ -20,6 +20,8 @@ function createFetchResponse(data) {
   return { json: () => new Promise((resolve) => resolve(data)) }
 }
 
+//TODO: Mock service not fetch
+
 describe('pages/diaries/index.vue Implementation Test', () => {
   let wrapper: VueWrapper
 
@@ -82,12 +84,13 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
   afterAll(() => {
     global.fetch = realFetch
   })
-
+//TODO: Should look at https://vuetifyjs.com/en/components/dialogs/#props-attach to remove template
   beforeEach(() => {
     state.isAuthenticated = false
     vi.stubEnv('VITE_API', 'http://test')
-    wrapper = mount(Component, {
+    wrapper = mount({template: "<v-defaults-provider :defaults=\"{'VDialog':{'contained':true }}\"><tested-component/></v-defaults-provider>"}, {
       global: {
+        components: {'tested-component': Component},
         plugins: [vuetify],
       },
     })
@@ -120,7 +123,7 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     expect(deleteButton.html()).toMatch("delete")
     deleteButton.trigger('click')
     await nextTick()
-    expect(document.getElementsByClassName('v-card-title')[0].textContent).toMatch("Are you sure you want to delete this diary?")
+    expect(wrapper.find('.v-card-title').html()).toMatch("Are you sure you want to delete this diary?")
   })
 
   it('Edit diary dialog', async () => {
@@ -129,7 +132,10 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     const editButton = wrapper.findComponent('#f80a9774-ab8c-44fd-f67d-08dcc87078fb_edit')
     editButton.trigger('click')
     await nextTick()
-    expect(document.getElementsByClassName('v-card-title')[0].textContent).toMatch("Add Diary")
+    expect(wrapper.find('form').html()).toMatch("Edit Diary")
+    expect(wrapper.find('form').html()).toMatch("80 Days Around the World")
+    expect(wrapper.find('form').html()).toMatch("Jules Verne")
+    expect(wrapper.find('form').html()).toMatch("Circumnavigation around the earth")
   })
 
   it('Add diary dialog', async () => {
@@ -138,6 +144,6 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     const addButton = wrapper.findComponent('header>*>button')
     addButton.trigger('click')
     await nextTick()
-    expect(document.getElementsByClassName('v-card-title')[0].textContent).toMatch("Add Diary")
+    expect(wrapper.find('form').html()).toMatch("Add Diary")
   })
 })

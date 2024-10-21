@@ -27,6 +27,7 @@
               :author="editedItem?.author"
               :description="editedItem?.description"
               :title="editedItem?.title"
+              :addMode="editedItem?.diaryId == undefined"
               @close="close"
               @submit="onAddDiary"
             />
@@ -73,8 +74,8 @@
   const dialogDelete = ref(false)
   const dialog = ref(false)
   const diaries = ref([] as Diary[])
-  const defaultItem = ref(new Diary('', '', '') as Diary)
-  const editedItem = ref(new Diary('', '', '') as Diary)
+  const defaultItem = ref(new Diary('', '', '', undefined) as Diary)
+  const editedItem = ref<Diary>(new Diary('', '', '', undefined) as Diary)
 
   const headers = [
     { title: 'Title', value: 'title' },

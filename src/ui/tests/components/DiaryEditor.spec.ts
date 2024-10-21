@@ -18,6 +18,7 @@ describe('DiaryEditor', () => {
         title: 'Original Title',
         author: 'Original Author',
         description: 'Original Description',
+        addMode: false,
       },
       global: {
         plugins: [vuetify],
@@ -36,6 +37,7 @@ describe('DiaryEditor', () => {
         title: 'Original Title',
         author: 'Original Author',
         description: 'Original Description',
+        addMode: false,
       },
       global: {
         plugins: [vuetify],
@@ -66,6 +68,12 @@ describe('DiaryEditor', () => {
 
   test('CloseForm', async () => {
     const wrapper = mount(DiaryEditor, {
+      props: {
+        title: 'Original Title',
+        author: 'Original Author',
+        description: 'Original Description',
+        addMode: false,
+      },
       global: {
         plugins: [vuetify],
       },
@@ -78,6 +86,12 @@ describe('DiaryEditor', () => {
 
   test('ValidationFailureTitleTooShort', async () => {
     const wrapper = mount(DiaryEditor, {
+      props: {
+        title: '',
+        author: '',
+        description: '',
+        addMode: false,
+      },
       global: {
         plugins: [vuetify],
       },
@@ -95,6 +109,12 @@ describe('DiaryEditor', () => {
 
   test('ValidationFailureAuthorTooShort', async () => {
     const wrapper = mount(DiaryEditor, {
+      props: {
+        title: '',
+        author: '',
+        description: '',
+        addMode: false,
+      },
       global: {
         plugins: [vuetify],
       },

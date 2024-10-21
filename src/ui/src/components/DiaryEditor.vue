@@ -3,7 +3,7 @@
     <v-form @submit.prevent="submit">
       <v-card
         prepend-icon="mdi-book-open-variant-outline"
-        title="Add Diary"
+        :title="addMode ? 'Add Diary' : 'Edit Diary'"
       >
         <v-card-text>
           <v-text-field
@@ -60,10 +60,11 @@
 <script setup lang="ts">
   import { SubmitEventPromise } from 'vuetify'
 
-  const props = defineProps(['title', 'author', 'description'])
-  const title = ref(props.title)
-  const author = ref(props.author)
-  const description = ref(props.description)
+  const props = defineProps<{title: string, author: string, description: string, addMode: boolean}>()
+  const title = ref<string>(props.title)
+  const author = ref<string>(props.author)
+  const description = ref<string>(props.description)
+  const addMode = ref<boolean>(props.addMode)
   const emit = defineEmits({
     submit (payload: { title: string, author: string, description: string }) {
       return payload
