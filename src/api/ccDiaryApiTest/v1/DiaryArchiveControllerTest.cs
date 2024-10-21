@@ -4,18 +4,13 @@
 
 namespace ccDiaryApiTest.v1
 {
+    using System;
     using ccDiaryApi.Controllers.v1;
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
-    using Microsoft.AspNetCore.Http.HttpResults;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
 
     [TestClass]
     public class DiaryArchiveControllerTest
