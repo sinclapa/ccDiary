@@ -53,12 +53,6 @@ stages:
       displayName: "NPM Install"
       workingDirectory: 'src/ui'
 
-    #- task: Npm@1
-    #  displayName: "NPM Install"
-    #  inputs:    
-    #    command: 'install'
-    #    workingDir: 'src/ui'
-
     - task: Npm@1
       displayName: "NPM Build"
       inputs:    
@@ -142,6 +136,18 @@ stages:
         jsonTargetFiles: 'appsettings.json'
         xmlTransformationRules: '' # disabled
 
+    - task: Cache@2
+      displayName: Cache task
+      inputs:
+        key: 'docker | "$(Agent.OS)" | src/api/ccDiaryApi/Dockerfile'
+        path: $(Pipeline.Workspace)/docker
+        cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
+        
+    - script: |
+        docker load -i $(Pipeline.Workspace)/docker/cache.tar
+      displayName: Docker restore
+      condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
+    
     - task: Docker@2
       displayName: 'Build API Docker Image'
       inputs:    
@@ -153,6 +159,12 @@ stages:
         addPipelineData: true
         addBaseImageData: true
         tags: '$(tag)'
+
+    - script: |
+        mkdir -p $(Pipeline.Workspace)/docker
+        docker save -o $(Pipeline.Workspace)/docker/cache.tar $(repository):$(tag)
+      displayName: Docker save
+      condition: and(not(canceled()), not(failed()), ne(variables.CACHE_RESTORED, 'true'))
 
     - task: Docker@2
       displayName: 'Test API Docker Image'
@@ -201,7 +213,6 @@ stages:
 - stage: Deploy
   displayName: 'Deploy the web application'
   dependsOn: Build
-  #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
   jobs:
   - deployment: Deploy
