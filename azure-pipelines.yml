@@ -50,12 +50,14 @@ stages:
       displayName: Cache npm
     
     - script: npm ci
-
-    - task: Npm@1
       displayName: "NPM Install"
-      inputs:    
-        command: 'install'
-        workingDir: 'src/ui'
+      workingDirectory: 'src/ui'
+
+    #- task: Npm@1
+    #  displayName: "NPM Install"
+    #  inputs:    
+    #    command: 'install'
+    #    workingDir: 'src/ui'
 
     - task: Npm@1
       displayName: "NPM Build"
