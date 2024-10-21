@@ -1,13 +1,13 @@
-import { flushPromises, mount, shallowMount, VueWrapper } from '@vue/test-utils'
-import { expect, test, vi, describe, beforeEach, afterEach, it, beforeAll, afterAll } from 'vitest'
+import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
+import { expect, vi, describe, beforeEach, afterEach, it, beforeAll, afterAll } from 'vitest'
 import { createVuetify } from 'vuetify'
 import { nextTick } from 'vue'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { state } from '../../../src/services/authentication/msalConfig'
 import Component from '../../../src/pages/diaries/index.vue'
-import { diaryAPI } from '../../../src/services/modules/diaryService'
-import Diary from '../../../src/services/models/diary'
+//import { diaryAPI } from '../../../src/services/modules/diaryService'
+//import Diary from '../../../src/services/models/diary'
 
 const vuetify = createVuetify({
   components,
@@ -16,7 +16,7 @@ const vuetify = createVuetify({
 
 global.ResizeObserver = require('resize-observer-polyfill')
 
-function createFetchResponse(data) {
+function createFetchResponse(data: any) {
   return { json: () => new Promise((resolve) => resolve(data)) }
 }
 

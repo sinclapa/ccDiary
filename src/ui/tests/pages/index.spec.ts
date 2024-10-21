@@ -1,5 +1,5 @@
-import { flushPromises, mount, shallowMount, VueWrapper } from '@vue/test-utils'
-import { expect, test, vi, describe, beforeEach, afterEach, it, beforeAll, afterAll } from 'vitest'
+import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
+import { expect, vi, describe, beforeEach, afterEach, it, beforeAll, afterAll } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -11,7 +11,7 @@ const vuetify = createVuetify({
   directives,
 })
 
-function createFetchResponse(data) {
+function createFetchResponse(data: any) {
   return { json: () => new Promise((resolve) => resolve(data)) }
 }
 

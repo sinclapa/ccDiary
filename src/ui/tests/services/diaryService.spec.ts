@@ -1,5 +1,5 @@
 import { diaryAPI } from '@/services/modules/diaryService'
-import Diary from '@/services/models/diary'
+//import Diary from '@/services/models/diary'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 function createFetchResponse(data: any) {
@@ -43,7 +43,8 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
   })
 
   it('Get Diaries', async () => {
-    const results = await diaryAPI.getDiaries()
+    ///const results =
+    await diaryAPI.getDiaries()
     expect(global.fetch).toBeCalledTimes(1)
   })
 })
