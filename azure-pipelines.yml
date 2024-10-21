@@ -30,7 +30,8 @@ stages:
       VITE_CLIENTID: '$(entraClientId)'
       VITE_TENANTID: '$(entraTenantId)'
       VITE_APPLICATIONID_URI: '$(entraApplicationIdURI)'   
-        
+      npm_config_cache: $(Pipeline.Workspace)/.npm
+
     steps:
     - task: PowerShell@2
       displayName: 'Set UI Version'
@@ -39,6 +40,16 @@ stages:
         script: |
           $NewContent = (Get-Content -Path src/ui/.env -Raw) -replace '(?<=VITE_BUILDNUMBER.*=.*")\d+(?=")', '$(Build.BuildId)'
           Set-Content -Path src/ui/.env -Value $NewContent
+
+    - task: Cache@2
+      inputs:
+        key: 'npm | "$(Agent.OS)" | package-lock.json'
+        restoreKeys: |
+          npm | "$(Agent.OS)"
+        path: $(npm_config_cache)
+      displayName: Cache npm
+    
+    - script: npm ci
 
     - task: Npm@1
       displayName: "NPM Install"
