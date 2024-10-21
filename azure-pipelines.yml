@@ -156,8 +156,6 @@ stages:
         Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
         buildContext: 'src/api'
         containerRegistry: $(containerRegistry)
-        addPipelineData: true
-        addBaseImageData: true
         tags: '$(tag)'
         arguments: '--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=$(REPOSITORY):latest'
 

@@ -15,13 +15,16 @@ COPY ["ccDiaryApi/ccDiaryApi.csproj", "ccDiaryApi/"]
 COPY ["ccDiaryApiTest/ccDiaryApiTest.csproj", "ccDiaryApiTest/"]
 RUN dotnet restore "./ccDiaryApi/ccDiaryApi.csproj"
 RUN dotnet restore "./ccDiaryApiTest/ccDiaryApiTest.csproj"
+
 # Copy full solution into image
 COPY . .
 RUN dotnet build "ccDiaryApi/ccDiaryApi.csproj" -c Release -o /app/build --no-restore
 RUN dotnet build "ccDiaryApiTest/ccDiaryApiTest.csproj" -c Release -o /app/test --no-restore
+
 # run the unit tests
 FROM build AS test
 WORKDIR /src
+
 # run the unit tests
 RUN dotnet test "ccDiaryApiTest/ccDiaryApiTest.csproj" -c Release --no-restore --logger "trx;LogFileName=testresults.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs" || exit 0
 
