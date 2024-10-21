@@ -156,12 +156,14 @@ stages:
         Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
         buildContext: 'src/api'
         containerRegistry: $(containerRegistry)
-        tags: '$(tag)'
+        tags: |
+          $(tag)
+          latest
         arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline'
 
     - script: |
         mkdir -p $(Pipeline.Workspace)/docker
-        docker save -o $(Pipeline.Workspace)/docker/cache.tar $(containerRegistryLoginServer)/$(dockerImageName):$(tag)
+        docker save -o $(Pipeline.Workspace)/docker/cache.tar $(containerRegistryLoginServer)/$(dockerImageName):latest
       displayName: Docker save
       condition: and(not(canceled()), not(failed()), ne(variables.CACHE_RESTORED, 'true'))
 
