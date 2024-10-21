@@ -22,37 +22,6 @@ function createFetchResponse(data: any) {
 
 //TODO: Mock service not fetch
 
-describe('pages/diaries/index.vue Implementation Test', () => {
-  let wrapper: VueWrapper
-
-  beforeEach(() => {
-    state.isAuthenticated = false
-    vi.stubEnv('VITE_API', 'http://test')
-    wrapper = mount(Component, {
-      global: {
-         plugins: [vuetify],
-      },
-    })
-  })
-
-  afterEach(() => {
-    state.isAuthenticated = false
-    wrapper.unmount()
-  })
-
-  it('Initialize with correct elements', () => {
-    expect(wrapper.findComponent('header').html()).toContain(`Diaries`)
-    expect(wrapper.text()).not.toContain(`Add Diary`)
-    expect(document.getElementsByClassName('v-card-title').length).toEqual(0)
-  })
-
-  it('Display Add Diary button when authenticated', async () => {
-    state.isAuthenticated = true
-    await flushPromises()
-    expect(wrapper.text()).toContain(`Add Diary`)
-  })
-})
-
 describe('pages/diaries/index.vue with successful HTTP Get', () => {
   let wrapper: VueWrapper
   const realFetch = global.fetch
@@ -99,6 +68,19 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
   afterEach(() => {
     state.isAuthenticated = false
     wrapper.unmount()
+  })
+
+
+  it('Initialize with correct elements', () => {
+    expect(wrapper.findComponent('header').html()).toContain(`Diaries`)
+    expect(wrapper.text()).not.toContain(`Add Diary`)
+    expect(document.getElementsByClassName('v-card-title').length).toEqual(0)
+  })
+
+  it('Display Add Diary button when authenticated', async () => {
+    state.isAuthenticated = true
+    await flushPromises()
+    expect(wrapper.text()).toContain(`Add Diary`)
   })
 
   it('Validate result table', async () => {
