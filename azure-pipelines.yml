@@ -164,9 +164,7 @@ stages:
     - script: |
         docker build . -f ccDiaryApi\Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
       displayName: 'Build API Docker Image'
-      workingDirectory: 'src/api/ccDiaryApi'
-      condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
-    
+      workingDirectory: 'src/api/ccDiaryApi'    
         
     - script: |
         mkdir -p $(Pipeline.Workspace)/docker
