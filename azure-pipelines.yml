@@ -137,7 +137,7 @@ stages:
     - task: Cache@2
       displayName: Cache task
       inputs:
-        key: 'docker | "$(Agent.OS)" | src/api/ccDiaryApi/Dockerfile'
+        key: 'docker | "$(Agent.OS)" | cache'
         path: $(Pipeline.Workspace)/docker
         restoreKeys: 'docker | "$(Agent.OS)"'
         cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
