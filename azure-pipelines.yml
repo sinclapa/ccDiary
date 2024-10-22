@@ -22,8 +22,6 @@ stages:
   displayName: 'Build web application'
   pool:
     vmImage: 'ubuntu-latest'
-    demands:
-    - npm
   jobs:
   - job: Build_UI
     variables:
@@ -218,7 +216,7 @@ stages:
 - stage: Deploy
   displayName: 'Deploy the web application'
   dependsOn: Build
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
   - deployment: Deploy
     pool:
@@ -256,6 +254,7 @@ stages:
               targetType: inline
               script: |
                 docker load --input $(Pipeline.Workspace)/api-docker-image/$(dockerImageName).tar
+                docker tag $(containerRegistryLoginServer)/$(dockerImageName):$(tag) $(containerRegistryLoginServer)/$(dockerImageName):latest
 
           - task: Docker@2
             displayName: 'Push API Docker Image to Azure Container Registry'
