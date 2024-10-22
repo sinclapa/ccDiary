@@ -155,7 +155,9 @@ stages:
         repository: '$(dockerImageName)'
         Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
         buildContext: 'src/api'
-        containerRegistry: $(containerRegistry)
+        containerRegistry: $(containerRegistry)        
+        addPipelineData: false
+        addBaseImageData: false
         tags: |
           $(tag)
           latest
@@ -175,9 +177,11 @@ stages:
         Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
         buildContext: 'src/api'
         containerRegistry: $(containerRegistry)
-        addPipelineData: true
-        addBaseImageData: true
-        tags: '$(tag)'
+        addPipelineData: false
+        addBaseImageData: false
+        tags: |
+          '$(tag)'
+          latest
         arguments: --target export-test-results --output type=local,dest=$(Build.ArtifactStagingDirectory)/testresults  
 
     - task: PublishTestResults@2
@@ -252,7 +256,6 @@ stages:
               targetType: inline
               script: |
                 docker load --input $(Pipeline.Workspace)/api-docker-image/$(dockerImageName).tar
-                docker tag $(containerRegistryLoginServer)/$(dockerImageName):$(tag) $(containerRegistryLoginServer)/$(dockerImageName):latest
 
           - task: Docker@2
             displayName: 'Push API Docker Image to Azure Container Registry'
@@ -264,7 +267,9 @@ stages:
               containerRegistry: $(containerRegistry)
               addPipelineData: true
               addBaseImageData: true
-              tags: '$(tag),latest'
+              tags: |
+                $(tag)
+                latest
 
           - task: AzureContainerApps@1    
             displayName: 'Deploy to Azure Container App'
