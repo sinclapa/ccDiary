@@ -180,7 +180,7 @@ stages:
         addPipelineData: false
         addBaseImageData: false
         tags: |
-          '$(tag)'
+          $(tag)
           latest
         arguments: --target export-test-results --output type=local,dest=$(Build.ArtifactStagingDirectory)/testresults  
 
