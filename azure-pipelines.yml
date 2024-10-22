@@ -146,21 +146,28 @@ stages:
       displayName: Docker restore
       condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
     
-    - task: Docker@2
+#    - task: Docker@2
+#      displayName: 'Build API Docker Image'
+#      inputs:    
+#        command: 'build'
+#        repository: '$(dockerImageName)'
+#        Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
+#        buildContext: 'src/api'
+#        containerRegistry: $(containerRegistry)        
+#        addPipelineData: false
+#        addBaseImageData: false
+#        tags: |
+#          $(tag)
+#          latest
+#        arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest cache-to type=inline'
+ 
+    - script: |
+        docker build . -f ccDiaryApi\Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
       displayName: 'Build API Docker Image'
-      inputs:    
-        command: 'build'
-        repository: '$(dockerImageName)'
-        Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
-        buildContext: 'src/api'
-        containerRegistry: $(containerRegistry)        
-        addPipelineData: false
-        addBaseImageData: false
-        tags: |
-          $(tag)
-          latest
-        arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --build-arg BUILDKIT_INLINE_CACHE=1'
-#--cache-to type=inline
+      workingDirectory: 'src/api/ccDiaryApi'
+      condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
+    
+        
     - script: |
         mkdir -p $(Pipeline.Workspace)/docker
         docker save -o $(Pipeline.Workspace)/docker/cache.tar $(containerRegistryLoginServer)/$(dockerImageName):latest
