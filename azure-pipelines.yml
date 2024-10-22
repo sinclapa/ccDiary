@@ -159,8 +159,8 @@ stages:
         tags: |
           $(tag)
           latest
-        arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline'
-
+        arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --build-arg BUILDKIT_INLINE_CACHE=1'
+#--cache-to type=inline
     - script: |
         mkdir -p $(Pipeline.Workspace)/docker
         docker save -o $(Pipeline.Workspace)/docker/cache.tar $(containerRegistryLoginServer)/$(dockerImageName):latest
