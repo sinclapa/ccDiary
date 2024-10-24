@@ -139,7 +139,6 @@ stages:
       inputs:
         key: 'docker | "$(Agent.OS)" | src/api/ccDiaryApi/Dockerfile'
         path: $(Pipeline.Workspace)/docker
-        restoreKeys: 'docker | "$(Agent.OS)"'
         cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
         
     - script: |
