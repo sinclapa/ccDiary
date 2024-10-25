@@ -163,7 +163,7 @@ stages:
 #        arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest cache-to type=inline'
  
     - script: |
-        docker build . -f ccDiaryApi/Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
+        docker build . -f ccDiaryApi/Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline,mode=max -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
       displayName: 'Build API Docker Image'
       workingDirectory: 'src/api'    
         
