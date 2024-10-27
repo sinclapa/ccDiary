@@ -47,9 +47,13 @@ stages:
         path: $(npm_config_cache)
       displayName: Cache npm
     
-    - script: npm ci
-      displayName: "NPM Install"
-      workingDirectory: 'src/ui'
+    - task: PowerShell@2
+      displayName: "NPM CI Install"
+      inputs:
+        workingDirectory: 'src/ui'
+        script: 
+          ls $(npm_config_cache)
+          npm ci
 
     - task: Npm@1
       displayName: "NPM Build"
