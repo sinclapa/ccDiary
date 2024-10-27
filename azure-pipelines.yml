@@ -51,7 +51,7 @@ stages:
       displayName: "NPM CI Install"
       inputs:
         workingDirectory: 'src/ui'
-        script: 
+        script: |
           ls $(npm_config_cache)
           npm ci
 
