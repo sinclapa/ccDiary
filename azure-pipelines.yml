@@ -134,45 +134,45 @@ stages:
         jsonTargetFiles: 'appsettings.json'
         xmlTransformationRules: '' # disabled
 
-    - task: Cache@2
-      displayName: Cache task
-      inputs:
-        key: 'docker | "$(Agent.OS)" | src/api/ccDiaryApi/Dockerfile'
-        path: $(Pipeline.Workspace)/docker
-        cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
+    # - task: Cache@2
+    #   displayName: Cache task
+    #   inputs:
+    #     key: 'docker | "$(Agent.OS)" | src/api/ccDiaryApi/Dockerfile'
+    #     path: $(Pipeline.Workspace)/docker
+    #     cacheHitVar: CACHE_RESTORED                #Variable to set to 'true' when the cache is restored
         
-    - script: |
-        docker load -i $(Pipeline.Workspace)/docker/cache.tar
-        ls -lt $(Pipeline.Workspace)/docker
-      displayName: Docker restore
-      condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
+    # - script: |
+    #     docker load -i $(Pipeline.Workspace)/docker/cache.tar
+    #     ls -lt $(Pipeline.Workspace)/docker
+    #   displayName: Docker restore
+    #   condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
     
-#    - task: Docker@2
-#      displayName: 'Build API Docker Image'
-#      inputs:    
-#        command: 'build'
-#        repository: '$(dockerImageName)'
-#        Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
-#        buildContext: 'src/api'
-#        containerRegistry: $(containerRegistry)        
-#        addPipelineData: false
-#        addBaseImageData: false
-#        tags: |
-#          $(tag)
-#          latest
-#        arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest cache-to type=inline'
+    - task: Docker@2
+     displayName: 'Build API Docker Image'
+     inputs:    
+       command: 'build'
+       repository: '$(dockerImageName)'
+       Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
+       buildContext: 'src/api'
+       containerRegistry: $(containerRegistry)        
+       addPipelineData: false
+       addBaseImageData: false
+       tags: |
+         $(tag)
+         latest
+       arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest cache-to type=inline'
  
-    - script: |
-        docker build . -f ccDiaryApi/Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline,mode=max -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
-      displayName: 'Build API Docker Image'
-      workingDirectory: 'src/api'    
-        
-    - script: |
-        mkdir -p $(Pipeline.Workspace)/docker
-        docker save -o $(Pipeline.Workspace)/docker/cache.tar $(containerRegistryLoginServer)/$(dockerImageName):latest
-        ls -lt $(Pipeline.Workspace)/docker
-      displayName: Docker save
-      condition: and(not(canceled()), not(failed()), ne(variables.CACHE_RESTORED, 'true'))
+    # - script: |
+    #     docker build . -f ccDiaryApi/Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline,mode=max -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
+    #   displayName: 'Build API Docker Image'
+    #   workingDirectory: 'src/api'    
+
+    # - script: |
+    #     mkdir -p $(Pipeline.Workspace)/docker
+    #     docker save -o $(Pipeline.Workspace)/docker/cache.tar $(containerRegistryLoginServer)/$(dockerImageName):latest
+    #     ls -lt $(Pipeline.Workspace)/docker
+    #   displayName: Docker save
+    #   condition: and(not(canceled()), not(failed()), ne(variables.CACHE_RESTORED, 'true'))
 
     - task: Docker@2
       displayName: 'Test API Docker Image'

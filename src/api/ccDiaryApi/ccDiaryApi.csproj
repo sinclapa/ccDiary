@@ -11,7 +11,6 @@
     <FileVersion>1.0.0</FileVersion>
     <Description>Cooking Code Diary App</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
- 
     <!--
     CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
     -->    
