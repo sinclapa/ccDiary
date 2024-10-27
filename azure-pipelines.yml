@@ -50,6 +50,7 @@ stages:
     - task: PowerShell@2
       displayName: "NPM CI Install"
       inputs:
+        targetType: inline
         workingDirectory: 'src/ui'
         script: |
           ls $(npm_config_cache)
