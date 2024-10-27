@@ -148,19 +148,19 @@ stages:
     #   condition: and(not(canceled()), eq(variables.CACHE_RESTORED, 'true'))
     
     - task: Docker@2
-     displayName: 'Build API Docker Image'
-     inputs:    
-       command: 'build'
-       repository: '$(dockerImageName)'
-       Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
-       buildContext: 'src/api'
-       containerRegistry: $(containerRegistry)        
-       addPipelineData: false
-       addBaseImageData: false
-       tags: |
-         $(tag)
-         latest
-       arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest cache-to type=inline'
+      displayName: 'Build API Docker Image'
+      inputs:    
+        command: 'build'
+        repository: '$(dockerImageName)'
+        Dockerfile: 'src/api/ccDiaryApi/Dockerfile'
+        buildContext: 'src/api'
+        containerRegistry: $(containerRegistry)        
+        addPipelineData: false
+        addBaseImageData: false
+        tags: |
+          $(tag)
+          latest
+#       arguments: '--cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest cache-to type=inline'
  
     # - script: |
     #     docker build . -f ccDiaryApi/Dockerfile --cache-from $(containerRegistryLoginServer)/$(dockerImageName):latest --cache-to type=inline,mode=max -t $(containerRegistryLoginServer)/$(dockerImageName):$(tag) -t $(containerRegistryLoginServer)/$(dockerImageName):latest
