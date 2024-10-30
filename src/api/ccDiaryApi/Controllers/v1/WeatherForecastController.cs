@@ -29,7 +29,6 @@ namespace ccDiaryApi.Controllers.v1
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
-            _logger.LogDebug("Get WeatherForecast");
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),

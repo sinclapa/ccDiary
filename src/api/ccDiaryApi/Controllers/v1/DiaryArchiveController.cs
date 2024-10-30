@@ -29,7 +29,7 @@ namespace ccDiaryApi.Controllers.v1
         [HttpGet]
         public ActionResult<DiaryExportDTO> Export(Guid diaryId)
         {
-            var diary = _diaryService.Get(diaryId);
+            var diary = _diaryService.GetDiary(diaryId);
             if (diary == null)
             {
                 return NotFound();

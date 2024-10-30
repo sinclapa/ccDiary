@@ -15,7 +15,7 @@ namespace ccDiaryApiTest.v1
     [TestClass]
     public class DiaryArchiveControllerTest
     {
-        public DiaryDatabaseContext GetMemoryContext()
+        public static DiaryDatabaseContext GetMemoryContext()
         {
             var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
                 .UseInMemoryDatabase(databaseName: "InMemoryDatabase")
@@ -50,7 +50,7 @@ namespace ccDiaryApiTest.v1
                 Description = "TestDescription",
             });
 
-            var diaryEntryA = diaryEntryService.CreateDiaryEntry(new DiaryEntryDTO()
+            diaryEntryService.CreateDiaryEntry(new DiaryEntryDTO()
             {
                 Entry = "TestEntryA",
                 Date = DateTime.Now,
@@ -58,7 +58,7 @@ namespace ccDiaryApiTest.v1
                 DiaryId = diary.DiaryId,
             });
 
-            var diaryEntryB = diaryEntryService.CreateDiaryEntry(new DiaryEntryDTO()
+            diaryEntryService.CreateDiaryEntry(new DiaryEntryDTO()
             {
                 Entry = "TestEntryB",
                 Date = DateTime.Now,

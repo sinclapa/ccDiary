@@ -135,7 +135,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_FailNonExistentDiary()
+        public async Task CreateFailNonExistentDiary()
         {
             // Act
             var diaryEntry = new DiaryEntryDTO
@@ -152,7 +152,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_MissingDate()
+        public async Task CreateMissingDate()
         {
             // Arrange
             var diary = await CreateDiary();
@@ -172,7 +172,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_MissingLocation()
+        public async Task CreateMissingLocation()
         {
             // Arrange
             var diary = await CreateDiary();
@@ -192,7 +192,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_MissingNotes()
+        public async Task CreateMissingNotes()
         {
             // Arrange
             var diary = await CreateDiary();
@@ -212,7 +212,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Search_NonExistentDiary()
+        public async Task SearchNonExistentDiary()
         {
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{Guid.NewGuid()}");
@@ -297,7 +297,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task SearchMonth_YearEnd()
+        public async Task SearchMonthYearEnd()
         {
             // Arrange
             var diary = await CreateDiary();
@@ -315,7 +315,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task SearchDay_MonthEnd()
+        public async Task SearchDayMonthEnd()
         {
             // Arrange
             var diary = await CreateDiary();
@@ -352,7 +352,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task SearchDay_UTCOffset60()
+        public async Task SearchDayUTCOffset60()
         {
             // Arrange
             var diary = await CreateDiary();
@@ -371,7 +371,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Update_null()
+        public async Task UpdateNull()
         {
             // Act
             var response = await _httpClient.PutAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Update", null);
@@ -424,7 +424,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Delete_NotFound()
+        public async Task DeleteNotFound()
         {
             // Act
             var response = await _httpClient.DeleteAsync($"/api/v1/DiaryEntry/Delete/{Guid.NewGuid()}");

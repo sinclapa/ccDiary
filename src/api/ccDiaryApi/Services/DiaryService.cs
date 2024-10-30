@@ -29,14 +29,14 @@ namespace ccDiaryApi.Services
             _context.SaveChanges();
         }
 
-        public IEnumerable<DiaryDTO> Get()
+        public IEnumerable<DiaryDTO> GetDiaries()
         {
             var diaries = _context.Diaries
                 .OrderBy(x => x.Author).ThenBy(x => x.Title);
             return diaries;
         }
 
-        public DiaryDTO? Get(Guid diaryId)
+        public DiaryDTO? GetDiary(Guid diaryId)
         {
             var diary = _context.Diaries
                 .SingleOrDefault(x => x.DiaryId == diaryId);

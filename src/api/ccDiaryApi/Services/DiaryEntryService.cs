@@ -20,7 +20,7 @@ namespace ccDiaryApi.Services
         {
             if (diaryEntry.Date == DateTime.MinValue)
             {
-                throw new ApplicationException($"Date has to be not null and greater than {DateTime.MinValue}.");
+                throw new ArgumentException($"Date has to be not null and greater than {DateTime.MinValue}.");
             }
 
             _context.Add(diaryEntry);
@@ -51,7 +51,7 @@ namespace ccDiaryApi.Services
             return new DiaryDateRange { MaxDateTime = maxDate, MinDateTime = minDate };
         }
 
-        public List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime to, SearchType searchType)
+        public List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType)
         {
             Func<DiaryEntryDTO, int> func;
             switch (searchType)
@@ -66,10 +66,10 @@ namespace ccDiaryApi.Services
                     func = new Func<DiaryEntryDTO, int>(x => x.Date.Day);
                     break;
                 default:
-                    throw new ApplicationException($"Unhandled SearchType [{searchType}]");
+                    throw new ArgumentException($"Unhandled SearchType [{searchType}]");
             }
 
-            return _context.DiaryEntries.Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= to)
+            return _context.DiaryEntries.Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= until)
                 .OrderBy(func)
                 .Select(func)
                 .Distinct()
@@ -84,10 +84,10 @@ namespace ccDiaryApi.Services
                 .ToList();
         }
 
-        public List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId, DateTime from, DateTime to)
+        public List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId, DateTime from, DateTime until)
         {
             return _context.DiaryEntries
-                .Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= to)
+                .Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= until)
                 .OrderBy(x => x.Date)
                 .ToList();
         }
@@ -102,7 +102,7 @@ namespace ccDiaryApi.Services
         {
             if (diaryEntry.Date == DateTime.MinValue)
             {
-                throw new ApplicationException($"Date has to be not null and greater than {DateTime.MinValue}.");
+                throw new ArgumentException($"Date has to be not null and greater than {DateTime.MinValue}.");
             }
 
             _context.Update(diaryEntry);

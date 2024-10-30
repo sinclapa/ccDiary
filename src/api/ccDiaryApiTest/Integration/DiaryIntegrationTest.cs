@@ -7,6 +7,7 @@ namespace ccDiaryApiTest.Integration
     using System.Net;
     using System.Net.Http.Json;
     using ccDiaryApi.Data.Model;
+    using Microsoft.AspNetCore.Http;
 
     [TestClass]
     public class DiaryIntegrationTest
@@ -30,7 +31,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Get_NoItems()
+        public async Task GetNoItems()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();
@@ -87,6 +88,43 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
+        public async Task GetByIdForUser()
+        {
+            // Arrange
+            var webAppFactory = new CustomWebApplicationFactory<Program>();
+            var httpClient = webAppFactory.CreateDefaultClient();
+            var diary = await CreateDiary(httpClient);
+
+            // Act
+            var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/Diary/Get/{diary.DiaryId}");
+            request.Headers.Add("UserId", "testuser");
+            var response = await httpClient.SendAsync(request);
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<DiaryDTO>();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(diary.Author, result.Author);
+            Assert.AreEqual(diary.Title, result.Title);
+            Assert.AreEqual(diary.DiaryId, result.DiaryId);
+        }
+
+        [TestMethod]
+        public async Task LoadSwagger()
+        {
+            // Arrange
+            var webAppFactory = new CustomWebApplicationFactory<Program>();
+            var httpClient = webAppFactory.CreateDefaultClient();
+
+            // Act
+            var response = await httpClient.GetAsync($"/swagger/index.html");
+
+            // Assert
+            var result = await response.Content.ReadAsStringAsync();
+            Assert.IsTrue(result.IndexOf("swagger", StringComparison.InvariantCultureIgnoreCase) > 0);
+        }
+
+        [TestMethod]
         public async Task Create()
         {
             // Arrange
@@ -112,7 +150,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_Null()
+        public async Task CreateNull()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();
@@ -126,7 +164,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_TooShortTitle()
+        public async Task CreateTooShortTitle()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();
@@ -146,7 +184,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_TooLongTitle()
+        public async Task CreateTooLongTitle()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();
@@ -166,7 +204,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Create_TooLomgAuthor()
+        public async Task CreateTooLomgAuthor()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();
@@ -186,7 +224,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Update_null()
+        public async Task UpdateNull()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();
@@ -239,7 +277,7 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
-        public async Task Delete_NotFound()
+        public async Task DeleteNotFound()
         {
             // Arrange
             var webAppFactory = new CustomWebApplicationFactory<Program>();

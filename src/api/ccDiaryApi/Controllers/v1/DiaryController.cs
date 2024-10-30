@@ -27,7 +27,7 @@ namespace ccDiaryApi.Controllers.v1
         [AllowAnonymous]
         public ActionResult<IEnumerable<DiaryDTO>> Get()
         {
-            var diaries = _diaryService.Get();
+            var diaries = _diaryService.GetDiaries();
             return Ok(diaries);
         }
 
@@ -36,7 +36,7 @@ namespace ccDiaryApi.Controllers.v1
         [AllowAnonymous]
         public ActionResult<DiaryDTO> Get(Guid diaryId)
         {
-            var diary = _diaryService.Get(diaryId);
+            var diary = _diaryService.GetDiary(diaryId);
             return Ok(diary);
         }
 
@@ -58,7 +58,7 @@ namespace ccDiaryApi.Controllers.v1
         [HttpDelete]
         public ActionResult Delete(Guid diaryId)
         {
-            var diary = _diaryService.Get(diaryId);
+            var diary = _diaryService.GetDiary(diaryId);
             if (diary == null)
             {
                 return NotFound();

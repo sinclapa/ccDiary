@@ -20,7 +20,7 @@ namespace ccDiaryApiTest.v1
     [TestClass]
     public class DiaryControllerTest
     {
-        public DiaryDatabaseContext GetMemoryContext()
+        public static DiaryDatabaseContext GetMemoryContext()
         {
             var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
                 .UseInMemoryDatabase(databaseName: "InMemoryDatabase")

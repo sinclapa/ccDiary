@@ -11,6 +11,9 @@
     <FileVersion>1.0.0</FileVersion>
     <Description>Cooking Code Diary App</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>Recommended</AnalysisMode>
+
     <!--
     CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
     -->    

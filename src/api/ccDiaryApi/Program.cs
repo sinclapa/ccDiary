@@ -2,6 +2,7 @@
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
+using System.Globalization;
 using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
@@ -33,8 +34,8 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Debug()
-    .WriteTo.Console()
+    .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
+    .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
