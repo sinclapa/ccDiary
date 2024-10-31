@@ -1,50 +1,116 @@
+import Diary from '@/services/models/diary'
 import { diaryAPI } from '@/services/modules/diaryService'
-//import Diary from '@/services/models/diary'
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-function createFetchResponse(data: any) {
-  return { json: () => new Promise((resolve) => resolve(data)) }
-}
+const baseUrl : string = 'http://localhost'
 
-
-describe('pages/diaries/index.vue with successful HTTP Get', () => {
-  const realFetch = global.fetch
-  beforeAll(() => {
-    const diaryGetResponse = [
-      {
-        "diaryId": "0af38239-b24f-4fa9-f679-08dcc87078fb",
-        "title": "Test Diary",
-        "author": "A J Smith",
-        "description": "First Test Diary"
-      },
-      {
-        "diaryId": "f80a9774-ab8c-44fd-f67d-08dcc87078fb",
-        "title": "80 Days Around the World",
-        "author": "Jules Verne",
-        "description": "Circumnavigation around the earth"
-      },
-      {
-        "diaryId": "ca89c5cf-7699-4d1c-f67b-08dcc87078fb",
-        "title": "To the Moon and Back",
-        "author": "Tom Hanks",
-        "description": "Filming Apollo 13"
-      }
-    ]
-    global.fetch = vi.fn().mockResolvedValue(createFetchResponse(diaryGetResponse))
-
-  })
-
-  afterAll(() => {
-    global.fetch = realFetch
-  })
-
+describe('Diary Service', () => {
   beforeEach(() => {
-    vi.stubEnv('VITE_API', 'http://localhost')
+    vi.stubEnv('VITE_API', baseUrl)
   })
 
   it('Get Diaries', async () => {
-    ///const results =
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
     await diaryAPI.getDiaries()
-    expect(global.fetch).toBeCalledTimes(1)
+
+    // Assert
+    expect(fetchSpy).toHaveBeenCalledWith(new URL('v1/Diary/Get', baseUrl))
+  })
+
+  it('Get Diary', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diaryId = crypto.randomUUID()
+    await diaryAPI.getDiary(diaryId)
+
+    // Assert
+    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/Diary/Get/${diaryId}`, baseUrl))
+  })
+
+  it('Delete Diary', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diaryId = crypto.randomUUID()
+    await diaryAPI.deleteDiary(diaryId)
+
+    // Assert
+    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/Diary/Delete/${diaryId}`, baseUrl), { method: 'DELETE' })
+  })
+
+  it('Create Diary', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diary : Diary = {
+      author: 'TestAuthor',
+      description: 'TestDescription',
+      title: 'TestTitle',
+    }
+    await diaryAPI.createDiary(diary)
+
+    // Assert
+    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/Diary/Create`, baseUrl),
+      {
+        body: JSON.stringify(diary),
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      }
+    )
+  })
+
+  it('Update  Diary', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diary : Diary = {
+      author: 'TestAuthor',
+      description: 'TestDescription',
+      title: 'TestTitle',
+    }
+    await diaryAPI.updateDiary(diary)
+
+    // Assert
+    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/Diary/Update`, baseUrl),
+      {
+        body: JSON.stringify(diary),
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        method: 'PUT',
+      }
+    )
   })
 })

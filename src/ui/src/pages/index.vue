@@ -22,14 +22,14 @@
       </thead>
       <tbody>
         <tr
-        v-for="item in weather"
-        :key="item.date"
-      >
-        <td>{{ item.date }}</td>
-        <td>{{ item.temperatureC }}</td>
-        <td>{{ item.temperatureF }}</td>
-        <td>{{ item.summary }}</td>
-      </tr>
+          v-for="item in weather"
+          :key="item.date"
+        >
+          <td>{{ item.date }}</td>
+          <td>{{ item.temperatureC }}</td>
+          <td>{{ item.temperatureF }}</td>
+          <td>{{ item.summary }}</td>
+        </tr>
       </tbody>
     </v-table>
   </header>

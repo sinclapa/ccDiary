@@ -24,10 +24,10 @@
               </v-btn>
             </template>
             <DiaryEditor
+              :add-mode="editedItem?.diaryId == undefined"
               :author="editedItem?.author"
               :description="editedItem?.description"
               :title="editedItem?.title"
-              :addMode="editedItem?.diaryId == undefined"
               @close="close"
               @submit="onAddDiary"
             />
@@ -51,12 +51,24 @@
         </a>
       </template>
       <template #item.actions="{ item }">
-        <v-btn v-if="state.isAuthenticated" icon size="small" :id="item.diaryId + '_edit'" @click="editItem(item)">
+        <v-btn
+          v-if="state.isAuthenticated"
+          :id="item.diaryId + '_edit'"
+          icon
+          size="small"
+          @click="editItem(item)"
+        >
           <v-icon>
             mdi-pencil
           </v-icon>
         </v-btn>
-        <v-btn v-if="state.isAuthenticated" icon size="small" :id="item.diaryId + '_delete'" @click="deleteItem(item)">
+        <v-btn
+          v-if="state.isAuthenticated"
+          :id="item.diaryId + '_delete'"
+          icon
+          size="small"
+          @click="deleteItem(item)"
+        >
           <v-icon>
             mdi-delete
           </v-icon>

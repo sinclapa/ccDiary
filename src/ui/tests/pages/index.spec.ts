@@ -1,5 +1,5 @@
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { expect, vi, describe, beforeEach, afterEach, it, beforeAll, afterAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -11,8 +11,8 @@ const vuetify = createVuetify({
   directives,
 })
 
-function createFetchResponse(data: any) {
-  return { json: () => new Promise((resolve) => resolve(data)) }
+function createFetchResponse (data: any) {
+  return { json: () => new Promise(resolve => resolve(data)) }
 }
 
 describe('pages/Index.vue Implementation Test', () => {
@@ -24,7 +24,7 @@ describe('pages/Index.vue Implementation Test', () => {
     wrapper = mount(Component, {
       propsData: {},
       global: {
-         plugins: [vuetify],
+        plugins: [vuetify],
       },
     })
   })
@@ -52,35 +52,35 @@ describe('Pages/Index.vue with successful HTTP Get', () => {
   beforeAll(() => {
     const weatherResponse = [
       {
-        "date": "2024-10-21",
-        "temperatureC": 29,
-        "temperatureF": 84,
-        "summary": "Sweltering"
+        date: '2024-10-21',
+        temperatureC: 29,
+        temperatureF: 84,
+        summary: 'Sweltering',
       },
       {
-        "date": "2024-10-22",
-        "temperatureC": 53,
-        "temperatureF": 127,
-        "summary": "Balmy"
+        date: '2024-10-22',
+        temperatureC: 53,
+        temperatureF: 127,
+        summary: 'Balmy',
       },
       {
-        "date": "2024-10-23",
-        "temperatureC": 44,
-        "temperatureF": 111,
-        "summary": "Balmy"
+        date: '2024-10-23',
+        temperatureC: 44,
+        temperatureF: 111,
+        summary: 'Balmy',
       },
       {
-        "date": "2024-10-24",
-        "temperatureC": -6,
-        "temperatureF": 22,
-        "summary": "Freezing"
+        date: '2024-10-24',
+        temperatureC: -6,
+        temperatureF: 22,
+        summary: 'Freezing',
       },
       {
-        "date": "2024-10-25",
-        "temperatureC": 30,
-        "temperatureF": 85,
-        "summary": "Freezing"
-      }
+        date: '2024-10-25',
+        temperatureC: 30,
+        temperatureF: 85,
+        summary: 'Freezing',
+      },
     ]
 
     global.fetch = vi.fn().mockResolvedValue(createFetchResponse(weatherResponse))
@@ -95,7 +95,7 @@ describe('Pages/Index.vue with successful HTTP Get', () => {
     vi.stubEnv('VITE_API', 'http://test')
     wrapper = mount(Component, {
       global: {
-         plugins: [vuetify],
+        plugins: [vuetify],
       },
     })
   })

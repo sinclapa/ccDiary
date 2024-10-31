@@ -61,7 +61,6 @@ describe('AppHeader', () => {
   })
 
   test('ShowDrawer', async () => {
-
     const wrapper = mount({
       template: '<v-layout><app-header></app-header></v-layout>',
     }, {

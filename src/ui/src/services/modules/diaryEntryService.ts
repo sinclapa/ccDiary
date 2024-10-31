@@ -20,12 +20,12 @@ export default class DiaryEntryAPIService {
   }
 
   async searchDiaryEntry (diaryId: string, year?: number, month?: number) : Promise<number[] | null> {
-    let api = new URL(`v1/DiaryEntry/Search/${diaryId}`, import.meta.env.VITE_API)
+    let api = new URL(`v1/DiaryEntry/Search/${diaryId}/`, import.meta.env.VITE_API)
     if (year !== undefined) {
-      api = new URL(`${year}`, api)
+      api = new URL(`${year}/`, api)
     }
     if (month !== undefined) {
-      api = new URL(`${month}`, api)
+      api = new URL(`${month}/`, api)
     }
     let output : number[] | null = null
     await fetch(api)

@@ -1,13 +1,13 @@
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { expect, vi, describe, beforeEach, afterEach, it, beforeAll, afterAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createVuetify } from 'vuetify'
 import { nextTick } from 'vue'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { state } from '../../../src/services/authentication/msalConfig'
 import Component from '../../../src/pages/diaries/index.vue'
-//import { diaryAPI } from '../../../src/services/modules/diaryService'
-//import Diary from '../../../src/services/models/diary'
+// import { diaryAPI } from '../../../src/services/modules/diaryService'
+// import Diary from '../../../src/services/models/diary'
 
 const vuetify = createVuetify({
   components,
@@ -16,11 +16,11 @@ const vuetify = createVuetify({
 
 global.ResizeObserver = require('resize-observer-polyfill')
 
-function createFetchResponse(data: any) {
-  return { json: () => new Promise((resolve) => resolve(data)) }
+function createFetchResponse (data: any) {
+  return { json: () => new Promise(resolve => resolve(data)) }
 }
 
-//TODO: Mock service not fetch
+// TODO: Mock service not fetch
 
 describe('pages/diaries/index.vue with successful HTTP Get', () => {
   let wrapper: VueWrapper
@@ -28,23 +28,23 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
   beforeAll(() => {
     const diaryGetResponse = [
       {
-        "diaryId": "0af38239-b24f-4fa9-f679-08dcc87078fb",
-        "title": "Test Diary",
-        "author": "A J Smith",
-        "description": "First Test Diary"
+        diaryId: '0af38239-b24f-4fa9-f679-08dcc87078fb',
+        title: 'Test Diary',
+        author: 'A J Smith',
+        description: 'First Test Diary',
       },
       {
-        "diaryId": "f80a9774-ab8c-44fd-f67d-08dcc87078fb",
-        "title": "80 Days Around the World",
-        "author": "Jules Verne",
-        "description": "Circumnavigation around the earth"
+        diaryId: 'f80a9774-ab8c-44fd-f67d-08dcc87078fb',
+        title: '80 Days Around the World',
+        author: 'Jules Verne',
+        description: 'Circumnavigation around the earth',
       },
       {
-        "diaryId": "ca89c5cf-7699-4d1c-f67b-08dcc87078fb",
-        "title": "To the Moon and Back",
-        "author": "Tom Hanks",
-        "description": "Filming Apollo 13"
-      }
+        diaryId: 'ca89c5cf-7699-4d1c-f67b-08dcc87078fb',
+        title: 'To the Moon and Back',
+        author: 'Tom Hanks',
+        description: 'Filming Apollo 13',
+      },
     ]
 
     global.fetch = vi.fn().mockResolvedValue(createFetchResponse(diaryGetResponse))
@@ -53,13 +53,13 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
   afterAll(() => {
     global.fetch = realFetch
   })
-//TODO: Should look at https://vuetifyjs.com/en/components/dialogs/#props-attach to remove template
+  // TODO: Should look at https://vuetifyjs.com/en/components/dialogs/#props-attach to remove template
   beforeEach(() => {
     state.isAuthenticated = false
     vi.stubEnv('VITE_API', 'http://test')
-    wrapper = mount({template: "<v-defaults-provider :defaults=\"{'VDialog':{'contained':true }}\"><tested-component/></v-defaults-provider>"}, {
+    wrapper = mount({ template: "<v-defaults-provider :defaults=\"{'VDialog':{'contained':true }}\"><tested-component/></v-defaults-provider>" }, {
       global: {
-        components: {'tested-component': Component},
+        components: { 'tested-component': Component },
         plugins: [vuetify],
       },
     })
@@ -69,7 +69,6 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     state.isAuthenticated = false
     wrapper.unmount()
   })
-
 
   it('Initialize with correct elements', () => {
     expect(wrapper.findComponent('header').html()).toContain(`Diaries`)
@@ -102,10 +101,10 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     state.isAuthenticated = true
     await flushPromises()
     const deleteButton = wrapper.findComponent('#f80a9774-ab8c-44fd-f67d-08dcc87078fb_delete')
-    expect(deleteButton.html()).toMatch("delete")
+    expect(deleteButton.html()).toMatch('delete')
     deleteButton.trigger('click')
     await nextTick()
-    expect(wrapper.find('.v-card-title').html()).toMatch("Are you sure you want to delete this diary?")
+    expect(wrapper.find('.v-card-title').html()).toMatch('Are you sure you want to delete this diary?')
   })
 
   it('Edit diary dialog', async () => {
@@ -114,10 +113,10 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     const editButton = wrapper.findComponent('#f80a9774-ab8c-44fd-f67d-08dcc87078fb_edit')
     editButton.trigger('click')
     await nextTick()
-    expect(wrapper.find('form').html()).toMatch("Edit Diary")
-    expect(wrapper.find('form').html()).toMatch("80 Days Around the World")
-    expect(wrapper.find('form').html()).toMatch("Jules Verne")
-    expect(wrapper.find('form').html()).toMatch("Circumnavigation around the earth")
+    expect(wrapper.find('form').html()).toMatch('Edit Diary')
+    expect(wrapper.find('form').html()).toMatch('80 Days Around the World')
+    expect(wrapper.find('form').html()).toMatch('Jules Verne')
+    expect(wrapper.find('form').html()).toMatch('Circumnavigation around the earth')
   })
 
   it('Add diary dialog', async () => {
@@ -126,6 +125,6 @@ describe('pages/diaries/index.vue with successful HTTP Get', () => {
     const addButton = wrapper.findComponent('header>*>button')
     addButton.trigger('click')
     await nextTick()
-    expect(wrapper.find('form').html()).toMatch("Add Diary")
+    expect(wrapper.find('form').html()).toMatch('Add Diary')
   })
 })
