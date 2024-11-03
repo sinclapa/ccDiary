@@ -1,6 +1,7 @@
 import DiaryEntry from '@/services/models/diaryEntry'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import dayjs from 'dayjs'
 
 const baseUrl : string = 'http://localhost'
 
@@ -102,10 +103,11 @@ describe('DiaryEntry Service', () => {
     await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
 
     // Assert
+    const utcOffsetMinutes : number = dayjs(new Date(2024, 9, 17)).utcOffset()
     expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/DiaryEntry/Search/${diaryId}/2024/9/17`, baseUrl),
       {
         headers: {
-          'x-utc-offset': '60',
+          'x-utc-offset': `${utcOffsetMinutes}`,
         },
       }
     )
