@@ -1,5 +1,5 @@
 import { useAppStore } from '@/stores/app'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 describe('App Store', () => {
   it('Load', async () => {
