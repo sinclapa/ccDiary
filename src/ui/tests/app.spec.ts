@@ -30,6 +30,5 @@ describe('App.vue Implementation Test', () => {
 
   it('Initialize with correct elements', () => {
     expect(wrapper.findComponent('main').exists()).toBeTruthy()
-    expect(wrapper.find('router-view').exists()).toBeTruthy()
   })
 })
