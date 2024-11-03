@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import DiaryEditor from '../../src/components/DiaryEditor.vue'
+import DiaryEditor from '@/components/DiaryEditor.vue'
 
 const vuetify = createVuetify({
   components,

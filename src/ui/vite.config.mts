@@ -75,7 +75,7 @@ export default defineConfig({
   },
   test: {
     unstubEnvs: true,
-    globals: true,
+    globals: true,    
     environment: 'happy-dom',
     server: {
       deps: {
@@ -85,6 +85,20 @@ export default defineConfig({
     coverage: {
       reporter: ['cobertura', 'text', 'html'],
       provider: 'v8',
+      exclude: [
+        'src/plugins/index.ts',
+        'src/plugins/vuetify.ts',
+        'src/router/index.ts',
+        'src/auto-imports.d.ts',
+        'src/components.d.ts',
+        'src/main.ts',
+        'src/typed-router.d.ts',
+        'src/vite-env.d.ts',
+        'src/stores/index.ts',
+        '.eslintrc.js',
+        'vite.config.mts',
+        '**/dist/**',
+      ]
     },
   },
 })

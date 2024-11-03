@@ -3,8 +3,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import { state } from '../../src/services/authentication/msalConfig'
-import Component from '../../src/pages/index.vue'
+import { state } from '@/services/authentication/msalConfig'
+import Component from '@/pages/index.vue'
 
 const vuetify = createVuetify({
   components,
