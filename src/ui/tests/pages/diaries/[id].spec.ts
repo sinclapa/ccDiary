@@ -9,6 +9,7 @@ import * as directives from 'vuetify/directives'
 import { state } from '@/services/authentication/msalConfig'
 import Component from '@/pages/diaries/[id].vue'
 import Diary from '@/services/models/diary'
+import DiaryEntry from '@/services/models/diaryEntry'
 
 const vuetify = createVuetify({
   components,
@@ -18,6 +19,8 @@ const vuetify = createVuetify({
 describe('pages/diaries/[id].vue Implementation Test', () => {
   const diaryId : string = crypto.randomUUID()
   const diary = new Diary('June as a Snowman', 'Mr Puddle', 'Life out of the freezer', diaryId)
+  const diaryEntryA = new DiaryEntry(diaryId, new Date(2024, 10, 3, 14, 0, 0), 'Freezer', 'Feeling safe', crypto.randomUUID())
+  const diaryEntryB = new DiaryEntry(diaryId, new Date(2024, 10, 3, 14, 0, 0), 'Park', 'Started warm', crypto.randomUUID())
   const minDate = new Date(0, 0, 1)
   const maxDate = new Date(9999, 0, 1)
 
@@ -30,6 +33,7 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
   let getDiarySpy: MockInstance
   let getMinDateSpy: MockInstance
   let getMaxDateSpy: MockInstance
+  let searchDiaryEntryForDaySpy: MockInstance
 
   beforeEach(() => {
     state.isAuthenticated = false
@@ -46,6 +50,10 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
 
     getMaxDateSpy = vi.spyOn(diaryEntryAPI, 'getMaxDate',).mockReturnValue(
       new Promise( resolve => resolve(maxDate)
+    ))
+
+    searchDiaryEntryForDaySpy = vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay',).mockReturnValue(
+      new Promise( resolve => resolve([diaryEntryA, diaryEntryB])
     ))
 
     wrapper = mount(Component, {
