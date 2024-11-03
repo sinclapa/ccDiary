@@ -36,7 +36,11 @@ export default defineConfig({
       dts: 'src/components.d.ts',
     }),
     Vue({
-      template: { transformAssetUrls },
+      template: { transformAssetUrls, 
+        compilerOptions: {
+            isCustomElement: (tag) => ['router-view'].includes(tag)
+          }
+      },
     }),
     // https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin#readme
     Vuetify({
