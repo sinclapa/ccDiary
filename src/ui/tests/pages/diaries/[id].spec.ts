@@ -68,6 +68,9 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
     state.isAuthenticated = false
     wrapper.unmount()
     getDiarySpy.mockReset()
+    getMinDateSpy.mockReset()
+    getMaxDateSpy.mockReset()
+    searchDiaryEntryForDaySpy.mockReset()
   })
 
   it('Display controller', async () => {
@@ -77,6 +80,7 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
     expect(getMinDateSpy).toBeCalledWith(diaryId)
     expect(getMaxDateSpy).toHaveBeenCalledOnce()
     expect(getMaxDateSpy).toBeCalledWith(diaryId)
+    expect(searchDiaryEntryForDaySpy).toHaveBeenCalledOnce()
     expect(wrapper.text()).toMatch(diary.title)
     expect(wrapper.text()).toMatch(diary.author)
     expect(wrapper.html()).not.toMatch('Add Entry')
