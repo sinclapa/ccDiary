@@ -91,6 +91,7 @@ stages:
       inputs:
         checkCoverage: true
         coverageFailOption: fixed
+        coverageType: lines
         coverageThreshold: 100
                 
     - task: ArchiveFiles@2
@@ -197,6 +198,7 @@ stages:
       inputs:
         checkCoverage: true
         coverageFailOption: fixed
+        coverageType: lines
         coverageThreshold: 100
                
     - task: PowerShell@2 
