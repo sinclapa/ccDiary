@@ -85,7 +85,14 @@ stages:
       inputs:
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/src/ui/coverage/cobertura-coverage.xml'
         failIfCoverageEmpty : true
-        
+
+    - task: BuildQuality@9
+      displayName: 'Check build quality'
+      inputs:
+        checkCoverage: true
+        coverageFailOption: fixed
+        coverageThreshold: 100
+                
     - task: ArchiveFiles@2
       condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       displayName: Package UI
@@ -185,6 +192,13 @@ stages:
         summaryFileLocation: '$(Build.ArtifactStagingDirectory)/testresults/coverage.*.xml'
         failIfCoverageEmpty : true
 
+    - task: BuildQuality@9
+      displayName: 'Check build quality'
+      inputs:
+        checkCoverage: true
+        coverageFailOption: fixed
+        coverageThreshold: 100
+               
     - task: PowerShell@2 
       condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
       displayName: 'Save API Docker Image'
