@@ -86,7 +86,7 @@ stages:
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/src/ui/coverage/cobertura-coverage.xml'
         failIfCoverageEmpty : true
 
-    - task: BuildQuality@9
+    - task: BuildQualityChecks@9
       displayName: 'Check build quality'
       inputs:
         checkCoverage: true
@@ -192,7 +192,7 @@ stages:
         summaryFileLocation: '$(Build.ArtifactStagingDirectory)/testresults/coverage.*.xml'
         failIfCoverageEmpty : true
 
-    - task: BuildQuality@9
+    - task: BuildQualityChecks@9
       displayName: 'Check build quality'
       inputs:
         checkCoverage: true
