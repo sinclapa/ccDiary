@@ -83,7 +83,7 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
     expect(searchDiaryEntryForDaySpy).toHaveBeenCalledOnce()
     expect(wrapper.text()).toMatch(diary.title)
     expect(wrapper.text()).toMatch(diary.author)
-    expect(wrapper.html()).not.toMatch('Add Entry')
+    expect(wrapper.html()).not.toMatch('Add')
   })
 
   it('Display controller authenticated', async () => {
@@ -96,6 +96,6 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
     expect(getDiarySpy).toBeCalledWith(diaryId)
     expect(wrapper.text()).toMatch(diary.title)
     expect(wrapper.text()).toMatch(diary.author)
-    expect(wrapper.html()).toMatch('Add Entry')
+    expect(wrapper.html()).toMatch('Add')
   })
 })

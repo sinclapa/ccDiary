@@ -2,6 +2,9 @@
   <v-container>
     <v-row>
       <h2>{{ diary?.title }}</h2><h4>&nbsp;by {{ diary?.author }}</h4>
+      <br/>
+      {{  selectedDate }}
+      <br/> {{ minDate }}
     </v-row>
     <v-row>
       <v-col>
@@ -13,6 +16,26 @@
           @update:month="updateMonth"
           @update:year="updateMonth"
         />
+        <v-btn
+          :color="'white'"
+          class="mb-2"
+          @click="moveStart()"
+          :disabled="dayjs(selectedDate).isSame(minDate, 'date')"
+        >
+          <v-icon>
+            mdi-skip-backward
+          </v-icon>
+        </v-btn>
+        <v-btn
+          :color="'white'"
+          class="mb-2"
+          @click="moveBackward()"
+          :disabled="dayjs(selectedDate).isSame(minDate, 'date')"
+        >
+          <v-icon>
+            mdi-rewind
+          </v-icon>
+        </v-btn>
         <v-dialog
           v-model="dialog"
         >
@@ -23,7 +46,7 @@
               v-bind="props"
               @click="editItem()"
             >
-              Add Entry
+              Add
             </v-btn>
           </template>
           <diary-entry-editor
@@ -34,6 +57,26 @@
             @submit="onSubmitDiaryEntry"
           />
         </v-dialog>
+        <v-btn
+          :color="'white'"
+          class="mb-2"
+          @click="moveForward()"
+          :disabled="dayjs(selectedDate).isAfter(maxDate)"
+        >
+          <v-icon>
+            mdi-fast-forward
+          </v-icon>
+        </v-btn>
+        <v-btn
+          :color="'white'"
+          class="mb-2"
+          @click="moveEnd()"
+          :disabled="dayjs(selectedDate).isAfter(maxDate)"
+        >
+          <v-icon>
+            mdi-skip-forward
+          </v-icon>
+        </v-btn>
         <v-dialog v-model="dialogDelete" max-width="500px">
           <v-card>
             <v-card-title class="text-h7">Are you sure you want to delete this diary entry?</v-card-title>
@@ -58,7 +101,7 @@
               <div
                 :class="`pt-1 headline font-weight-bold text-${'red'}`"
                 v-text="dayjs(diaryEntry.date).format('ddd HH:mm:ss')"
-              />
+              ></div>
             </template>
             <div>
               <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">
@@ -168,6 +211,26 @@
   async function deleteItem (item: DiaryEntry) {
     editedItem.value = Object.assign({}, item)
     dialogDelete.value = true
+  }
+
+  function moveForward () {
+    selectedDate.value = dayjs(selectedDate.value).endOf('day').add(1, 'day').toDate()
+    selectDate(selectedDate.value)
+  }
+
+  function moveBackward () {
+    selectedDate.value = dayjs(selectedDate.value).startOf('day').subtract(1, 'day').toDate()
+    selectDate(selectedDate.value)
+  }
+
+  function moveStart () {
+    selectedDate.value = dayjs(minDate.value).startOf('day').toDate()
+    selectDate(selectedDate.value)
+  }
+
+  function moveEnd () {
+    selectedDate.value = dayjs(maxDate.value).endOf('day').toDate()
+    selectDate(selectedDate.value)
   }
 
   function closeDelete () {
