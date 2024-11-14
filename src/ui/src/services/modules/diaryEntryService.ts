@@ -51,19 +51,19 @@ export default class DiaryEntryAPIService {
 
   async getMinDate (diaryId: string) : Promise<Date> {
     const api = new URL(`v1/DiaryEntry/GetMinDate/${diaryId}`, import.meta.env.VITE_API)
-    let output : Date = new Date(0, 0, 1)
+    let output : Date = dayjs(new Date(0, 0, 1)).startOf('day').toDate()
     await fetch(api)
       .then(response => response.json())
-      .then(data => output = new Date(data))
+      .then(data => output = dayjs(data).startOf('day').toDate())
     return output
   }
 
   async getMaxDate (diaryId: string) : Promise<Date> {
     const api = new URL(`v1/DiaryEntry/GetMaxDate/${diaryId}`, import.meta.env.VITE_API)
-    let output : Date = new Date(9999, 0, 1)
+    let output : Date = dayjs(new Date(9999, 0, 1)).endOf('day').toDate()
     await fetch(api)
       .then(response => response.json())
-      .then(data => output = new Date(data))
+      .then(data => output = dayjs(data).endOf('day').toDate())
     return output
   }
 

@@ -2,9 +2,6 @@
   <v-container>
     <v-row>
       <h2>{{ diary?.title }}</h2><h4>&nbsp;by {{ diary?.author }}</h4>
-      <br/>
-      {{  selectedDate }}
-      <br/> {{ minDate }}
     </v-row>
     <v-row>
       <v-col>
@@ -20,7 +17,7 @@
           :color="'white'"
           class="mb-2"
           @click="moveStart()"
-          :disabled="dayjs(selectedDate).isSame(minDate, 'date')"
+          :disabled="dayjs(selectedDate).get('date') == dayjs(minDate).get('date')"
         >
           <v-icon>
             mdi-skip-backward
@@ -30,7 +27,7 @@
           :color="'white'"
           class="mb-2"
           @click="moveBackward()"
-          :disabled="dayjs(selectedDate).isSame(minDate, 'date')"
+          :disabled="dayjs(selectedDate).get('date') == dayjs(minDate).get('date')"
         >
           <v-icon>
             mdi-rewind
@@ -61,7 +58,7 @@
           :color="'white'"
           class="mb-2"
           @click="moveForward()"
-          :disabled="dayjs(selectedDate).isAfter(maxDate)"
+          :disabled="dayjs(selectedDate).get('date') == dayjs(maxDate).get('date')"
         >
           <v-icon>
             mdi-fast-forward
@@ -71,7 +68,7 @@
           :color="'white'"
           class="mb-2"
           @click="moveEnd()"
-          :disabled="dayjs(selectedDate).isAfter(maxDate)"
+          :disabled="dayjs(selectedDate).get('date') == dayjs(maxDate).get('date')"
         >
           <v-icon>
             mdi-skip-forward

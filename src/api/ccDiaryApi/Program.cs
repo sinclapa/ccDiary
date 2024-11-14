@@ -70,6 +70,8 @@ builder.Services.AddScoped<IDiaryService, DiaryService>();
 
 builder.Services.AddScoped<IDiaryEntryService, DiaryEntryService>();
 
+builder.Services.AddScoped<IDiaryArchiveService, DiaryArchiveService>();
+
 builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 
 builder.Services.AddControllers();

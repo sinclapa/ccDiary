@@ -41,7 +41,8 @@ namespace ccDiaryApiTest.v1
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
             var diaryEntryService = new DiaryEntryService(db);
-            var controller = new DiaryArchiveController(diaryService, diaryEntryService);
+            var diaryArchiveService = new DiaryArchiveService(db);
+            var controller = new DiaryArchiveController(diaryService, diaryEntryService, diaryArchiveService);
 
             var diary = diaryService.Create(new DiaryDTO()
             {
@@ -84,7 +85,8 @@ namespace ccDiaryApiTest.v1
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
             var diaryEntryService = new DiaryEntryService(db);
-            var controller = new DiaryArchiveController(diaryService, diaryEntryService);
+            var diaryArchiveService = new DiaryArchiveService(db);
+            var controller = new DiaryArchiveController(diaryService, diaryEntryService, diaryArchiveService);
 
             // Act
             var response = controller.Export(Guid.NewGuid());

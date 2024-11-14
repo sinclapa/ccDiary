@@ -18,16 +18,18 @@ namespace ccDiaryApi.Controllers.v1
     {
         private readonly IDiaryService _diaryService;
         private readonly IDiaryEntryService _diaryEntryService;
+        private readonly IDiaryArchiveService _diaryArchiveService;
 
-        public DiaryArchiveController(IDiaryService diaryService, IDiaryEntryService diaryEntryService)
+        public DiaryArchiveController(IDiaryService diaryService, IDiaryEntryService diaryEntryService, IDiaryArchiveService diaryArchiveService)
         {
             _diaryService = diaryService;
             _diaryEntryService = diaryEntryService;
+            _diaryArchiveService = diaryArchiveService;
         }
 
         [Route("{diaryId:guid}")]
         [HttpGet]
-        public ActionResult<DiaryExportDTO> Export(Guid diaryId)
+        public ActionResult<DiaryArchiveDTO> Export(Guid diaryId)
         {
             var diary = _diaryService.GetDiary(diaryId);
             if (diary == null)
@@ -36,8 +38,15 @@ namespace ccDiaryApi.Controllers.v1
             }
 
             var diaryEntries = _diaryEntryService.GetDiaryEntries(diaryId);
-            DiaryExportDTO export = new () { Diary = diary, DiaryEntries = diaryEntries };
+            DiaryArchiveDTO export = new () { Diary = diary, DiaryEntries = diaryEntries };
             return Ok(export);
+        }
+
+        [HttpPost]
+        public ActionResult<DiaryDTO> Import(DiaryArchiveDTO diaryArchive)
+        {
+            var diary = _diaryArchiveService.Import(diaryArchive);
+            return Ok(diary);
         }
     }
 }
