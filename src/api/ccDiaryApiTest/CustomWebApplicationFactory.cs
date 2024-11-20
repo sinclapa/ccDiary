@@ -12,6 +12,7 @@ namespace ccDiaryApiTest
     using Microsoft.AspNetCore.TestHost;
     using Microsoft.Data.Sqlite;
     using Microsoft.EntityFrameworkCore;
+    using Microsoft.EntityFrameworkCore.Infrastructure;
     using Microsoft.Extensions.DependencyInjection;
 
     public class CustomWebApplicationFactory<TProgram>
@@ -40,11 +41,11 @@ namespace ccDiaryApiTest
                     services.Remove(dbContextDescriptor);
                 }
 
-                var dbConnectionDescriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(DbConnection));
-                if (dbConnectionDescriptor != null)
+                var dbContextFactoryDescriptor = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(IDbContextOptionsConfiguration<DiaryDatabaseContext>));
+                if (dbContextFactoryDescriptor != null)
                 {
-                    services.Remove(dbConnectionDescriptor);
+                    services.Remove(dbContextFactoryDescriptor);
                 }
 
                 services.AddDbContext<DiaryDatabaseContext>(options =>
