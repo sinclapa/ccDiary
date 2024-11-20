@@ -49,8 +49,6 @@ namespace ccDiaryApi.Services
             }
 
             _context.SaveChanges();
-
-
             return diaryArchive.Diary;
         }
     }

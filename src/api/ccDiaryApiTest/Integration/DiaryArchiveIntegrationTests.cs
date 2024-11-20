@@ -1,15 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
-using ccDiaryApi.Data.Model;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+﻿// <copyright file="DiaryArchiveIntegrationTests.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 namespace ccDiaryApiTest.Integration
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http.Json;
+    using System.Threading.Tasks;
+    using ccDiaryApi.Data.Model;
+
     [TestClass]
     public class DiaryArchiveIntegrationTests
     {
@@ -94,6 +96,5 @@ namespace ccDiaryApiTest.Integration
             var archiveDiary = new DiaryArchiveDTO { Diary = diary, DiaryEntries = diaryEntries };
             return archiveDiary;
         }
-
     }
 }

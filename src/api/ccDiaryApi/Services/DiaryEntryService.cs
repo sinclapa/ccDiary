@@ -100,11 +100,6 @@ namespace ccDiaryApi.Services
 
         public DiaryEntryDTO UpdateDiaryEntry(DiaryEntryDTO diaryEntry)
         {
-            if (diaryEntry.Date == DateTime.MinValue)
-            {
-                throw new ArgumentException($"Date has to be not null and greater than {DateTime.MinValue}.");
-            }
-
             _context.Update(diaryEntry);
             _context.SaveChanges();
             return diaryEntry;
