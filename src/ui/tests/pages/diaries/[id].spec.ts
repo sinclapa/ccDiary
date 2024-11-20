@@ -1,5 +1,5 @@
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi, Mock, MockInstance } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, Mock, MockInstance, vi } from 'vitest'
 import { createVuetify } from 'vuetify'
 import { useRoute } from 'vue-router'
 import { diaryAPI } from '@/services/modules/diaryService'
@@ -40,21 +40,21 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
     vi.stubEnv('VITE_API', 'http://test')
 
     // Mock getDiary
-    getDiarySpy = vi.spyOn(diaryAPI, 'getDiary',).mockReturnValue(
-      new Promise( resolve => resolve(diary)
-    ))
+    getDiarySpy = vi.spyOn(diaryAPI, 'getDiary').mockReturnValue(
+      new Promise(resolve => resolve(diary)
+      ))
 
-    getMinDateSpy = vi.spyOn(diaryEntryAPI, 'getMinDate',).mockReturnValue(
-      new Promise( resolve => resolve(minDate)
-    ))
+    getMinDateSpy = vi.spyOn(diaryEntryAPI, 'getMinDate').mockReturnValue(
+      new Promise(resolve => resolve(minDate)
+      ))
 
-    getMaxDateSpy = vi.spyOn(diaryEntryAPI, 'getMaxDate',).mockReturnValue(
-      new Promise( resolve => resolve(maxDate)
-    ))
+    getMaxDateSpy = vi.spyOn(diaryEntryAPI, 'getMaxDate').mockReturnValue(
+      new Promise(resolve => resolve(maxDate)
+      ))
 
-    searchDiaryEntryForDaySpy = vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay',).mockReturnValue(
-      new Promise( resolve => resolve([diaryEntryA, diaryEntryB])
-    ))
+    searchDiaryEntryForDaySpy = vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockReturnValue(
+      new Promise(resolve => resolve([diaryEntryA, diaryEntryB])
+      ))
 
     wrapper = mount(Component, {
       propsData: {},

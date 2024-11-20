@@ -14,20 +14,20 @@
           @update:year="updateMonth"
         />
         <v-btn
-          :color="'white'"
           class="mb-2"
-          @click="moveStart()"
+          :color="'white'"
           :disabled="dayjs(selectedDate).get('date') == dayjs(minDate).get('date')"
+          @click="moveStart()"
         >
           <v-icon>
             mdi-skip-backward
           </v-icon>
         </v-btn>
         <v-btn
-          :color="'white'"
           class="mb-2"
-          @click="moveBackward()"
+          :color="'white'"
           :disabled="dayjs(selectedDate).get('date') == dayjs(minDate).get('date')"
+          @click="moveBackward()"
         >
           <v-icon>
             mdi-rewind
@@ -55,20 +55,20 @@
           />
         </v-dialog>
         <v-btn
-          :color="'white'"
           class="mb-2"
-          @click="moveForward()"
+          :color="'white'"
           :disabled="dayjs(selectedDate).get('date') == dayjs(maxDate).get('date')"
+          @click="moveForward()"
         >
           <v-icon>
             mdi-fast-forward
           </v-icon>
         </v-btn>
         <v-btn
-          :color="'white'"
           class="mb-2"
-          @click="moveEnd()"
+          :color="'white'"
           :disabled="dayjs(selectedDate).get('date') == dayjs(maxDate).get('date')"
+          @click="moveEnd()"
         >
           <v-icon>
             mdi-skip-forward
@@ -98,7 +98,7 @@
               <div
                 :class="`pt-1 headline font-weight-bold text-${'red'}`"
                 v-text="dayjs(diaryEntry.date).format('ddd HH:mm:ss')"
-              ></div>
+              />
             </template>
             <div>
               <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">

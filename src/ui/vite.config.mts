@@ -75,7 +75,7 @@ export default defineConfig({
   },
   test: {
     unstubEnvs: true,
-    globals: true,    
+    globals: true,
     environment: 'happy-dom',
     server: {
       deps: {
@@ -98,7 +98,7 @@ export default defineConfig({
         '.eslintrc.js',
         'vite.config.mts',
         '**/dist/**',
-      ]
+      ],
     },
   },
 })
