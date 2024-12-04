@@ -1,7 +1,8 @@
 <template>
   <v-container>
     <v-row>
-      <h2>{{ diary?.title }}</h2><h4>&nbsp;by {{ diary?.author }}</h4>
+      <span class="title">{{ diary?.title }}</span>
+      <span class="author">&nbsp;by {{ diary?.author }}</span>
     </v-row>
     <v-row>
       <v-col>
@@ -264,3 +265,13 @@
     })
   })
 </script>
+<style scoped>
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+  }
+  .author {
+    font-size: 10px;
+    font-style: italic;
+  }
+</style>
