@@ -6,9 +6,7 @@ if (-Not (Get-Module -ListAvailable -Name SqlServer)) {
 }
 
 <# --------------------------------------------------------------------------------- #>
-<# Capture inputs #>
-$settingsFile = "buildInfrastructure.settings"
-
+<# Utility Functions #>
 function ConvertTo-StringData {
     [CmdletBinding()]
     param(
@@ -24,6 +22,10 @@ function ConvertTo-StringData {
     }
 }
 
+<# --------------------------------------------------------------------------------- #>
+<# Capture inputs #>
+$settingsFile = "buildInfrastructure.settings"
+
 if (Test-Path $settingsFile) {
     $params = Get-Content -Raw $settingsFile | ConvertFrom-StringData
 }
@@ -31,6 +33,20 @@ else {
     $params = @{}
 }
 
+if (-Not ($params.ContainsKey("SubscriptionId"))) {
+    $subscriptionId = Read-Host -Prompt "Enter the Subscription Id"
+    $params.Add("SubscriptionId", $subscriptionId)
+}
+else {
+    $subscriptionId = $params["SubscriptionId"]
+}
+if (-Not ($params.ContainsKey("TenantId"))) {
+    $tenantId = Read-Host -Prompt "Enter the Tenant Id"
+    $params.Add("TenantId", $tenantId)
+}
+else {
+    $tenantId = $params["TenantId"]
+}
 if (-Not ($params.ContainsKey("Name"))) {
     $name = Read-Host -Prompt "Enter the name of the project"
     $params.Add("Name", $name)
@@ -73,12 +89,20 @@ if (-Not ($params.ContainsKey("DevOpsPipelineName"))) {
 else {
     $devOpsPipelineName = $params["DevOpsPipelineName"]
 }
+if (-Not ($params.ContainsKey("DevOpsPipelineName"))) {
+    $devOpsPipelineName = Read-Host -Prompt "Enter the Azure DevOps Pipeline Name"
+    $params.Add("DevOpsPipelineName", $devOpsPipelineName)
+}
+else {
+    $devOpsPipelineName = $params["DevOpsPipelineName"]
+}
 
 $params | ConvertTo-StringData | Set-Content $settingsFile
 
 <# --------------------------------------------------------------------------------- #>
 <# Get Azure Params #>
-Connect-AzAccount
+Connect-AzAccount -Subscription $subscriptionId
+
 $outputUser = Get-AzADUser
 $userId = $outputUser.Id
 $userPrincipalName = $outputUser.UserPrincipalName
@@ -141,27 +165,29 @@ Write-Output "entraTenantId = $entraTenantId"
 <# Update Local Build Environment #>
 
 Write-Host "Updating Local API Build"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj init
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:TenantId" $entraTenantId 
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ClientId" $entraClientId
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ApplicationIdUri" $entraApplicationIdURI
-
-Write-Host "Updating Local UI Build"
-function ConvertTo-StringData {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
-        [HashTable[]]$HashTable
-    )
-    process {
-        foreach ($item in $HashTable) {
-            foreach ($entry in $item.GetEnumerator()) {
-                "{0}={1}" -f $entry.Key, $entry.Value
-            }
-        }
-    }
+$envPath = ".\src\api\.env"
+if (Test-Path $envPath) {
+    $envContent = Get-Content -Raw $envPath | ConvertFrom-StringData
+}
+else {
+    $envContent = @{}
+}
+if (-Not ($envContent.ContainsKey("DB_PASSWORD"))) {
+    $localDBPassword = Read-Host -Prompt "Enter the password for the local database"
+    $envContent.Add("DB_PASSWORD", $localDBPassword)
+    $envContent | ConvertTo-StringData | Set-Content $envPath
+}
+else {
+    $localDBPassword = $envContent["DB_PASSWORD"]
 }
 
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj init
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "SA_PASSWORD" """$localDBPassword"""
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:TenantId" """$entraTenantId"""
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ClientId" """$entraClientId"""
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ApplicationIdUri" """$entraApplicationIdURI"""
+
+Write-Host "Updating Local UI Build"
 function SetValueInHashTable {
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
@@ -192,47 +218,7 @@ SetValueInHashTable $content "VITE_APPLICATIONID_URI" """$entraApplicationIdURI"
 $content | ConvertTo-StringData | Set-Content $vuePath
 
 <# --------------------------------------------------------------------------------- #>
-<# Update Build Pipeline #>
-
-Write-Host "Update Azure DevOps Pipeline"
-function SetDevOpsPipelineVariable {
-    param(
-        [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
-        [PSCustomObject]$Variables,
-        [Parameter(Mandatory, Position = 1)]
-        [System.String]$Org,
-        [Parameter(Mandatory, Position = 2)]
-        [System.String]$Project,
-        [Parameter(Mandatory, Position = 3)]
-        [System.String]$PipelineName,
-        [Parameter(Mandatory, Position = 4)]
-        [System.String]$Name,
-        [Parameter(Mandatory, Position = 5)]
-        [System.String]$Value,
-        [Parameter(Position = 6)]
-        [System.Boolean]$Secret
-    )
-    if ($Variables.PSObject.Properties.Name.Contains($Name)) {
-        az pipelines variable update --org $Org --project $Project --pipeline-name $PipelineName --name $Name --value $Value --secret $Secret
-    }
-    else {
-        az pipelines variable create --org $Org --project $Project --pipeline-name $PipelineName --name $Name --value $Value --secret $Secret
-    }
-}
-
-$pipelineVariables = az pipelines variable list --org $devOpsOrg --project $devOpsProject --pipeline-name $devOpsPipelineName | ConvertFrom-Json 
-
-$siteDeploymentToken = az staticwebapp secrets list --resource-group $resourceGroupName --name $staticSiteName --query properties.apiKey
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerAppName" $containerAppName 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerRegistryLoginServer" $containerRegistryLoginServer 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraClientId" $entraClientId 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraTenantId" $entraTenantId 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraApplicationIdURI" $entraApplicationIdURI 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "resourceGroup" $resourceGroupName 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "siteDeploymentToken" $siteDeploymentToken $true
-
-<# --------------------------------------------------------------------------------- #>
-<# Update Build Pipeline #>
+<# Configure azure database roles #>
 
 Write-Host "Configure database"
 
@@ -282,3 +268,48 @@ BEGIN
   ALTER ROLE db_ddladmin ADD MEMBER ""${containerAppName}"";
 END
 " -ServerInstance $databaseServer -database $databaseName -AccessToken $dbTokenCredential.GetNetworkCredential().Password
+
+<# --------------------------------------------------------------------------------- #>
+<# Update Build Pipeline #>
+Write-Host "Update Azure DevOps Pipeline"
+az login --tenant $tenantId
+
+function SetDevOpsPipelineVariable {
+    param(
+        [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
+        [PSCustomObject]$Variables,
+        [Parameter(Mandatory, Position = 1)]
+        [System.String]$Org,
+        [Parameter(Mandatory, Position = 2)]
+        [System.String]$Project,
+        [Parameter(Mandatory, Position = 3)]
+        [System.String]$PipelineName,
+        [Parameter(Mandatory, Position = 4)]
+        [System.String]$Name,
+        [Parameter(Mandatory, Position = 5)]
+        [System.String]$Value,
+        [Parameter(Position = 6)]
+        [System.Boolean]$Secret
+    )
+    if ($Variables.PSObject.Properties.Name.Contains($Name)) {
+        az pipelines variable update --org $Org --project $Project --pipeline-name $PipelineName --name $Name --value $Value --secret $Secret
+    }
+    else {
+        az pipelines variable create --org $Org --project $Project --pipeline-name $PipelineName --name $Name --value $Value --secret $Secret
+    }
+}
+
+$pipelineVariables = az pipelines variable list --org $devOpsOrg --project $devOpsProject --pipeline-name $devOpsPipelineName | ConvertFrom-Json 
+
+$siteDeploymentToken = az staticwebapp secrets list --resource-group $resourceGroupName --name $staticSiteName --query properties.apiKey
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerAppName" $containerAppName 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerRegistryLoginServer" $containerRegistryLoginServer 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraClientId" $entraClientId 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraTenantId" $entraTenantId 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraApplicationIdURI" $entraApplicationIdURI 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "resourceGroup" $resourceGroupName 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "siteDeploymentToken" $siteDeploymentToken $true
+
+<# --------------------------------------------------------------------------------- #>
+<# Update Build Pipeline #>
+Write-Host "Finished"

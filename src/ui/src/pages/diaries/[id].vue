@@ -108,24 +108,18 @@
                 <v-btn
                   v-if="state.isAuthenticated"
                   :color="'red'"
-                  icon
+                  icon="mdi-pencil"
                   size="small"
                   @click="editItem(diaryEntry)"
                 >
-                  <v-icon>
-                    mdi-pencil
-                  </v-icon>
                 </v-btn>
                 <v-btn
                   v-if="state.isAuthenticated"
                   :color="'red'"
-                  icon
+                  icon="mdi-delete"
                   size="small"
                   @click="deleteItem(diaryEntry)"
                 >
-                  <v-icon>
-                    mdi-delete
-                  </v-icon>
                 </v-btn>
               </h2>
               <div>
