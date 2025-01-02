@@ -174,10 +174,12 @@
   async function editItem (item?: DiaryEntry) {
     if (item === undefined) {
       let date = selectedDate.value ?? new Date()
+      let location = ''
       if (diaryEntries.value && diaryEntries.value.length > 0) {
         date = diaryEntries.value[diaryEntries.value.length - 1].date
+        location = diaryEntries.value[diaryEntries.value.length - 1].location
       }
-      editedItem.value = new DiaryEntry(diaryId, date, '', '')
+      editedItem.value = new DiaryEntry(diaryId, date, location, '')
     } else {
       editedItem.value = Object.assign({}, item)
     }
