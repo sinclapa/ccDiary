@@ -1,130 +1,138 @@
-import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createVuetify } from 'vuetify'
-import { nextTick } from 'vue'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { state } from '@/services/authentication/msalConfig'
-import Component from '@/pages/diaries/index.vue'
-// import { diaryAPI } from '../../../src/services/modules/diaryService'
-// import Diary from '../../../src/services/models/diary'
-
-const vuetify = createVuetify({
-  components,
-  directives,
-})
+import Index from '@/pages/diaries/index.vue'
+import { diaryAPI } from '@/services/modules/diaryService'
 
 global.ResizeObserver = require('resize-observer-polyfill')
 
-function createFetchResponse (data: any) {
-  return { json: () => new Promise(resolve => resolve(data)) }
-}
 
-// TODO: Mock service not fetch
+vi.mock('@/services/modules/diaryService', () => ({
+  diaryAPI: {
+    getDiaries: vi.fn(),
+    createDiary: vi.fn(),
+    updateDiary: vi.fn(),
+    deleteDiary: vi.fn(),
+  },
+}))
 
-describe('pages/diaries/index.vue with successful HTTP Get', () => {
-  let wrapper: VueWrapper
-  const realFetch = global.fetch
-  beforeAll(() => {
-    const diaryGetResponse = [
-      {
-        diaryId: '0af38239-b24f-4fa9-f679-08dcc87078fb',
-        title: 'Test Diary',
-        author: 'A J Smith',
-        description: 'First Test Diary',
-      },
-      {
-        diaryId: 'f80a9774-ab8c-44fd-f67d-08dcc87078fb',
-        title: '80 Days Around the World',
-        author: 'Jules Verne',
-        description: 'Circumnavigation around the earth',
-      },
-      {
-        diaryId: 'ca89c5cf-7699-4d1c-f67b-08dcc87078fb',
-        title: 'To the Moon and Back',
-        author: 'Tom Hanks',
-        description: 'Filming Apollo 13',
-      },
-    ]
+vi.mock('@/services/authentication/msalConfig', () => ({
+  state: {
+    isAuthenticated: true,
+    user: { name: 'Test User' },
+  },
+}))
 
-    global.fetch = vi.fn().mockResolvedValue(createFetchResponse(diaryGetResponse))
-  })
 
-  afterAll(() => {
-    global.fetch = realFetch
-  })
-  // TODO: Should look at https://vuetifyjs.com/en/components/dialogs/#props-attach to remove template
+describe('pages/diaries/index.vue', () => {
+  let wrapper: any
+
   beforeEach(() => {
-    state.isAuthenticated = false
-    vi.stubEnv('VITE_API', 'http://test')
-    wrapper = mount({ template: "<v-defaults-provider :defaults=\"{'VDialog':{'contained':true }}\"><tested-component/></v-defaults-provider>" }, {
+    vi.clearAllMocks()
+    wrapper = mount(Index, {
       global: {
-        components: { 'tested-component': Component },
-        plugins: [vuetify],
+        plugins: [vuetify], // Register Vuetify plugin here
       },
     })
   })
 
-  afterEach(() => {
+  it('should render the component', () => {
+    expect(wrapper.exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'VDataTable'}).exists()).toBe(true)
+  })
+
+  it('should fetch diaries on mount', async () => {
+    const mockDiaries = [
+      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
+    ];
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
+    await wrapper.vm.data()
+    expect(diaryAPI.getDiaries).toHaveBeenCalled()
+    expect(wrapper.vm.diaries).toEqual(mockDiaries)
+  })
+
+  it('should open the dialog for adding a diary', async () => {
+    await wrapper.vm.editItem()
+    expect(wrapper.vm.dialog).toBe(true)
+    expect(wrapper.vm.editedItem.diaryId).toBeUndefined()
+  })
+
+  it('should open the dialog for editing a diary', async () => {
+    const diary = { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' }
+    await wrapper.vm.editItem(diary)
+    expect(wrapper.vm.dialog).toBe(true)
+    expect(wrapper.vm.editedItem).toEqual(diary)
+  })
+
+  it('should close the dialog', async () => {
+    wrapper.vm.close()
+    await wrapper.vm.data()
+    expect(wrapper.vm.dialog).toBe(false)
+    expect(wrapper.vm.editedItem).toEqual(wrapper.vm.defaultItem)
+  })
+
+  it('should open the delete confirmation dialog', async () => {
+    const diary = { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' }
+    await wrapper.vm.deleteItem(diary)
+    expect(wrapper.vm.dialogDelete).toBe(true)
+    expect(wrapper.vm.editedItem).toEqual(diary)
+  })
+
+  it('should close the delete confirmation dialog', async () => {
+    wrapper.vm.closeDelete()
+    await wrapper.vm.data()
+    expect(wrapper.vm.dialogDelete).toBe(false)
+    expect(wrapper.vm.editedItem).toEqual(wrapper.vm.defaultItem)
+  })
+
+  it('should confirm and delete a diary', async () => {
+    const diaryId = '1'
+    wrapper.vm.editedItem.diaryId = diaryId
+    await wrapper.vm.deleteItemConfirm()
+    expect(diaryAPI.deleteDiary).toHaveBeenCalledWith(diaryId)
+    expect(diaryAPI.getDiaries).toHaveBeenCalled()
+    expect(wrapper.vm.dialogDelete).toBe(false)
+  })
+
+  it('should add a new diary', async () => {
+    const payload = { title: 'New Diary', author: 'Test User2', description: 'New Description' }
+    wrapper.vm.editedItem.diaryId = undefined
+    await wrapper.vm.onAddDiary(payload)
+    expect(diaryAPI.createDiary).toHaveBeenCalledWith({
+      diaryId: undefined,
+      title: 'New Diary',
+      author: 'Test User2',
+      description: 'New Description',
+    })
+    expect(diaryAPI.getDiaries).toHaveBeenCalled()
+    expect(wrapper.vm.dialog).toBe(false)
+  })
+
+  it('should update an existing diary', async () => {
+    const payload = { title: 'Updated Diary', author: 'Test User', description: 'Updated Description' }
+    wrapper.vm.editedItem.diaryId = '1'
+    await wrapper.vm.onAddDiary(payload)
+    expect(diaryAPI.updateDiary).toHaveBeenCalledWith({
+      diaryId: '1',
+      title: 'Updated Diary',
+      author: 'Test User',
+      description: 'Updated Description',
+    })
+    expect(diaryAPI.getDiaries).toHaveBeenCalled()
+    expect(wrapper.vm.dialog).toBe(false)
+  })
+
+
+  it('should conditionally render buttons based on authentication', async () => {
+    const mockDiaries = [
+      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
+    ];
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
+    await wrapper.vm.data()
+    expect(wrapper.html()).toContain('_delete')
     state.isAuthenticated = false
-    wrapper.unmount()
-  })
-
-  it('Initialize with correct elements', () => {
-    expect(wrapper.findComponent('header').html()).toContain(`Diaries`)
-    expect(wrapper.text()).not.toContain(`Add Diary`)
-    expect(document.getElementsByClassName('v-card-title').length).toEqual(0)
-  })
-
-  it('Display Add Diary button when authenticated', async () => {
-    state.isAuthenticated = true
-    await flushPromises()
-    expect(wrapper.text()).toContain(`Add Diary`)
-  })
-
-  it('Validate result table', async () => {
-    await flushPromises()
-    expect(wrapper.findAll('table>tbody>tr').length).toEqual(3)
-    expect(wrapper.find('table>tbody').text()).toMatch('80 Days Around the World')
-    expect(wrapper.find('table>tbody').text()).toMatch('Tom Hanks')
-    expect(wrapper.find('table>tbody').text()).toMatch('Filming Apollo 13')
-    expect(wrapper.findAll('table>tbody>button').length).toEqual(0)
-  })
-
-  it('Validate result table edit mode', async () => {
-    state.isAuthenticated = true
-    await flushPromises()
-    expect(wrapper.findAll('table>tbody>tr>td>button').length).toBeGreaterThan(0)
-  })
-
-  it('Delete diary dialog', async () => {
-    state.isAuthenticated = true
-    await flushPromises()
-    const deleteButton = wrapper.findComponent('#f80a9774-ab8c-44fd-f67d-08dcc87078fb_delete')
-    expect(deleteButton.html()).toMatch('delete')
-    deleteButton.trigger('click')
-    await nextTick()
-    expect(wrapper.find('.v-card-title').html()).toMatch('Are you sure you want to delete this diary?')
-  })
-
-  it('Edit diary dialog', async () => {
-    state.isAuthenticated = true
-    await flushPromises()
-    const editButton = wrapper.findComponent('#f80a9774-ab8c-44fd-f67d-08dcc87078fb_edit')
-    editButton.trigger('click')
-    await nextTick()
-    expect(wrapper.find('form').html()).toMatch('Edit Diary')
-    expect(wrapper.find('form').html()).toMatch('80 Days Around the World')
-    expect(wrapper.find('form').html()).toMatch('Jules Verne')
-    expect(wrapper.find('form').html()).toMatch('Circumnavigation around the earth')
-  })
-
-  it('Add diary dialog', async () => {
-    state.isAuthenticated = true
-    await flushPromises()
-    const addButton = wrapper.findComponent('header>*>button')
-    addButton.trigger('click')
-    await nextTick()
-    expect(wrapper.find('form').html()).toMatch('Add Diary')
+    wrapper = mount(Index)
+    expect(wrapper.html()).not.toContain('_delete')
   })
 })

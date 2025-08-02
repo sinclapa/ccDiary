@@ -89,5 +89,5 @@ export function msalService () {
     }
   }
 
-  return { initializeInstance, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor }
+  return { initializeInstance, login, logout, handleRedirect, getToken, registerAuthorizationHeaderInterceptor }
 }
