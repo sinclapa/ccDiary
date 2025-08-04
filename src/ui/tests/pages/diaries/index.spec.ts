@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { state } from '@/services/authentication/msalConfig'
@@ -6,7 +6,6 @@ import Index from '@/pages/diaries/index.vue'
 import { diaryAPI } from '@/services/modules/diaryService'
 
 global.ResizeObserver = require('resize-observer-polyfill')
-
 
 vi.mock('@/services/modules/diaryService', () => ({
   diaryAPI: {
@@ -27,7 +26,6 @@ vi.mock('@/services/authentication/msalConfig', () => ({
 
 describe('pages/diaries/index.vue', () => {
   let wrapper: any
-
   beforeEach(() => {
     vi.clearAllMocks()
     wrapper = mount(Index, {
@@ -135,4 +133,39 @@ describe('pages/diaries/index.vue', () => {
     wrapper = mount(Index)
     expect(wrapper.html()).not.toContain('_delete')
   })
+
+  it('sets defaultItem.author to empty string if state.user.name is null', async () => {
+    // Arrange: set user.name to null
+    if (state.user) {
+      state.user.name = undefined
+    }
+    // Remount to trigger onMounted
+    const wrapper = mount(Index, {
+      global: { plugins: [vuetify] }
+    })
+    // Wait for onMounted to finish
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect((wrapper.vm as any).defaultItem.author).toBe('')
+  })
+
+  it('renders the root div and table with data', async () => {
+    // Provide at least one diary so the table renders a row
+    const mockDiaries = [
+      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
+    ];
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries);
+
+    const wrapper = mount(Index, {
+      global: { plugins: [vuetify] }
+    });
+
+    // Wait for onMounted and data fetching
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    // Check root div exists
+    expect(wrapper.find('div').exists()).toBe(true);
+    // Check table row is rendered
+    expect(wrapper.html()).toContain('Diary 1');
+  });
 })

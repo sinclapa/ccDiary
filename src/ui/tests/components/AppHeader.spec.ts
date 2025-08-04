@@ -13,7 +13,20 @@ const vuetify = createVuetify({
   directives,
 })
 
-vi.mock('../../src/services/authentication/msalConfig')
+vi.mock('@/services/authentication/msalConfig')
+const msalServiceSpies = {
+  initializeInstance: vi.fn().mockImplementation(()=> { throw new Error('MSAL instance initialization failed') }),
+  login: vi.fn(),
+  logout: vi.fn(),
+  handleRedirect: vi.fn().mockResolvedValue(null),
+  registerAuthorizationHeaderInterceptor: vi.fn().mockResolvedValue(null),
+}
+
+vi.mock('@/services/authentication/msalService', () => {
+  return {
+    msalService: () => msalServiceSpies,
+  }
+})
 
 global.ResizeObserver = require('resize-observer-polyfill')
 describe('AppHeader', () => {
@@ -75,5 +88,62 @@ describe('AppHeader', () => {
 
     const drawerButton = wrapper.findComponent('.v-app-bar-nav-icon')
     drawerButton.trigger('click')
+  })
+
+  test('drawer location is "bottom" on mobile', async () => {
+    const wrapper = mount({
+      template: '<v-layout><app-header></app-header></v-layout>',
+    }, {
+      global: {
+        components: { AppHeader },
+        plugins: [vuetify],
+        mocks: {
+          $vuetify: {
+            display: { mobile: true }
+          }
+        }
+      }
+    })
+    // Find the navigation drawer
+    const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
+    // The prop should be "bottom"
+    expect(drawer.props('location')).toBe('bottom')
+  })
+
+  test('drawer location is not "bottom" on non-mobile', async () => {
+    const wrapper = mount({
+      template: '<v-layout><app-header></app-header></v-layout>',
+    }, {
+      global: {
+        components: { AppHeader },
+        plugins: [vuetify],
+        mocks: {
+          $vuetify: {
+            display: { mobile: false }
+          }
+        }
+      }
+    })
+    // Find the navigation drawer
+    const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
+    // The prop should be "bottom"
+    expect(drawer.props('location')).not.toBe('bottom')
+  })
+
+  test('calls initialize, handleRedirect, and registerAuthorizationHeaderInterceptor on mount', async () => {
+    // Clear call history before test
+    Object.values(msalServiceSpies).forEach(fn => fn.mockClear())
+    const wrapper = mount({
+      template: '<v-layout><app-header></app-header></v-layout>',
+    }, {
+      global: {
+        components: { AppHeader },
+        plugins: [vuetify],
+      },
+    })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(msalServiceSpies.initializeInstance).toHaveBeenCalled()
+    expect(msalServiceSpies.handleRedirect).toHaveBeenCalled()
+    expect(msalServiceSpies.registerAuthorizationHeaderInterceptor).toHaveBeenCalled()
   })
 })

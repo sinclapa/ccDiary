@@ -1,9 +1,13 @@
-import { msalInstance, state } from '@/services/authentication/msalConfig'
+import { msalInstance as defaultMsalInstance, state as defaultState } from '@/services/authentication/msalConfig'
 
-export function msalService () {
+export function msalService(
+  msalInstance = defaultMsalInstance,
+  state = defaultState,
+  win: Window & typeof globalThis = window
+) {
   const initializeInstance = async () => {
     try {
-      await msalInstance.initialize() // Call the initialize function
+      await msalInstance.initialize()
     } catch (error) {
       console.log('MSAL initialization error', error)
     }
@@ -26,13 +30,17 @@ export function msalService () {
   }
 
   const logout = async () => {
-    if (!msalInstance) {
-      throw new Error('MSAL not initialized. Call initializeMsal() before using MSAL API.')
-    }
+    try {
+      if (!msalInstance) {
+        throw new Error('MSAL not initialized. Call initializeMsal() before using MSAL API.')
+      }
 
-    await msalInstance.logoutRedirect()
-    state.isAuthenticated = false
-    console.log('Logged out')
+      await msalInstance.logoutRedirect()
+      state.isAuthenticated = false
+      console.log('Logged out')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   const handleRedirect = async () => {
@@ -67,9 +75,9 @@ export function msalService () {
     }
   }
 
-  const { fetch: originalFetch } = window
   const registerAuthorizationHeaderInterceptor = async () => {
-    window.fetch = async (...args) => {
+    const originalFetch = win.fetch // capture at call time, not module load time
+    win.fetch = async (...args) => {
       let [resource, options] = args
       if (resource.toString().includes(import.meta.env.VITE_API)) {
         const accessToken = await getToken()

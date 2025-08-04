@@ -98,4 +98,13 @@ describe('pages/diaries/[id].vue Implementation Test', () => {
     expect(wrapper.text()).toMatch(diary.author)
     expect(wrapper.html()).toMatch('Add')
   })
+
+  it('shows Add button only when authenticated', async () => {
+    state.isAuthenticated = false
+    await flushPromises()
+    expect(wrapper.html()).not.toMatch('Add')
+    state.isAuthenticated = true
+    await flushPromises()
+    expect(wrapper.html()).toMatch('Add')
+  })
 })

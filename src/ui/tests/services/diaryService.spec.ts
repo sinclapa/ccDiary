@@ -50,9 +50,27 @@ describe('Diary Service', () => {
 
     // Act
     const diaryId = crypto.randomUUID()
-    await diaryAPI.deleteDiary(diaryId)
+    const result = await diaryAPI.deleteDiary(diaryId)
 
     // Assert
+    expect(result).toBe(true)
+    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/Diary/Delete/${diaryId}`, baseUrl), { method: 'DELETE' })
+  })
+
+  it('Delete Diary Fail', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diaryId = crypto.randomUUID()
+    const result = await diaryAPI.deleteDiary(diaryId)
+
+    // Assert
+    expect(result).toBe(false)
     expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/Diary/Delete/${diaryId}`, baseUrl), { method: 'DELETE' })
   })
 

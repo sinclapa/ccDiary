@@ -123,9 +123,27 @@ describe('DiaryEntry Service', () => {
 
     // Act
     const diaryEntryId = crypto.randomUUID()
-    await diaryEntryAPI.deleteDiaryEntry(diaryEntryId)
+    const result = await diaryEntryAPI.deleteDiaryEntry(diaryEntryId)
 
     // Assert
+    expect(result).toBe(true)
+    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/DiaryEntry/Delete/${diaryEntryId}`, baseUrl), { method: 'DELETE' })
+  })
+
+    it('Delete DiaryEntry Fail', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diaryEntryId = crypto.randomUUID()
+    const result = await diaryEntryAPI.deleteDiaryEntry(diaryEntryId)
+
+    // Assert
+    expect(result).toBe(false)
     expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/DiaryEntry/Delete/${diaryEntryId}`, baseUrl), { method: 'DELETE' })
   })
 
