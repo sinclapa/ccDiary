@@ -250,7 +250,7 @@
   }
 
   function updateMonth (x: any | undefined) {
-    console.info(x)
+    //console.info(x)
   }
 
   onMounted(() => {

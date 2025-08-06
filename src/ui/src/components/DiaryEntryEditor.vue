@@ -70,6 +70,8 @@
   import dayjs from 'dayjs'
   import { SubmitEventPromise } from 'vuetify'
   import { VDateInput } from 'vuetify/labs/VDateInput'
+  import { watch } from 'vue'
+
   const props = defineProps<{date: Date, location: string, entry: string}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
@@ -96,4 +98,15 @@
       emit('submit', { date: entryDate, location: location.value, entry: entry.value })
     }
   }
+
+  watch(() => props.location, (newVal) => {
+    location.value = newVal
+  })
+  watch(() => props.entry, (newVal) => {
+    entry.value = newVal
+  })
+  watch(() => props.date, (newVal) => {
+    date.value = new Date(newVal)
+    time.value = dayjs(newVal).format('HH:mm')
+  })
 </script>
