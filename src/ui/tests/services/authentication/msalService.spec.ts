@@ -147,7 +147,7 @@ describe('msalService', () => {
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api/resource'
     await window.fetch(resource, { headers: { 'X-Test': '1' } })
-    const lastCall = fetchMock.mock.calls[0]
+    //const lastCall = fetchMock.mock.calls[0]
     //const headers = lastCall[1].headers
     //expect(headers.get('Authorization')).toBe('Bearer token')
     //expect(headers.get('X-Test')).toBe('1')

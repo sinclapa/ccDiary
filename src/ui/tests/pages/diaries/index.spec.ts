@@ -1,4 +1,4 @@
-import { mount, VueWrapper } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { state } from '@/services/authentication/msalConfig'

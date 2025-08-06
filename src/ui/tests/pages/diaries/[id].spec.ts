@@ -120,7 +120,7 @@ vi.mock('vue-router', () => ({
 }))
 
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, Mock, MockInstance } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 //import { useRoute } from 'vue-router'
 import { diaryAPI } from '@/services/modules/diaryService'

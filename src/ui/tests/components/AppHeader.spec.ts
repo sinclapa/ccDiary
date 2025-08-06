@@ -133,7 +133,7 @@ describe('AppHeader', () => {
   test('calls initialize, handleRedirect, and registerAuthorizationHeaderInterceptor on mount', async () => {
     // Clear call history before test
     Object.values(msalServiceSpies).forEach(fn => fn.mockClear())
-    const wrapper = mount({
+    mount({
       template: '<v-layout><app-header></app-header></v-layout>',
     }, {
       global: {
