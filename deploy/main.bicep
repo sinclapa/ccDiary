@@ -34,6 +34,4 @@ output databaseServer string = resourceGroupModule.outputs.databaseServer
 output databaseName string = resourceGroupModule.outputs.databaseName
 output staticSiteName string = resourceGroupModule.outputs.staticSiteName
 output staticSiteUrl string = resourceGroupModule.outputs.staticSiteUrl
-output entraApplicationIdURI string = resourceGroupModule.outputs.entraApplicationIdURI
-output entraClientId string = resourceGroupModule.outputs.entraClientId
-output entraTenantId string = resourceGroupModule.outputs.entraTenantId
+output resourceGroupId string = resourceGroupModule.outputs.resourceGroupId

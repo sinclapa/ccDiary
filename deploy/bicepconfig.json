@@ -1,7 +1,4 @@
 {
-    "experimentalFeaturesEnabled": {
-        "extensibility": true
-    },
     "analyzers": {
       "core": {
         "enabled": true,

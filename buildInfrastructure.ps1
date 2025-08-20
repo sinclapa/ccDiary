@@ -22,6 +22,13 @@ function ConvertTo-StringData {
     }
 }
 
+function New-GuidFromString {
+    param([string]$InputString)
+    $hasher = [System.Security.Cryptography.MD5]::Create()
+    $hashBytes = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($InputString))
+    return [System.Guid]::new($hashBytes)
+}
+
 <# --------------------------------------------------------------------------------- #>
 <# Capture inputs #>
 $settingsFile = "buildInfrastructure.settings"
@@ -39,13 +46,6 @@ if (-Not ($params.ContainsKey("SubscriptionId"))) {
 }
 else {
     $subscriptionId = $params["SubscriptionId"]
-}
-if (-Not ($params.ContainsKey("TenantId"))) {
-    $tenantId = Read-Host -Prompt "Enter the Tenant Id"
-    $params.Add("TenantId", $tenantId)
-}
-else {
-    $tenantId = $params["TenantId"]
 }
 if (-Not ($params.ContainsKey("Name"))) {
     $name = Read-Host -Prompt "Enter the name of the project"
@@ -107,6 +107,11 @@ $outputUser = Get-AzADUser
 $userId = $outputUser.Id
 $userPrincipalName = $outputUser.UserPrincipalName
 
+$outputTenant = Get-AzTenant
+$tenantId = $outputTenant.Id
+
+az login --tenant $tenantId
+
 $outputInfrastructure = New-AzSubscriptionDeployment -Location $location -TemplateFile .\deploy\main.bicep -nameFromTemplate $name -environment $environment -adminUser $userPrincipalName -adminUserSID $userId
 $outputInfrastructure
 foreach ($key in $outputInfrastructure.Outputs.keys) {
@@ -137,18 +142,13 @@ foreach ($key in $outputInfrastructure.Outputs.keys) {
     if ($key -eq "staticSiteUrl") {
         $staticSiteUrl = $outputInfrastructure.Outputs[$key].value
     }          
-    if ($key -eq "entraApplicationIdURI") {
-        $entraApplicationIdURI = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "entraClientId") {
-        $entraClientId = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "entraTenantId") {
-        $entraTenantId = $outputInfrastructure.Outputs[$key].value
+    if ($key -eq "resourceGroupId") {
+        $resourceGroupId = $outputInfrastructure.Outputs[$key].value
     }
 }
 
 Write-Output "resourceGroupName = $resourceGroupName"
+Write-Output "resourceGroupId = $resourceGroupId"
 Write-Output "containerAppName = $containerAppName"
 Write-Output "containerAppUrl = $containerAppUrl"
 Write-Output "containerRegistryName = $containerRegistryName"
@@ -157,9 +157,95 @@ Write-Output "databaseServer = $databaseServer"
 Write-Output "databaseName = $databaseName"
 Write-Output "staticSiteName = $staticSiteName"
 Write-Output "staticSiteUrl = $staticSiteUrl"
+
+<# --------------------------------------------------------------------------------- #>
+<# Configure Entra App Registration #>
+$app_name="${name}-${environment}"
+
+$appSpaJson = @{redirectUris = @("https://localhost:54629/swagger/oauth2-redirect.html", "http://localhost:8080/", "https://${staticSiteUrl}/", "https://${containerAppUrl}/swagger/oauth2-redirect.html", "https://ccdiary.cookingcode.com/")} | ConvertTo-Json -d 3 -Compress
+$appUpdateBody = $appSpaJson | ConvertTo-Json -d 4
+
+$webUris=@("https://localhost:54629/", "https://${containerAppUrl}/")
+$appId=$(az ad app list --filter "displayName eq '$app_name'" --query "[0].appId" -o tsv)
+
+if ($appId -ne "" -and $appId -ne $null) {
+    Write-Host "Updating existing application: $appId"
+    
+    # Update application
+    az ad app update --id $appId `
+        --web-redirect-uris $webUris `
+        --set spa=$appUpdateBody `
+        --identifier-uris "api://${appId}" `
+        --enable-id-token-issuance true `
+        --sign-in-audience AzureADMyOrg
+} else {
+    Write-Host "Creating new application..."
+    
+    # Create application
+    $appId = az ad app create `
+        --display-name $app_name `
+        --web-redirect-uris $webUris `
+        --enable-id-token-issuance true `
+        --sign-in-audience AzureADMyOrg `
+        --query "appId" -o tsv
+
+    az ad app update --id $appId `
+        --set spa=$appUpdateBody `
+        --identifier-uris "api://${appId}" `
+        --enable-id-token-issuance true `
+        --sign-in-audience AzureADMyOrg
+}
+
+$existingApp = az ad app show --id $appId | ConvertFrom-Json
+if ($existingApp.api.oauth2PermissionScopes) {
+    foreach ($scope in $existingApp.api.oauth2PermissionScopes) {
+        $scope.isEnabled = $false
+    }
+    $disabledScopesJson = @{ oauth2PermissionScopes = $existingApp.api.oauth2PermissionScopes } | ConvertTo-Json -Depth 10 -Compress
+    $disabledScopesBody = $disabledScopesJson | ConvertTo-Json -d 4
+    az ad app update --id $appId --set api=$disabledScopesBody
+}
+
+$oauthJson = @(
+    @{
+        oauth2PermissionScopes = @(
+            @{
+                id = New-GuidFromString "${resourceGroupId}-${name}-${environment}-oauth2-diary-update"
+                value = "Diary.Update"
+                adminConsentDisplayName = "Update diary details"
+                adminConsentDescription = "Update diary details within the ccDiary API"
+                userConsentDescription = $null
+                userConsentDisplayName = $null  
+                isEnabled = $true
+                type = "Admin"
+            }
+        )
+    }
+)
+$oauthJsonOutput = $oauthJson | ConvertTo-Json -Depth 10 -Compress
+$oauthJsonOutputBody = $oauthJsonOutput | ConvertTo-Json -d 4
+az ad app update --id $appId --set api=$oauthJsonOutputBody 
+
+$resourceJson = @(
+  @{
+    resourceAppId = "00000003-0000-0000-c000-000000000000"
+    resourceAccess = @(
+      @{
+        id = New-GuidFromString "${resourceGroupId}-${name}-${environment}-resourceAccess-scope-00000003-0000-0000-c000-000000000000"
+        type = "Scope"
+      }
+    )    
+  }
+)
+$resourceJsonOutput = $resourceJson | ConvertTo-Json -Depth 10 -Compress
+$resourceJsonOutputBody = $resourceJsonOutput | ConvertTo-Json -d 4
+
+az ad app update --id $appId --set requiredResourceAccess="[$resourceJsonOutputBody]"
+
+$entraApplicationIdURI = "api://${appId}"
+$entraClientId = $appId
 Write-Output "entraApplicationIdURI = $entraApplicationIdURI"
 Write-Output "entraClientId = $entraClientId"
-Write-Output "entraTenantId = $entraTenantId"
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Local Build Environment #>
@@ -182,10 +268,10 @@ else {
 }
 
 dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj init
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "SA_PASSWORD" """$localDBPassword"""
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:TenantId" """$entraTenantId"""
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ClientId" """$entraClientId"""
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ApplicationIdUri" """$entraApplicationIdURI"""
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "SA_PASSWORD" "$localDBPassword"
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:TenantId" "$tenantId"
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ClientId" "$entraClientId"
+dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
 
 Write-Host "Updating Local UI Build"
 function SetValueInHashTable {
@@ -213,7 +299,7 @@ else {
     $content = @{}
 }
 SetValueInHashTable $content "VITE_CLIENTID" """$entraClientId"""
-SetValueInHashTable $content "VITE_TENANTID" """$entraTenantId"""
+SetValueInHashTable $content "VITE_TENANTID" """$tenantId"""
 SetValueInHashTable $content "VITE_APPLICATIONID_URI" """$entraApplicationIdURI"""
 $content | ConvertTo-StringData | Set-Content $vuePath
 
@@ -272,7 +358,6 @@ END
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Update Azure DevOps Pipeline"
-az login --tenant $tenantId
 
 function SetDevOpsPipelineVariable {
     param(
@@ -305,7 +390,7 @@ $siteDeploymentToken = az staticwebapp secrets list --resource-group $resourceGr
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerAppName" $containerAppName 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerRegistryLoginServer" $containerRegistryLoginServer 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraClientId" $entraClientId 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraTenantId" $entraTenantId 
+SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraTenantId" $tenantId 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraApplicationIdURI" $entraApplicationIdURI 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "resourceGroup" $resourceGroupName 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "siteDeploymentToken" $siteDeploymentToken $true
