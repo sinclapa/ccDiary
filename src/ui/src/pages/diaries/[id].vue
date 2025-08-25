@@ -1,19 +1,38 @@
 <template>
   <v-container>
     <v-row>
-      <span class="title">{{ diary?.title }}</span>
+      <div>
+      <span class="title">{{ diary?.title }}&nbsp;</span>
       <span class="author">&nbsp;by {{ diary?.author }}</span>
+      </div>
     </v-row>
     <v-row>
-      <v-col>
+      <v-col cols="auto">
+        <v-btn
+          :color="isDatePickerExpanded ? 'primary' : 'secondary'"
+          :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
+          class="mb-3"
+          size="small"
+          @click="toggleDatePickerHeight"
+          :aria-label="isDatePickerExpanded ? 'Collapse date picker' : 'Expand date picker'"
+        >
+          <v-icon :icon="isDatePickerExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+          {{ isDatePickerExpanded ? 'Compact View' : 'Expanded View' }}
+        </v-btn>
+        <v-row>
         <v-date-picker
           v-model="selectedDate"
           :max="maxDate"
           :min="minDate"
+          :max-height="datePickerHeight"
           @update:model-value="selectDate"
           @update:month="updateMonth"
           @update:year="updateMonth"
-        />
+        >
+        </v-date-picker>
+        </v-row>
+        <v-row >
+          <v-col style="margin: 0; padding: 0;">
         <v-btn
           class="mb-2"
           :color="'white'"
@@ -24,6 +43,8 @@
             mdi-skip-backward
           </v-icon>
         </v-btn>
+        </v-col>
+        <v-col style="margin: 0; padding: 0;">
         <v-btn
           class="mb-2"
           :color="'white'"
@@ -34,6 +55,8 @@
             mdi-rewind
           </v-icon>
         </v-btn>
+        </v-col>
+        <v-col style="margin: 0; padding: 0;">
         <v-dialog
           v-model="dialog"
         >
@@ -55,6 +78,8 @@
             @submit="onSubmitDiaryEntry"
           />
         </v-dialog>
+        </v-col>
+        <v-col style="margin: 0; padding: 0;">
         <v-btn
           class="mb-2"
           :color="'white'"
@@ -65,6 +90,8 @@
             mdi-fast-forward
           </v-icon>
         </v-btn>
+        </v-col>
+        <v-col style="margin: 0; padding: 0;">
         <v-btn
           class="mb-2"
           :color="'white'"
@@ -75,6 +102,8 @@
             mdi-skip-forward
           </v-icon>
         </v-btn>
+        </v-col>
+        </v-row>
         <v-dialog v-model="dialogDelete" max-width="500px">
           <v-card>
             <v-card-title class="text-h7">Are you sure you want to delete this diary entry?</v-card-title>
@@ -96,17 +125,16 @@
             size="small"
           >
             <template #opposite>
-              <div
+              <div style="width: 80px; align-self: flex-start;"
                 :class="`pt-1 headline font-weight-bold text-${'red'}`"
-                v-text="dayjs(diaryEntry.date).format('ddd HH:mm:ss')"
+                v-text="dayjs(diaryEntry.date).format('ddd HH:mm')"
               />
             </template>
             <div>
               <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">
                 {{ diaryEntry.location }}
-
+                <div v-if="state.isAuthenticated">
                 <v-btn
-                  v-if="state.isAuthenticated"
                   :color="'red'"
                   icon="mdi-pencil"
                   size="small"
@@ -114,13 +142,13 @@
                 >
                 </v-btn>
                 <v-btn
-                  v-if="state.isAuthenticated"
                   :color="'red'"
                   icon="mdi-delete"
                   size="small"
                   @click="deleteItem(diaryEntry)"
                 >
                 </v-btn>
+                </div>
               </h2>
               <div>
                 {{ diaryEntry.entry }}
@@ -152,6 +180,19 @@
   const editedItem = ref<DiaryEntry>(new DiaryEntry(diaryId, new Date(Date.now()), '', ''))
   const minDate = ref<Date>()
   const maxDate = ref<Date>()
+  const isDatePickerExpanded = ref(true)
+
+  // Computed height
+  const datePickerHeight = computed(() =>
+    isDatePickerExpanded.value ? 500 : 130
+  )
+
+  // Toggle function with persistence
+  const toggleDatePickerHeight = () => {
+    isDatePickerExpanded.value = !isDatePickerExpanded.value
+    localStorage.setItem('datePickerExpanded',
+      isDatePickerExpanded.value.toString())
+  }
 
   async function loadDiary (diaryId: string) {
     diary.value = await diaryAPI.getDiary(diaryId)
@@ -259,6 +300,10 @@
       selectedDate.value = x
       selectDate(selectedDate.value)
     })
+    const stored = localStorage.getItem('datePickerExpanded')
+    if (stored) {
+      isDatePickerExpanded.value = stored === 'true'
+    }
   })
 </script>
 <style scoped>
@@ -267,7 +312,7 @@
     font-weight: bold;
   }
   .author {
-    font-size: 10px;
+    font-size: 16px;
     font-style: italic;
   }
 </style>
