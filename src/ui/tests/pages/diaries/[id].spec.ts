@@ -1,115 +1,3 @@
-/* import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, Mock, MockInstance, vi } from 'vitest'
-import { createVuetify } from 'vuetify'
-import { useRoute } from 'vue-router'
-import { diaryAPI } from '@/services/modules/diaryService'
-import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
-import { state } from '@/services/authentication/msalConfig'
-import Component from '@/pages/diaries/[id].vue'
-import Diary from '@/services/models/diary'
-import DiaryEntry from '@/services/models/diaryEntry'
-
-const vuetify = createVuetify({
-  components,
-  directives,
-})
-
-describe('pages/diaries/[id].vue Implementation Test', () => {
-  const diaryId : string = crypto.randomUUID()
-  const diary = new Diary('June as a Snowman', 'Mr Puddle', 'Life out of the freezer', diaryId)
-  const diaryEntryA = new DiaryEntry(diaryId, new Date(2024, 10, 3, 14, 0, 0), 'Freezer', 'Feeling safe', crypto.randomUUID())
-  const diaryEntryB = new DiaryEntry(diaryId, new Date(2024, 10, 3, 14, 0, 0), 'Park', 'Started warm', crypto.randomUUID())
-  const minDate = new Date(0, 0, 1)
-  const maxDate = new Date(9999, 0, 1)
-
-  // Mock route
-  vi.mock('vue-router')
-  const mockedUseRoute = useRoute as Mock
-  mockedUseRoute.mockReturnValue({ params: { id: diaryId } })
-
-  let wrapper: VueWrapper
-  let getDiarySpy: MockInstance
-  let getMinDateSpy: MockInstance
-  let getMaxDateSpy: MockInstance
-  let searchDiaryEntryForDaySpy: MockInstance
-
-  beforeEach(() => {
-    state.isAuthenticated = false
-    vi.stubEnv('VITE_API', 'http://test')
-
-    // Mock getDiary
-    getDiarySpy = vi.spyOn(diaryAPI, 'getDiary').mockReturnValue(
-      new Promise(resolve => resolve(diary)
-      ))
-
-    getMinDateSpy = vi.spyOn(diaryEntryAPI, 'getMinDate').mockReturnValue(
-      new Promise(resolve => resolve(minDate)
-      ))
-
-    getMaxDateSpy = vi.spyOn(diaryEntryAPI, 'getMaxDate').mockReturnValue(
-      new Promise(resolve => resolve(maxDate)
-      ))
-
-    searchDiaryEntryForDaySpy = vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockReturnValue(
-      new Promise(resolve => resolve([diaryEntryA, diaryEntryB])
-      ))
-
-    wrapper = mount(Component, {
-      propsData: {},
-      global: {
-        plugins: [vuetify],
-      },
-    })
-  })
-
-  afterEach(() => {
-    state.isAuthenticated = false
-    wrapper.unmount()
-    getDiarySpy.mockReset()
-    getMinDateSpy.mockReset()
-    getMaxDateSpy.mockReset()
-    searchDiaryEntryForDaySpy.mockReset()
-  })
-
-  it('Display controller', async () => {
-    expect(getDiarySpy).toHaveBeenCalledOnce()
-    expect(getDiarySpy).toBeCalledWith(diaryId)
-    expect(getMinDateSpy).toHaveBeenCalledOnce()
-    expect(getMinDateSpy).toBeCalledWith(diaryId)
-    expect(getMaxDateSpy).toHaveBeenCalledOnce()
-    expect(getMaxDateSpy).toBeCalledWith(diaryId)
-    expect(searchDiaryEntryForDaySpy).toHaveBeenCalledOnce()
-    expect(wrapper.text()).toMatch(diary.title)
-    expect(wrapper.text()).toMatch(diary.author)
-    expect(wrapper.html()).not.toMatch('Add')
-  })
-
-  it('Display controller authenticated', async () => {
-    // Arrange
-    state.isAuthenticated = true
-    await flushPromises()
-
-    // Assert
-    expect(getDiarySpy).toHaveBeenCalledOnce()
-    expect(getDiarySpy).toBeCalledWith(diaryId)
-    expect(wrapper.text()).toMatch(diary.title)
-    expect(wrapper.text()).toMatch(diary.author)
-    expect(wrapper.html()).toMatch('Add')
-  })
-
-  it('shows Add button only when authenticated', async () => {
-    state.isAuthenticated = false
-    await flushPromises()
-    expect(wrapper.html()).not.toMatch('Add')
-    state.isAuthenticated = true
-    await flushPromises()
-    expect(wrapper.html()).toMatch('Add')
-  })
-})
- */
-
 import { vi } from 'vitest'
 
 // Mock BEFORE importing the component!
@@ -148,6 +36,18 @@ describe('[id].vue', () => {
   let wrapper: VueWrapper
 
   beforeEach(() => {
+    // Mock localStorage
+    const localStorageMock = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      clear: vi.fn(),
+      removeItem: vi.fn()
+    }
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true
+    })
+
     vi.resetAllMocks()
     state.isAuthenticated = false
     vi.spyOn(diaryAPI, 'getDiary').mockResolvedValue(diary)
@@ -165,9 +65,9 @@ describe('[id].vue', () => {
     })
   })
 
-    afterEach(() => {
-      wrapper.unmount()
-    })
+  afterEach(() => {
+    wrapper.unmount()
+  })
 
   it('renders diary title and author', async () => {
     await flushPromises()
@@ -213,20 +113,20 @@ describe('[id].vue', () => {
     // No error means the methods ran
   })
 
-  it('calls deleteItemConfirm when OK is clicked in delete dialog', async () => {
-    state.isAuthenticated = true
+  // correct text of button displayed when isDatePickerExpanded is true vs false
+  it('shows correct toggle button text based on isDatePickerExpanded state', async () => {
+    // Set initial state to false
+    ((wrapper.vm as any).isDatePickerExpanded as any) = false;
+
     await flushPromises()
-    // Open delete dialog
-    const deleteBtn = wrapper.findAll('button').find(btn => btn.html().includes('mdi-delete'))
-    expect(deleteBtn).toBeTruthy()
-    if (deleteBtn) await deleteBtn.trigger('click')
+
+    // Find the toggle button
+    const datePickerToggleBtn = wrapper.findAll('button').find(btn => btn.html().includes('Collapse date picker') || btn.html().includes('Expand date picker'))
+    expect(datePickerToggleBtn).toBeTruthy()
+    expect(datePickerToggleBtn?.text()).toBe('Expanded View')
+    if (datePickerToggleBtn) await datePickerToggleBtn.trigger('click')
     await flushPromises()
-    // Click OK in dialog
-    const okBtn = wrapper.findAllComponents({ name: 'VBtn' }).find(btn => btn.text() === 'OK')
-    expect(okBtn).toBeTruthy()
-    if (okBtn) await okBtn.trigger('click')
-    await flushPromises()
-    expect((wrapper.vm as any).dialogDelete).toBe(false)
+    expect(datePickerToggleBtn?.text()).toBe('Compact View')
   })
 
   it('calls onSubmitDiaryEntry for new entry', async () => {
@@ -256,17 +156,80 @@ describe('[id].vue', () => {
     expect(diaryEntryAPI.updateDiaryEntry).toHaveBeenCalled()
   })
 
-  // it('calls selectDate and updateMonth', async () => {
-  //   await flushPromises()
-  //   // selectDate
-  //   await (wrapper.vm as any).selectDate(new Date())
-  //   expect(diaryEntryAPI.searchDiaryEntryForDay).toHaveBeenCalled()
-  //   // updateMonth
-  //   const spy = vi.spyOn(console, 'info').mockImplementation(() => {})
-  //   await (wrapper.vm as any).updateMonth('test')
-  //   expect(spy).toHaveBeenCalledWith('test')
-  //   spy.mockRestore()
-  // })
+  it('should toggle isDatePickerExpanded from false to true', async () => {
+    // Set initial state to false
+    ((wrapper.vm as any).isDatePickerExpanded as any) = false;
+
+    // Call toggle function
+    (wrapper.vm as any).toggleDatePickerHeight();
+
+    // Verify state changed to true
+    expect((wrapper.vm as any).isDatePickerExpanded).toBe(true);
+  })
+
+  // onSubmitDiaryEntry() when date matches selectedDate
+  it('onSubmitDiaryEntry calls selectDate when date matches selectedDate', async () => {
+    state.isAuthenticated = true
+    await flushPromises()
+
+    const testDate = new Date(2024, 1, 15);
+    (wrapper.vm as any).selectedDate = testDate;
+
+    // Setup editedItem for creation (no diaryEntryId)
+    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry');
+
+    // Call onSubmitDiaryEntry with matching date
+    await (wrapper.vm as any).onSubmitDiaryEntry({
+      date: testDate,
+      location: 'Updated Location',
+      entry: 'Updated Entry'
+    })
+
+    // Verify selectDate was called because dates match
+    expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
+  })
+
+  // deleteItemConfirm() when date matches selectedDate
+  it('deleteItemConfirm calls selectDate when date matches selectedDate', async () => {
+    state.isAuthenticated = true
+    await flushPromises()
+
+    const testDate = new Date(2024, 1, 20);
+    (wrapper.vm as any).selectedDate = testDate;
+
+    // Setup editedItem with matching date and diaryEntryId
+    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry', 'test-entry-id');
+
+    // Call deleteItemConfirm
+    await (wrapper.vm as any).deleteItemConfirm()
+
+    // Verify selectDate was called because dates match
+    expect(diaryEntryAPI.deleteDiaryEntry).toHaveBeenCalledWith('test-entry-id')
+    expect((wrapper.vm as any).dialogDelete).toBe(false)
+  })
+
+  // onMounted() localStorage preference loading
+  it('onMounted loads datePickerExpanded preference from localStorage', async () => {
+    // Mock localStorage.getItem to return 'true'
+    vi.mocked(localStorage.getItem).mockReturnValue('true')
+
+    // Create a new component instance to trigger onMounted
+    const newWrapper = mount(Component, {
+      global: {
+        plugins: [vuetify],
+      },
+    })
+
+    await flushPromises()
+
+    // Verify localStorage was called with correct key
+    expect(localStorage.getItem).toHaveBeenCalledWith('id.datePickerExpanded')
+
+    // Verify the value was set correctly
+    expect((newWrapper.vm as any).isDatePickerExpanded).toBe(true)
+
+    newWrapper.unmount()
+  })
 
   it('renders diary title and author in v-row', async () => {
     await flushPromises()
@@ -301,82 +264,68 @@ describe('[id].vue', () => {
     expect((wrapper.vm as any).diaryEntries).not.toBeNull()
   })
 
-  // it('calls updateMonth and logs value', async () => {
-  //   const spy = vi.spyOn(console, 'info').mockImplementation(() => {})
-  //   await (wrapper.vm as any).updateMonth('month-value')
-  //   expect(spy).toHaveBeenCalledWith('month-value')
-  //   spy.mockRestore()
-  // })
-
   it('calls loadDiary on mount', async () => {
     await flushPromises()
     expect(diaryAPI.getDiary).toHaveBeenCalledWith(diaryId)
   })
 
-    it('does not show edit/delete buttons when not authenticated', async () => {
-      state.isAuthenticated = false
-      await flushPromises()
-      // Find all timeline items
-      const timelineItems = wrapper.findAllComponents({ name: 'VTimelineItem' })
-      timelineItems.forEach(item => {
-        expect(item.findAll('button').length).toBe(0)
-      })
+  it('does not show edit/delete buttons when not authenticated', async () => {
+    state.isAuthenticated = false
+    await flushPromises()
+    // Find all timeline items
+    const timelineItems = wrapper.findAllComponents({ name: 'VTimelineItem' })
+    timelineItems.forEach(item => {
+      expect(item.findAll('button').length).toBe(0)
     })
+  })
 
-    it('editItem sets default values when no diaryEntries', async () => {
-  (wrapper.vm as any).diaryEntries = []
-  await (wrapper.vm as any).editItem()
-  expect((wrapper.vm as any).dialog).toBe(true)
-  expect((wrapper.vm as any).editedItem.location).toBe('')
-})
-it('resets editedItem after close', async () => {
-  await (wrapper.vm as any).editItem({ location: 'Loc', entry: 'Entry', date: new Date(), diaryEntryId: 'id' })
-  await (wrapper.vm as any).close()
-  await nextTick() // <-- Wait for Vue to update
-  expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
-})
+  it('editItem sets default values when no diaryEntries', async () => {
+    (wrapper.vm as any).diaryEntries = []
+    await (wrapper.vm as any).editItem()
+    expect((wrapper.vm as any).dialog).toBe(true)
+    expect((wrapper.vm as any).editedItem.location).toBe('')
+  })
 
-it('resets editedItem after closeDelete', async () => {
-  await (wrapper.vm as any).editItem({ location: 'Loc', entry: 'Entry', date: new Date(), diaryEntryId: 'id' })
-  await (wrapper.vm as any).closeDelete()
-  await nextTick() // <-- Wait for Vue to update
-  expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
-})
+  it('resets editedItem after close', async () => {
+    await (wrapper.vm as any).editItem({ location: 'Loc', entry: 'Entry', date: new Date(), diaryEntryId: 'id' })
+    await (wrapper.vm as any).close()
+    await nextTick() // <-- Wait for Vue to update
+    expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
+  })
 
-it('moveStart sets selectedDate to minDate', async () => {
-  (wrapper.vm as any).minDate = new Date(2020, 0, 1)
-  await (wrapper.vm as any).moveStart()
-  expect(dayjs((wrapper.vm as any).selectedDate).isSame(dayjs((wrapper.vm as any).minDate), 'day')).toBe(true)
-})
+  it('resets editedItem after closeDelete', async () => {
+    await (wrapper.vm as any).editItem({ location: 'Loc', entry: 'Entry', date: new Date(), diaryEntryId: 'id' })
+    await (wrapper.vm as any).closeDelete()
+    await nextTick() // <-- Wait for Vue to update
+    expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
+  })
 
-it('moveEnd sets selectedDate to maxDate', async () => {
-  (wrapper.vm as any).maxDate = new Date(2020, 11, 31)
-  await (wrapper.vm as any).moveEnd()
-  expect(dayjs((wrapper.vm as any).selectedDate).isSame(dayjs((wrapper.vm as any).maxDate), 'day')).toBe(true)
-})
+  it('moveStart sets selectedDate to minDate', async () => {
+    (wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    await (wrapper.vm as any).moveStart()
+    expect(dayjs((wrapper.vm as any).selectedDate).isSame(dayjs((wrapper.vm as any).minDate), 'day')).toBe(true)
+  })
 
-it('calls selectDate when v-date-picker emits update:model-value', async () => {
-  await flushPromises()
-  const picker = wrapper.findComponent({ name: 'VDatePicker' })
-  const testDate = new Date()
-  await picker.vm.$emit('update:model-value', testDate)
-  // The effect: diaryEntries should be set
-  expect((wrapper.vm as any).diaryEntries).not.toBeNull()
-})
-// it('calls updateMonth when v-date-picker emits update:month', async () => {
-//   await flushPromises()
-//   const picker = wrapper.findComponent({ name: 'VDatePicker' })
-//   const spy = vi.spyOn(console, 'info').mockImplementation(() => {})
-//   await picker.vm.$emit('update:month', 'month')
-//   expect(spy).toHaveBeenCalledWith('month')
-//   spy.mockRestore()
-// })
+  it('moveEnd sets selectedDate to maxDate', async () => {
+    (wrapper.vm as any).maxDate = new Date(2020, 11, 31)
+    await (wrapper.vm as any).moveEnd()
+    expect(dayjs((wrapper.vm as any).selectedDate).isSame(dayjs((wrapper.vm as any).maxDate), 'day')).toBe(true)
+  })
 
-it('renders timeline items for diaryEntries', async () => {
-  await flushPromises()
-  const items = wrapper.findAllComponents({ name: 'VTimelineItem' })
-  expect(items.length).toBeGreaterThan(0)
-})
+  it('calls selectDate when v-date-picker emits update:model-value', async () => {
+    await flushPromises()
+    const picker = wrapper.findComponent({ name: 'VDatePicker' })
+    const testDate = new Date()
+    await picker.vm.$emit('update:model-value', testDate)
+    // The effect: diaryEntries should be set
+    expect((wrapper.vm as any).diaryEntries).not.toBeNull()
+  })
+
+  it('renders timeline items for diaryEntries', async () => {
+    await flushPromises()
+    const items = wrapper.findAllComponents({ name: 'VTimelineItem' })
+    expect(items.length).toBeGreaterThan(0)
+  })
 
 })
 

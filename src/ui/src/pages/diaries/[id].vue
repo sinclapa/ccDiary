@@ -116,8 +116,8 @@
           </v-card>
         </v-dialog>
       </v-col>
-      <v-col>
-        <v-timeline :align="'start'" side="end">
+      <v-col style="max-height: 0px;">
+        <v-timeline :align="'start'" side="end" style="justify-content: start;">
           <v-timeline-item
             v-for="(diaryEntry, i) in diaryEntries"
             :key="i"
@@ -125,29 +125,29 @@
             size="small"
           >
             <template #opposite>
-              <div style="width: 80px; align-self: flex-start;"
-                :class="`pt-1 headline font-weight-bold text-${'red'}`"
-                v-text="dayjs(diaryEntry.date).format('ddd HH:mm')"
-              />
+              <div style="width: 80px;" :class="`pt-1 headline font-weight-light text-${'red'}`">
+                {{ dayjs(diaryEntry.date).format('ddd HH:mm') }}
+              </div>
             </template>
             <div>
               <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">
                 {{ diaryEntry.location }}
                 <div v-if="state.isAuthenticated">
-                <v-btn
-                  :color="'red'"
-                  icon="mdi-pencil"
-                  size="small"
-                  @click="editItem(diaryEntry)"
-                >
-                </v-btn>
-                <v-btn
-                  :color="'red'"
-                  icon="mdi-delete"
-                  size="small"
-                  @click="deleteItem(diaryEntry)"
-                >
-                </v-btn>
+                  <v-btn
+                    :color="'red'"
+                    icon="mdi-pencil"
+                    size="x-small"
+                    @click="editItem(diaryEntry)"
+                  >
+                  </v-btn>
+                  &nbsp;
+                  <v-btn
+                    :color="'red'"
+                    icon="mdi-delete"
+                    size="x-small"
+                    @click="deleteItem(diaryEntry)"
+                  >
+                  </v-btn>
                 </div>
               </h2>
               <div>
@@ -169,6 +169,7 @@
   import { state } from '@/services/authentication/msalConfig'
   import dayjs from 'dayjs'
 
+  // Detect if the device is mobile
   const dialog = ref(false)
   const dialogDelete = ref(false)
   const selectedDate = ref<Date>()
@@ -180,7 +181,7 @@
   const editedItem = ref<DiaryEntry>(new DiaryEntry(diaryId, new Date(Date.now()), '', ''))
   const minDate = ref<Date>()
   const maxDate = ref<Date>()
-  const isDatePickerExpanded = ref(true)
+  const isDatePickerExpanded = ref( window.innerWidth >= 600)
 
   // Computed height
   const datePickerHeight = computed(() =>
@@ -190,7 +191,7 @@
   // Toggle function with persistence
   const toggleDatePickerHeight = () => {
     isDatePickerExpanded.value = !isDatePickerExpanded.value
-    localStorage.setItem('datePickerExpanded',
+    localStorage.setItem('id.datePickerExpanded',
       isDatePickerExpanded.value.toString())
   }
 
@@ -300,7 +301,7 @@
       selectedDate.value = x
       selectDate(selectedDate.value)
     })
-    const stored = localStorage.getItem('datePickerExpanded')
+    const stored = localStorage.getItem('id.datePickerExpanded')
     if (stored) {
       isDatePickerExpanded.value = stored === 'true'
     }
