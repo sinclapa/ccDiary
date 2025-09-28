@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container style="overflow-y: visible">
     <v-row>
       <div>
       <span class="title">{{ diary?.title }}&nbsp;</span>
@@ -116,8 +116,8 @@
           </v-card>
         </v-dialog>
       </v-col>
-      <v-col style="max-height: 0px;">
-        <v-timeline :align="'start'" side="end" style="justify-content: start;">
+      <v-col>
+        <v-timeline :align="'start'" side="end" style="justify-content: start; height: fit-content;">
           <v-timeline-item
             v-for="(diaryEntry, i) in diaryEntries"
             :key="i"
