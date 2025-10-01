@@ -134,34 +134,30 @@ resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-
 }
 
 resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
-  name: '${name}-${environment}'
+  name: 'db-${name}-${environment}'
   location: location
   parent: databaseServer
   properties: {
     createMode: 'Default'      
     collation: 'SQL_Latin1_General_CP1_CI_AS'
-    maxSizeBytes: 1073741824
+    maxSizeBytes: 34359738368 // 32 GB
     zoneRedundant: false      
     availabilityZone: 'NoPreference'
     autoPauseDelay: 60
     readScale: 'Disabled' 
-    //minCapacity: json('0.5')     
+    minCapacity: json('0.5')     
     requestedBackupStorageRedundancy: 'Local'
     catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
     isLedgerOn: false
-    //useFreeLimit: true
+    useFreeLimit: true
     freeLimitExhaustionBehavior: 'AutoPause'
+    //maintenanceConfigurationId: '/subscriptions/${subscription().id}/providers/Microsoft.Maintenance/publicMaintenanceConfigurations/SQL_WestEurope_DB_2'
+    maintenanceConfigurationId: subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')
   }
   sku: {
-    name: 'Basic'
-    tier: 'Basic'
-  }
-  /*sku: {
-    name: 'GP_S_Gen5'
+    name: 'GP_S_Gen5_1'
     tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 1         
-  } */
+  }
 }
 
 resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
