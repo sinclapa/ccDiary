@@ -21,8 +21,7 @@ stages:
 - stage: Build
   displayName: 'Build web application'
   pool:
-    name: 'Self Hosted'
-#    vmImage: 'ubuntu-latest'
+    vmImage: 'ubuntu-latest'
   jobs:
   - job: Build_UI
     variables:
@@ -222,8 +221,7 @@ stages:
   jobs:
   - deployment: Deploy
     pool:
-      name: 'Self Hosted'
-#      vmImage: 'ubuntu-latest'
+      vmImage: 'ubuntu-latest'
     environment: Production
     strategy:
       runOnce:
