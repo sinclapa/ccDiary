@@ -421,7 +421,6 @@ SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPi
 
 <# --------------------------------------------------------------------------------- #>
 <# Cleanup #>
-Disconnect-AzAccount
 az logout
 
 <# --------------------------------------------------------------------------------- #>
