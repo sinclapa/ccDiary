@@ -40,13 +40,6 @@ else {
     $params = @{}
 }
 
-if (-Not ($params.ContainsKey("SubscriptionId"))) {
-    $subscriptionId = Read-Host -Prompt "Enter the Subscription Id"
-    $params.Add("SubscriptionId", $subscriptionId)
-}
-else {
-    $subscriptionId = $params["SubscriptionId"]
-}
 if (-Not ($params.ContainsKey("Name"))) {
     $name = Read-Host -Prompt "Enter the name of the project"
     $params.Add("Name", $name)
@@ -101,51 +94,59 @@ $params | ConvertTo-StringData | Set-Content $settingsFile
 
 <# --------------------------------------------------------------------------------- #>
 <# Get Azure Params #>
-Connect-AzAccount -Subscription $subscriptionId
 
-$outputUser = Get-AzADUser
-$userId = $outputUser.Id
-$userPrincipalName = $outputUser.UserPrincipalName
+Write-Host "Authenticating with Azure..." -ForegroundColor Cyan
 
-$outputTenant = Get-AzTenant
-$tenantId = $outputTenant.Id
+az account clear
+az config set core.enable_broker_on_windows=false
+az login
 
-az login --tenant $tenantId
+$userInfoJson = az ad signed-in-user show --output json | ConvertFrom-Json
+$userId = $userInfoJson.id
+$userPrincipalName = $userInfoJson.userPrincipalName
 
-$outputInfrastructure = New-AzSubscriptionDeployment -Location $location -TemplateFile .\deploy\main.bicep -nameFromTemplate $name -environment $environment -adminUser $userPrincipalName -adminUserSID $userId
-$outputInfrastructure
-foreach ($key in $outputInfrastructure.Outputs.keys) {
-    if ($key -eq "resourceGroupName") {
-        $resourceGroupName = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "containerAppName") {
-        $containerAppName = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "containerAppUrl") {
-        $containerAppUrl = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "containerRegistryName") {
-        $containerRegistryName = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "containerRegistryLoginServer") {
-        $containerRegistryLoginServer = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "databaseServer") {
-        $databaseServer = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "databaseName") {
-        $databaseName = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "staticSiteName") {
-        $staticSiteName = $outputInfrastructure.Outputs[$key].value
-    }
-    if ($key -eq "staticSiteUrl") {
-        $staticSiteUrl = $outputInfrastructure.Outputs[$key].value
-    }          
-    if ($key -eq "resourceGroupId") {
-        $resourceGroupId = $outputInfrastructure.Outputs[$key].value
-    }
+# Get tenant information via Azure CLI (replaces Get-AzTenant)
+$tenantId = az account show --query "tenantId" --output tsv
+
+# Validate authentication was successful
+if (-not $userId -or -not $userPrincipalName -or -not $tenantId) {
+    Write-Error "Failed to retrieve Azure authentication information"
+    exit 1
 }
+
+Write-Host "Authentication successful:" -ForegroundColor Green
+Write-Host "  User: $userPrincipalName" -ForegroundColor Gray
+Write-Host "  Tenant: $tenantId" -ForegroundColor Gray
+Write-Host "  Subscription: $(az account show --query "name" --output tsv)" -ForegroundColor Gray
+
+Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
+
+# Deploy using Azure CLI
+$deploymentResult = az deployment sub create `
+  --location $location `
+  --template-file ".\deploy\main.bicep" `
+  --parameters name=$name environment=$environment adminUser=$userPrincipalName adminUserSID=$userId `
+  --output json | ConvertFrom-Json
+
+# Check if deployment succeeded
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Infrastructure deployment completed successfully" -ForegroundColor Green
+} else {
+    Write-Error "Infrastructure deployment failed"
+    exit 1
+}
+
+# Extract outputs (PowerShell style)
+$resourceGroupName = $deploymentResult.properties.outputs.resourceGroupName.value
+$containerAppName = $deploymentResult.properties.outputs.containerAppName.value
+$containerAppUrl = $deploymentResult.properties.outputs.containerAppUrl.value
+$containerRegistryName = $deploymentResult.properties.outputs.containerRegistryName.value
+$containerRegistryLoginServer = $deploymentResult.properties.outputs.containerRegistryLoginServer.value
+$databaseServer = $deploymentResult.properties.outputs.databaseServer.value
+$databaseName = $deploymentResult.properties.outputs.databaseName.value
+$staticSiteName = $deploymentResult.properties.outputs.staticSiteName.value
+$staticSiteUrl = $deploymentResult.properties.outputs.staticSiteUrl.value
+$resourceGroupId = $deploymentResult.properties.outputs.resourceGroupId.value
 
 Write-Output "resourceGroupName = $resourceGroupName"
 Write-Output "resourceGroupId = $resourceGroupId"
@@ -306,12 +307,35 @@ $content | ConvertTo-StringData | Set-Content $vuePath
 <# --------------------------------------------------------------------------------- #>
 <# Configure azure database roles #>
 
-Write-Host "Configure database"
+Write-Host "Configure database" -ForegroundColor Cyan
 
-$dbToken = (Get-AzAccessToken -AsSecureString -ResourceUrl https://database.windows.net).Token
-$dbTokenCredential = [PSCredential]::new("token", $dbToken)
+# Get database access token using Azure CLI
+Write-Host "Retrieving database access token..." -ForegroundColor Yellow
+$dbToken = az account get-access-token --resource https://database.windows.net --query "accessToken" --output tsv 2>$null
 
-Invoke-Sqlcmd -Query "
+if ($LASTEXITCODE -ne 0 -or -not $dbToken) {
+    throw "Failed to retrieve database access token. Ensure you are authenticated with Azure CLI and have appropriate permissions."
+}
+
+Write-Host "Database access token retrieved successfully" -ForegroundColor Green
+
+# Test database connection
+Write-Host "Testing database connection..." -ForegroundColor Yellow
+try {
+    $testResult = Invoke-SqlCmd -Query "SELECT @@VERSION as SqlVersion" -ServerInstance $databaseServer -Database $databaseName -AccessToken $dbToken
+    if ($testResult) {
+        Write-Host "Database connection test successful" -ForegroundColor Green
+    }
+}
+catch {
+    Write-Warning "Database connection test failed: $($_.Exception.Message)"
+    throw "Unable to connect to database. Please verify database server and permissions."
+}
+
+# Execute database configuration
+Write-Host "Configuring database roles for $containerAppName..." -ForegroundColor Yellow
+
+Invoke-SqlCmd -Query "
 IF NOT EXISTS(SELECT 1 FROM sys.database_principals WHERE type_desc = 'EXTERNAL_USER' and name = '${containerAppName}')
 BEGIN
   SELECT 'Add external user ${containerAppName}'
@@ -353,7 +377,7 @@ BEGIN
   SELECT 'Add ${containerAppName} to db_ddladmin'
   ALTER ROLE db_ddladmin ADD MEMBER ""${containerAppName}"";
 END
-" -ServerInstance $databaseServer -database $databaseName -AccessToken $dbTokenCredential.GetNetworkCredential().Password
+" -ServerInstance $databaseServer -database $databaseName -AccessToken $dbToken
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
@@ -394,6 +418,11 @@ SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPi
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraApplicationIdURI" $entraApplicationIdURI 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "resourceGroup" $resourceGroupName 
 SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "siteDeploymentToken" $siteDeploymentToken $true
+
+<# --------------------------------------------------------------------------------- #>
+<# Cleanup #>
+Disconnect-AzAccount
+az logout
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>

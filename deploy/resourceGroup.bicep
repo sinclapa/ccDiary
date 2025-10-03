@@ -12,7 +12,7 @@ var contributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefini
 
 resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
   name: userAssignedIdentityName
-  location: resourceGroup().location
+  location: location
 }
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
@@ -151,7 +151,6 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     isLedgerOn: false
     useFreeLimit: true
     freeLimitExhaustionBehavior: 'AutoPause'
-    //maintenanceConfigurationId: '/subscriptions/${subscription().id}/providers/Microsoft.Maintenance/publicMaintenanceConfigurations/SQL_WestEurope_DB_2'
     maintenanceConfigurationId: subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')
   }
   sku: {
