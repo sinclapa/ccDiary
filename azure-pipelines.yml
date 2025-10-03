@@ -10,9 +10,6 @@ trigger:
     - main
     - feature/*
 
-pool:
-  name: 'Self Hosted'
-
 variables:
   dockerImageName: 'ccdiaryapi'
   buildConfiguration: 'Release'
@@ -24,7 +21,8 @@ stages:
 - stage: Build
   displayName: 'Build web application'
   pool:
-    vmImage: 'ubuntu-latest'
+    name: 'Self Hosted'
+#    vmImage: 'ubuntu-latest'
   jobs:
   - job: Build_UI
     variables:
@@ -224,7 +222,8 @@ stages:
   jobs:
   - deployment: Deploy
     pool:
-      vmImage: 'ubuntu-latest'
+      name: 'Self Hosted'
+#      vmImage: 'ubuntu-latest'
     environment: Production
     strategy:
       runOnce:
