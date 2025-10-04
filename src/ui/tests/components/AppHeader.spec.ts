@@ -1,17 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, expect, test, vi } from 'vitest'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import AppHeader from '@/components/AppHeader.vue'
 import { state } from '@/services/authentication/msalConfig'
 import { AccountInfo } from '@azure/msal-browser'
 import { describe } from 'node:test'
-
-const vuetify = createVuetify({
-  components,
-  directives,
-})
+import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
 vi.mock('@/services/authentication/msalConfig')
 const msalServiceSpies = {

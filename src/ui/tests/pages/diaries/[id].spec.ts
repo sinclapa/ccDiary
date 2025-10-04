@@ -9,22 +9,18 @@ vi.mock('vue-router', () => ({
 
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
 //import { useRoute } from 'vue-router'
 import { diaryAPI } from '@/services/modules/diaryService'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import { state } from '@/services/authentication/msalConfig'
 import Component from '@/pages/diaries/[id].vue'
 import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
-import { createVuetify } from 'vuetify'
 
-//const createVuetify = vuetify
-const vuetify = createVuetify({ components, directives })
-
+global.ResizeObserver = require('resize-observer-polyfill')
 
 describe('[id].vue', () => {
   const diaryId = 'test-diary-id'
@@ -48,7 +44,7 @@ describe('[id].vue', () => {
       writable: true
     })
 
-    vi.resetAllMocks()
+    vi.clearAllMocks()
     state.isAuthenticated = false
     vi.spyOn(diaryAPI, 'getDiary').mockResolvedValue(diary)
     vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(minDate)
