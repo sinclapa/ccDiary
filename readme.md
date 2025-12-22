@@ -10,7 +10,7 @@ It is recommended to install the following applications
 * Node.js (https://nodejs.org/en)
 * Azure CLI (https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli)
 * Docker (https://www.docker.com/get-started/)
-* Code here
+* Code (https://github.com/sinclapa/ccDiary)
 
 # Setup Azure
 ## Build Infrastructure
