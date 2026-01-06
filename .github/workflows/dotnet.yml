@@ -17,20 +17,20 @@ jobs:
       pull-requests: write
       checks: write
 
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.204
+        dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore ./src/api/ccDiary.sln
     - name: Build
       run: dotnet build ./src/api/ccDiary.sln --configuration Release --no-restore
     - name: Test
-      run: dotnet test ./src/api/ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" /p:ExcludeByFile="**/*[Mm]igrations/*.cs"
+      run: dotnet test ./src/api/ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" /p:ExcludeByFile="**/*[Mm]igrations/*.cs" -- RunConfiguration.DisableAppDomain=true -- RunConfiguration.MaxCpuCount=1
     - name: Combine Coverage Reports # This is because one report is produced per project, and we want one result for all of them.
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
       with:
