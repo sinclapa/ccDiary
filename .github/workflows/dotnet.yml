@@ -107,6 +107,11 @@ jobs:
         if: ${{ !cancelled() }}       # run this step even if previous step failed
         with:
           name: JEST Tests            # Name of the check run which will be created
-          path: ./src/ui/reports/*.xml    # Path to test results
+          path: ./src/ui/reports/junit.xml    # Path to test results
           reporter: jest-junit        # Format of test results
-      
+      - name: Publish UI Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2.16.1
+        if: always()
+        with:
+            label: UI Tests
+            files: "${{ github.workspace }}/**/junit.xml"      
