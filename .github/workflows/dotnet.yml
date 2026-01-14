@@ -134,12 +134,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ui-coverage
-          path: ${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml
+          path: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
           retention-days: 5
       - name: Publish Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          filename: ${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml
+          filename: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
           badge: true
           fail_below_min: false # just informative for now
           format: markdown
