@@ -90,6 +90,7 @@ jobs:
       if: github.event_name == 'pull_request'
       with:
         recreate: true
+        message: "### API Code Coverage Report\n\n"
         path: code-coverage-results.md
 
         
@@ -118,17 +119,18 @@ jobs:
         run: npm run build --if-present
       - name: Run UI Tests
         run: npm run test:ci
-      - name: UI Test Report
-        uses: dorny/test-reporter@v2
-        if: always()       # run this step even if previous step failed
-        with:
-          name: UI Tests            # Name of the check run which will be created
-          path: ./src/ui/reports/junit.xml    # Path to test results
-          reporter: jest-junit        # Format of test results
+    #   - name: UI Test Report
+    #     uses: dorny/test-reporter@v2
+    #     if: always()       # run this step even if previous step failed
+    #     with:
+    #       name: UI Tests            # Name of the check run which will be created
+    #       path: ./src/ui/reports/junit.xml    # Path to test results
+    #       reporter: jest-junit        # Format of test results
       - name: Publish UI Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.16.1
         if: always()
         with:
+            check_name: "UI Tests"
             files: "${{ github.workspace }}/**/junit.xml"      
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
@@ -155,4 +157,5 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           recreate: true
+          message: "### UI Code Coverage Report\n\n"
           path: code-coverage-results.md
