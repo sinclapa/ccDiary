@@ -117,14 +117,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: ui-test-results
-            path: "${{ github.workspace }}/**/junit.xml" 
+            path: "${{ github.workspace }}/**/reports/junit.xml" 
             retention-days: 5
       - name: Publish UI Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.16.1
         if: always()
         with:
             check_name: "UI Tests"
-            files: "${{ github.workspace }}/**/junit.xml"      
+            files: "${{ github.workspace }}/**/reports/junit.xml"      
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
         with:
