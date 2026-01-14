@@ -132,7 +132,6 @@ jobs:
           path: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
           retention-days: 5
       - run: cp "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml" "${{ github.workspace }}/cobertura-coverage.xml"
-      - run: ls "${{ github.workspace }}"
       - name: Publish Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
