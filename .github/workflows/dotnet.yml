@@ -30,7 +30,7 @@ jobs:
       with:
         dotnet-version: 8.0.x
         cache: true
-        cache-dependency-path: '**/package-lock.json'
+        cache-dependency-path: '**/package.lock.json'
     - name: Restore API dependencies
       run: dotnet restore ccDiary.sln
     - name: Build API
