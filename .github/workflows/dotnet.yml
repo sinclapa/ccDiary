@@ -17,6 +17,9 @@ jobs:
         issues: read
         checks: write
         pull-requests: write
+        packages: write
+        attestations: write
+        id-token: write
 
     runs-on: ubuntu-latest
     defaults:
