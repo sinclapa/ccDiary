@@ -97,7 +97,8 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         push: true
-        context: .
+        context: ./src/api  # <== This is the path to the 'api' subdirectory containing your application resources
+        file: ./src/api/Dockerfile  # <== This specifies the 'Dockerfile' in the subdirectory
         working-directory: ./src/api
         tags: |
           ghcr.io/sinclapa/ccdiary/ccdiary-api:latest
