@@ -11,6 +11,7 @@ It is recommended to install the following applications
 * Azure CLI (https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli)
 * Docker (https://www.docker.com/get-started/)
 * Code (https://github.com/sinclapa/ccDiary)
+* GitHub CLI (https://cli.github.com/)
 
 # Setup Azure
 ## Build Infrastructure

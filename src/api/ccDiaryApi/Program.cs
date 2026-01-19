@@ -39,6 +39,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
+Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
 var connStrBuilder = new SqlConnectionStringBuilder(
     builder.Configuration["ConnectionStrings:SqlConnection"]);
 
