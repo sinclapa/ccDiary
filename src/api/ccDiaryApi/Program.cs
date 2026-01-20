@@ -21,7 +21,7 @@ using Steeltoe.Management.Endpoint.Info;
 using Steeltoe.Management.Endpoint.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Configuration.AddEnvironmentVariables();
 if (builder.Environment.IsEnvironment("Local"))
 {
     builder.Configuration.AddUserSecrets<Program>();
