@@ -34,6 +34,8 @@ jobs:
         dotnet-version: 8.0.x
         cache: true
         cache-dependency-path: '**/packages.lock.json'
+    - name: Set API Version
+      run: sed -i "s/\(<AssemblyVersion>\([0-9]*\+\.\)\{3\}\)\([0-9]*\+\)/\1${{github.run_number}}/" **/*.csproj
     - name: Restore API dependencies
       run: dotnet restore ccDiary.sln
     - name: Build API

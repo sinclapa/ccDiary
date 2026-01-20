@@ -7,7 +7,7 @@
     <UserSecretsId>cab124e3-5845-4057-8fa9-02c8ad6cc9ba</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
-    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0</FileVersion>
     <Description>Cooking Code Diary App</Description>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
