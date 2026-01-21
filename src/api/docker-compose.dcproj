@@ -11,6 +11,7 @@
     <DockerComposeProjectName>ccdiary</DockerComposeProjectName>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".runsettings" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>

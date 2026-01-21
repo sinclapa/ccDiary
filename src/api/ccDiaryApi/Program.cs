@@ -21,7 +21,7 @@ using Steeltoe.Management.Endpoint.Info;
 using Steeltoe.Management.Endpoint.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Configuration.AddEnvironmentVariables();
 if (builder.Environment.IsEnvironment("Local"))
 {
     builder.Configuration.AddUserSecrets<Program>();
@@ -39,6 +39,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
+Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
 var connStrBuilder = new SqlConnectionStringBuilder(
     builder.Configuration["ConnectionStrings:SqlConnection"]);
 

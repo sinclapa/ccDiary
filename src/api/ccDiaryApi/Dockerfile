@@ -25,7 +25,7 @@ FROM build AS test
 WORKDIR /src
 
 # run the unit tests
-RUN dotnet test "ccDiaryApiTest/ccDiaryApiTest.csproj" -c Release --no-restore --logger "trx;LogFileName=testresults.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs" || exit 0
+RUN dotnet test "ccDiaryApiTest/ccDiaryApiTest.csproj" -c Release --no-build --logger "trx;LogFileName=testresults.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs" || exit 0
 
 FROM scratch AS export-test-results
 COPY --from=test /src/ccDiaryApiTest/TestResults/* .

@@ -13,41 +13,62 @@ jobs:
   build-api:
     
     permissions:
-      contents: read
-      pull-requests: write
-      checks: write
+        contents: read
+        issues: read
+        checks: write
+        pull-requests: write
+        packages: write
+        attestations: write
+        id-token: write
 
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/api
 
-    steps:
-    - uses: actions/checkout@v4
+    steps:    
+    - uses: actions/checkout@v5
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
         cache: true
-        cache-dependency-path: '**/package-lock.json'
-    - name: Restore dependencies
-      run: dotnet restore ./src/api/ccDiary.sln
-    - name: Build
-      run: dotnet build ./src/api/ccDiary.sln --configuration Release --no-restore
-    - name: Test
-      run: dotnet test ./src/api/ccDiary.sln --configuration Release --no-build --verbosity normal --logger "trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs"
+        cache-dependency-path: '**/packages.lock.json'
+    - name: Set API Version
+      run: sed -i "s/\(<AssemblyVersion>\([0-9]*\+\.\)\{3\}\)\([0-9]*\+\)/\1${{github.run_number}}/" **/*.csproj
+    - name: Restore API dependencies
+      run: dotnet restore ccDiary.sln
+    - name: Build API
+      run: dotnet build ccDiary.sln --configuration Release --no-restore
+    - name: Test API
+      run: dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger "trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs"
+    - name: Upload Test Result Files
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-test-results
+        path: ${{ github.workspace }}/**/TestResults/**/*
+        retention-days: 5
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2.16.1
+      if: always()
+      with:
+        check_name: "API Tests"
+        trx_files: "${{ github.workspace }}/src/api/**/*.trx"
     - name: Combine Coverage Reports # This is because one report is produced per project, and we want one result for all of them.
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
       with:
-        reports: "**/*.cobertura.xml" # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
+        reports: "./src/api/**/*.cobertura.xml" # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
         targetdir: "${{ github.workspace }}" # REQUIRED # The directory where the generated report should be saved.
         reporttypes: "Cobertura" # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, Html_Dark, Html_Light, Html_BlueRed, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlInline_AzurePipelines_Light, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MarkdownSummary, MarkdownSummaryGithub, MarkdownDeltaSummary, MHtml, PngChart, SonarQube, TeamCitySummary, TextSummary, TextDeltaSummary, Xml, XmlSummary
         verbosity: "Info" # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
-        title: "Code Coverage" # Optional title.
+        title: "API Code Coverage" # Optional title.
         tag: "${{ github.run_number }}_${{ github.run_id }}" # Optional tag or build version.
         customSettings: "" # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
         toolpath: "reportgeneratortool" # Default directory for installing the dotnet tool.
     - name: Upload Combined Coverage XML
       uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: api-coverage
         path: ${{ github.workspace }}/Cobertura.xml
         retention-days: 5
     - name: Publish Code Coverage Report
@@ -55,7 +76,7 @@ jobs:
       with:
         filename: "Cobertura.xml"
         badge: true
-        fail_below_min: false # just informative for now
+        fail_below_min: true
         format: markdown
         hide_branch_rate: false
         hide_complexity: false
@@ -68,21 +89,32 @@ jobs:
       with:
         recreate: true
         path: code-coverage-results.md
-    - name: Upload Test Result Files
-      uses: actions/upload-artifact@v4
+    - name: Publish api
+      run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build  -c Release -o ./publish
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
       with:
-        name: test-results
-        path: ${{ github.workspace }}/**/TestResults/**/*
-        retention-days: 5
-    - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2.16.1
-      if: always()
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
       with:
-        trx_files: "${{ github.workspace }}/**/*.trx"
+        push: true
+        context: ./src/api  # <== This is the path to the 'api' subdirectory containing your application resources
+        file: ./src/api/Dockerfile  # <== This specifies the 'Dockerfile' in the subdirectory
+        tags: |
+          ghcr.io/sinclapa/ccdiary-api:latest
         
   build-ui:
 
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
     defaults:
       run:
@@ -90,10 +122,52 @@ jobs:
     
     steps:
       - uses: actions/checkout@v5
-      - name: Use Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-      - run: npm ci
-      - run: npm run build --if-present
-      - run: npm test
+          cache: 'npm'
+          cache-dependency-path: './src/ui/package-lock.json'
+      - name: Install packages
+        run: npm ci
+      - name: Build UI
+        run: npm run build --if-present
+      - name: Run UI Tests
+        run: npm run test:ci
+      - name: Upload Test Result Files
+        uses: actions/upload-artifact@v4
+        with:
+            name: ui-test-results
+            path: "${{ github.workspace }}/**/reports/junit.xml" 
+            retention-days: 5
+      - name: Publish UI Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2.16.1
+        if: always()
+        with:
+            check_name: "UI Tests"
+            files: "${{ github.workspace }}/**/reports/junit.xml"      
+      - name: Upload Combined Coverage XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-coverage
+          path: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
+          retention-days: 5
+      - run: cp "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml" "${{ github.workspace }}/cobertura-coverage.xml"
+      - name: Publish Code Coverage Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: "cobertura-coverage.xml"
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+          thresholds: "80 90"
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
