@@ -6,6 +6,12 @@ if (-Not (Get-Module -ListAvailable -Name SqlServer)) {
 }
 
 <# --------------------------------------------------------------------------------- #>
+<# Setup az #>
+
+az extension add --name containerapp
+az extension add --name serviceconnector-passwordless --upgrade
+
+<# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
 function ConvertTo-StringData {
     [CmdletBinding()]
@@ -308,6 +314,10 @@ $content | ConvertTo-StringData | Set-Content $vuePath
 <# Configure azure database roles #>
 
 Write-Host "Configure database" -ForegroundColor Cyan
+
+# az containerapp connection create sql --connection sql_85fe6 --source-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/DefaultResourceGroup-WEU/providers/Microsoft.App/containerApps/test --target-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/rg-ccdiary-dev/providers/Microsoft.Sql/servers/mssql-ccdiary-dev/databases/db-ccdiary-dev --client-type dotnet --system-identity -c test
+# az containerapp connection create sql --connection sql_cb6a1 --source-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/rg-ccdiary-dev/providers/Microsoft.App/containerApps/app-ccdiary-dev --target-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/rg-ccdiary-dev/providers/Microsoft.Sql/servers/mssql-ccdiary-dev/databases/db-ccdiary-dev --client-type dotnet --system-identity -c app-ccdiary-dev
+
 
 # Get database access token using Azure CLI
 Write-Host "Retrieving database access token..." -ForegroundColor Yellow
