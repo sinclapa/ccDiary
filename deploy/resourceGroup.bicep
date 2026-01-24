@@ -5,79 +5,11 @@ param environment string
 param adminUser string
 param adminUserSID string
 param location string = resourceGroup().location
-var apiImageName = 'ccdiaryapi'
-var userAssignedIdentityName = 'configDeployer'
-var roleAssignmentName = guid(resourceGroup().id, 'contributor')
-var contributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-
-resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
-  name: userAssignedIdentityName
-  location: location
-}
-
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: 'acr${name}${uniqueString(resourceGroup().id)}'
-  location: location
-  properties: {
-    adminUserEnabled: true
-  }
-  sku: {
-    name: 'Basic'
-  }
-}
-
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: roleAssignmentName
-  properties: {
-    roleDefinitionId: contributorRoleDefinitionId
-    principalId: userAssignedIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource ccdiaryApiImageExists 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: 'ccdiaryApiImageExists'  
-  kind: 'AzurePowerShell'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${userAssignedIdentity.id}': {}
-    }
-  }
-  location: location
-  properties: {
-    retentionInterval: 'PT1H'
-    azPowerShellVersion: '12.2'
-    cleanupPreference: 'OnSuccess'
-    arguments: '-AcrName ${containerRegistry.name} -ImageName ${apiImageName}'
-    scriptContent: '''
-      param (
-        [string] $AcrName,
-        [string] $ImageName
-      )
-      $acrList = Get-AzContainerRegistryRepository -RegistryName $AcrName
-      $exists = $acrList -contains $ImageName
-      $DeploymentScriptOutputs = @{}
-      $DeploymentScriptOutputs['Exists'] = $exists
-    '''
-  }
-  dependsOn: [
-    roleAssignment
-  ]
-}
-
-@description('This module seeds the ACR with the public version of the app')
-module acrImportImage 'br/public:deployment-scripts/import-acr:3.0.1' = {
-  name: 'importContainerImage'
-  params: {
-    acrName: containerRegistry.name
-    location: location
-    images: array(ccdiaryApiImageExists.properties.outputs.Exists ? '${containerRegistry.properties.loginServer}/${apiImageName}:latest' : 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest')
-  }
-}
+param containerImageName string
+var appName string = '${name}-${environment}'
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'logs-${name}-${environment}'
+  name: 'logs-${appName}'
   location: location
   properties: {
     retentionInDays: 30
@@ -88,7 +20,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 }
 
 resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: 'env-${name}-${environment}'
+  name: 'cae-${appName}'
   location: location
   properties: {
     zoneRedundant: false
@@ -104,8 +36,8 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' 
   }
 }
 
-resource databaseServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
-  name: 'mssql-${name}-${environment}'
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
+  name: 'sql-${appName}'
   location: location
   identity: {
     type: 'SystemAssigned'    
@@ -124,8 +56,8 @@ resource databaseServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
 }
 
 resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  name: 'AllowAllWindowsAzureIps'
-  parent: databaseServer
+  name: 'sql-fw-${appName}'
+  parent: sqlServer
   properties: {
     startIpAddress: '0.0.0.0'
     endIpAddress: '0.0.0.0'
@@ -133,10 +65,10 @@ resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-
 
 }
 
-resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
-  name: 'db-${name}-${environment}'
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  name: 'sqldb-${appName}'
   location: location
-  parent: databaseServer
+  parent: sqlServer
   properties: {
     createMode: 'Default'      
     collation: 'SQL_Latin1_General_CP1_CI_AS'
@@ -160,7 +92,7 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
 }
 
 resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
-  name: 'site-${name}-${environment}'
+  name: 'stapp-${appName}'
   location: location
   sku: {
     name: 'free'
@@ -176,23 +108,20 @@ resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
 module containerAppModule 'containerApps.bicep' = {
   name: 'containerApps'
   params: {
-    name: name
-    environment: environment
-    location: location
+    appName: appName
     containerAppsEnvironmentId: containerAppEnvironment.id
-    containerRegistryLoginServer: containerRegistry.properties.loginServer
-    containerRegistryName: containerRegistry.name
-    containerRegistryPassword: containerRegistry.listCredentials().passwords[0].value
-    imageName: acrImportImage.outputs.importedImages[0].acrHostedImage
+    containerImageName: containerImageName
   }
 }
 
+output containerAppId string = containerAppModule.outputs.containerAppId
 output containerAppName string = containerAppModule.outputs.containerAppName
 output containerAppUrl string = containerAppModule.outputs.containerAppUrl
-output containerRegistryName string = containerRegistry.name
-output containerRegistryLoginServer string = containerRegistry.properties.loginServer
-output databaseServer string = databaseServer.properties.fullyQualifiedDomainName
-output databaseName string = database.name
+output databaseServer string = sqlServer.properties.fullyQualifiedDomainName
+output databaseId string = sqlDatabase.id
+output databaseName string = sqlDatabase.name
 output staticSiteName string = staticSite.name
 output staticSiteUrl string = staticSite.properties.defaultHostname
 output resourceGroupId string = resourceGroup().id
+output resourceGroupName string = resourceGroup().name
+output appName string = appName

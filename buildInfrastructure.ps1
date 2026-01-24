@@ -1,15 +1,14 @@
 <# --------------------------------------------------------------------------------- #>
-<# Setup PowerShell #>
-
-if (-Not (Get-Module -ListAvailable -Name SqlServer)) {
-    Install-Module -Name SqlServer -Force
+<# Setup az extensions #>
+if ((az extension list --query "[?name=='containerapp']" ) -eq "[]") {
+    az extension add --name containerapp
+    Write-Host "Installed containerapp az extension" -ForegroundColor Gray
 }
 
-<# --------------------------------------------------------------------------------- #>
-<# Setup az #>
-
-az extension add --name containerapp
-az extension add --name serviceconnector-passwordless --upgrade
+if ((az extension list --query "[?name=='serviceconnector-passwordless']" ) -eq "[]") {
+    az extension add --name serviceconnector-passwordless --upgrade
+    Write-Host "Installed serviceconnector-passwordless az extension" -ForegroundColor Gray
+}
 
 <# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
@@ -53,13 +52,6 @@ if (-Not ($params.ContainsKey("Name"))) {
 else {
     $name = $params["Name"]
 }
-if (-Not ($params.ContainsKey("Environment"))) {
-    $environment = Read-Host -Prompt "Enter the environment e.g. dev"
-    $params.Add("Environment", $environment)
-}
-else {
-    $environment = $params["Environment"]
-}
 if (-Not ($params.ContainsKey("Location"))) {
     $location = Read-Host -Prompt "Enter the Azure location e.g. westeurope"
     $params.Add("Location", $location)
@@ -67,35 +59,20 @@ if (-Not ($params.ContainsKey("Location"))) {
 else {
     $location = $params["Location"]
 }
-if (-Not ($params.ContainsKey("DevOpsOrg"))) {
-    $devOpsOrg = Read-Host -Prompt "Enter the Azure DevOps Org e.g. https://dev.azure.com/orgname/"
-    $params.Add("DevOpsOrg", $devOpsOrg)
+if (-Not ($params.ContainsKey("GitHubRepo"))) {
+    $gitHubRepo = Read-Host -Prompt "Enter the GitHub Repository e.g. https://github.com/OWNER/REPO"
+    $params.Add("GitHubRepo", $gitHubRepo)
 }
 else {
-    $devOpsOrg = $params["DevOpsOrg"]
+    $gitHubRepo = $params["GitHubRepo"]
 }
-if (-Not ($params.ContainsKey("DevOpsProject"))) {
-    $devOpsProject = Read-Host -Prompt "Enter the Azure DevOps Project"
-    $params.Add("DevOpsProject", $devOpsProject)
-}
-else {
-    $devOpsProject = $params["DevOpsProject"]
-}
-if (-Not ($params.ContainsKey("DevOpsPipelineName"))) {
-    $devOpsPipelineName = Read-Host -Prompt "Enter the Azure DevOps Pipeline Name"
-    $params.Add("DevOpsPipelineName", $devOpsPipelineName)
+if (-Not ($params.ContainsKey("DevApiContainerImage"))) {
+    $devApiContainerImage = Read-Host -Prompt "Enter the Dev API Container Image e.g. ghcr.io/OWNER/IMAGE"
+    $params.Add("DevApiContainerImage", $devApiContainerImage)
 }
 else {
-    $devOpsPipelineName = $params["DevOpsPipelineName"]
+    $devApiContainerImage = $params["DevApiContainerImage"]
 }
-if (-Not ($params.ContainsKey("DevOpsPipelineName"))) {
-    $devOpsPipelineName = Read-Host -Prompt "Enter the Azure DevOps Pipeline Name"
-    $params.Add("DevOpsPipelineName", $devOpsPipelineName)
-}
-else {
-    $devOpsPipelineName = $params["DevOpsPipelineName"]
-}
-
 $params | ConvertTo-StringData | Set-Content $settingsFile
 
 <# --------------------------------------------------------------------------------- #>
@@ -131,8 +108,11 @@ Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file ".\deploy\main.bicep" `
-  --parameters name=$name environment=$environment adminUser=$userPrincipalName adminUserSID=$userId `
+  --parameters name=$name adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage `
   --output json | ConvertFrom-Json
+  
+Write-Host $deploymentResult.outputs.devEnvironment.value.environment
+Write-Host $deploymentResult
 
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
@@ -143,296 +123,52 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 # Extract outputs (PowerShell style)
-$resourceGroupName = $deploymentResult.properties.outputs.resourceGroupName.value
-$containerAppName = $deploymentResult.properties.outputs.containerAppName.value
-$containerAppUrl = $deploymentResult.properties.outputs.containerAppUrl.value
-$containerRegistryName = $deploymentResult.properties.outputs.containerRegistryName.value
-$containerRegistryLoginServer = $deploymentResult.properties.outputs.containerRegistryLoginServer.value
-$databaseServer = $deploymentResult.properties.outputs.databaseServer.value
-$databaseName = $deploymentResult.properties.outputs.databaseName.value
-$staticSiteName = $deploymentResult.properties.outputs.staticSiteName.value
-$staticSiteUrl = $deploymentResult.properties.outputs.staticSiteUrl.value
-$resourceGroupId = $deploymentResult.properties.outputs.resourceGroupId.value
+$resourceGroupName = $deploymentResult.properties.outputs.devEnvironment.value.resourceGroupName.value
+$containerAppId = $deploymentResult.properties.outputs.devEnvironment.value.containerAppId.value
+$containerAppName = $deploymentResult.properties.outputs.devEnvironment.value.containerAppName.value
+$containerAppUrl = $deploymentResult.properties.outputs.devEnvironment.value.containerAppUrl.value
+$databaseServer = $deploymentResult.properties.outputs.devEnvironment.value.databaseServer.value
+$databaseId = $deploymentResult.properties.outputs.devEnvironment.value.databaseId.value
+$databaseName = $deploymentResult.properties.outputs.devEnvironment.value.databaseName.value
+$staticSiteName = $deploymentResult.properties.outputs.devEnvironment.value.staticSiteName.value
+$staticSiteUrl = $deploymentResult.properties.outputs.devEnvironment.value.staticSiteUrl.value
+$resourceGroupId = $deploymentResult.properties.outputs.devEnvironment.value.resourceGroupId.value
+$appName = $deploymentResult.properties.outputs.devEnvironment.value.appName.value
 
 Write-Output "resourceGroupName = $resourceGroupName"
 Write-Output "resourceGroupId = $resourceGroupId"
 Write-Output "containerAppName = $containerAppName"
 Write-Output "containerAppUrl = $containerAppUrl"
-Write-Output "containerRegistryName = $containerRegistryName"
-Write-Output "containerRegistryLoginServer = $containerRegistryLoginServer"
 Write-Output "databaseServer = $databaseServer"
+Write-Output "databaseId = $databaseId"
 Write-Output "databaseName = $databaseName"
 Write-Output "staticSiteName = $staticSiteName"
 Write-Output "staticSiteUrl = $staticSiteUrl"
+Write-Output "appName = $appName"
 
-<# --------------------------------------------------------------------------------- #>
-<# Configure Entra App Registration #>
-$app_name="${name}-${environment}"
+Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
+$entraOut = & ".\entraSetup.ps1" `
+    -AppName $appName `
+    -spaUris @("https://${staticSiteUrl}/", "https://${containerAppUrl}/swagger/oauth2-redirect.html") `
+    -webUris @("https://${containerAppUrl}/") `
+    -resourceGroupId $resourceGroupId
+$entraClientId = $entraOut.EntraClientId
+$entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 
-$appSpaJson = @{redirectUris = @("https://localhost:54629/swagger/oauth2-redirect.html", "http://localhost:8080/", "https://${staticSiteUrl}/", "https://${containerAppUrl}/swagger/oauth2-redirect.html", "https://ccdiary.cookingcode.com/")} | ConvertTo-Json -d 3 -Compress
-$appUpdateBody = $appSpaJson | ConvertTo-Json -d 4
+az containerapp update `
+  --name $containerAppName `
+  --resource-group $resourceGroupName `
+  --output none `
+  --set-env-vars `
+    "Entra__TenantId=$tenantId" `
+    "Entra__ClientId=${entraClientId}" `
+    "Entra__ApplicationIdUri=${entraApplicationIdURI}" `
+    "ASPNETCORE_ENVIRONMENT=UAT" `
+    "ConnectionStrings__SqlConnection=Server=tcp:${databaseServer},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;"
 
-$webUris=@("https://localhost:54629/", "https://${containerAppUrl}/")
-$appId=$(az ad app list --filter "displayName eq '$app_name'" --query "[0].appId" -o tsv)
+az containerapp connection create sql --connection "sql_${New-GuidFromString(appName)}" --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
 
-if ($appId -ne "" -and $appId -ne $null) {
-    Write-Host "Updating existing application: $appId"
-    
-    # Update application
-    az ad app update --id $appId `
-        --web-redirect-uris $webUris `
-        --set spa=$appUpdateBody `
-        --identifier-uris "api://${appId}" `
-        --enable-id-token-issuance true `
-        --sign-in-audience AzureADMyOrg
-} else {
-    Write-Host "Creating new application..."
-    
-    # Create application
-    $appId = az ad app create `
-        --display-name $app_name `
-        --web-redirect-uris $webUris `
-        --enable-id-token-issuance true `
-        --sign-in-audience AzureADMyOrg `
-        --query "appId" -o tsv
-
-    az ad app update --id $appId `
-        --set spa=$appUpdateBody `
-        --identifier-uris "api://${appId}" `
-        --enable-id-token-issuance true `
-        --sign-in-audience AzureADMyOrg
-}
-
-$existingApp = az ad app show --id $appId | ConvertFrom-Json
-if ($existingApp.api.oauth2PermissionScopes) {
-    foreach ($scope in $existingApp.api.oauth2PermissionScopes) {
-        $scope.isEnabled = $false
-    }
-    $disabledScopesJson = @{ oauth2PermissionScopes = $existingApp.api.oauth2PermissionScopes } | ConvertTo-Json -Depth 10 -Compress
-    $disabledScopesBody = $disabledScopesJson | ConvertTo-Json -d 4
-    az ad app update --id $appId --set api=$disabledScopesBody
-}
-
-$oauthJson = @(
-    @{
-        oauth2PermissionScopes = @(
-            @{
-                id = New-GuidFromString "${resourceGroupId}-${name}-${environment}-oauth2-diary-update"
-                value = "Diary.Update"
-                adminConsentDisplayName = "Update diary details"
-                adminConsentDescription = "Update diary details within the ccDiary API"
-                userConsentDescription = $null
-                userConsentDisplayName = $null  
-                isEnabled = $true
-                type = "Admin"
-            }
-        )
-    }
-)
-$oauthJsonOutput = $oauthJson | ConvertTo-Json -Depth 10 -Compress
-$oauthJsonOutputBody = $oauthJsonOutput | ConvertTo-Json -d 4
-az ad app update --id $appId --set api=$oauthJsonOutputBody 
-
-$resourceJson = @(
-  @{
-    resourceAppId = "00000003-0000-0000-c000-000000000000"
-    resourceAccess = @(
-      @{
-        id = New-GuidFromString "${resourceGroupId}-${name}-${environment}-resourceAccess-scope-00000003-0000-0000-c000-000000000000"
-        type = "Scope"
-      }
-    )    
-  }
-)
-$resourceJsonOutput = $resourceJson | ConvertTo-Json -Depth 10 -Compress
-$resourceJsonOutputBody = $resourceJsonOutput | ConvertTo-Json -d 4
-
-az ad app update --id $appId --set requiredResourceAccess="[$resourceJsonOutputBody]"
-
-$entraApplicationIdURI = "api://${appId}"
-$entraClientId = $appId
-Write-Output "entraApplicationIdURI = $entraApplicationIdURI"
-Write-Output "entraClientId = $entraClientId"
-
-<# --------------------------------------------------------------------------------- #>
-<# Update Local Build Environment #>
-
-Write-Host "Updating Local API Build"
-$envPath = ".\src\api\.env"
-if (Test-Path $envPath) {
-    $envContent = Get-Content -Raw $envPath | ConvertFrom-StringData
-}
-else {
-    $envContent = @{}
-}
-if (-Not ($envContent.ContainsKey("DB_PASSWORD"))) {
-    $localDBPassword = Read-Host -Prompt "Enter the password for the local database"
-    $envContent.Add("DB_PASSWORD", $localDBPassword)
-    $envContent | ConvertTo-StringData | Set-Content $envPath
-}
-else {
-    $localDBPassword = $envContent["DB_PASSWORD"]
-}
-
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj init
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "SA_PASSWORD" "$localDBPassword"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:TenantId" "$tenantId"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ClientId" "$entraClientId"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
-
-Write-Host "Updating Local UI Build"
-function SetValueInHashTable {
-    param(
-        [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
-        [HashTable]$HashTable,
-        [Parameter(Mandatory, Position = 1)]
-        [System.String]$Name,
-        [Parameter(Mandatory, Position = 2)]
-        [System.String]$Value
-    )
-    if ($HashTable.ContainsKey($Name)) {
-        $HashTable[$Name] = $Value
-    }
-    else {
-        $HashTable.Add($Name, $Value)
-    }
-}
-
-$vuePath = ".\src\ui\.env.dev.local"
-if (Test-Path $vuePath) {
-    $content = Get-Content -Raw $vuePath | ConvertFrom-StringData
-}
-else {
-    $content = @{}
-}
-SetValueInHashTable $content "VITE_CLIENTID" """$entraClientId"""
-SetValueInHashTable $content "VITE_TENANTID" """$tenantId"""
-SetValueInHashTable $content "VITE_APPLICATIONID_URI" """$entraApplicationIdURI"""
-$content | ConvertTo-StringData | Set-Content $vuePath
-
-<# --------------------------------------------------------------------------------- #>
-<# Configure azure database roles #>
-
-Write-Host "Configure database" -ForegroundColor Cyan
-
-# az containerapp connection create sql --connection sql_85fe6 --source-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/DefaultResourceGroup-WEU/providers/Microsoft.App/containerApps/test --target-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/rg-ccdiary-dev/providers/Microsoft.Sql/servers/mssql-ccdiary-dev/databases/db-ccdiary-dev --client-type dotnet --system-identity -c test
-# az containerapp connection create sql --connection sql_cb6a1 --source-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/rg-ccdiary-dev/providers/Microsoft.App/containerApps/app-ccdiary-dev --target-id /subscriptions/b6b80247-81d9-457a-a42c-864dd2564d7a/resourceGroups/rg-ccdiary-dev/providers/Microsoft.Sql/servers/mssql-ccdiary-dev/databases/db-ccdiary-dev --client-type dotnet --system-identity -c app-ccdiary-dev
+exit 1
 
 
-# Get database access token using Azure CLI
-Write-Host "Retrieving database access token..." -ForegroundColor Yellow
-$dbToken = az account get-access-token --resource https://database.windows.net --query "accessToken" --output tsv 2>$null
 
-if ($LASTEXITCODE -ne 0 -or -not $dbToken) {
-    throw "Failed to retrieve database access token. Ensure you are authenticated with Azure CLI and have appropriate permissions."
-}
-
-Write-Host "Database access token retrieved successfully" -ForegroundColor Green
-
-# Test database connection
-Write-Host "Testing database connection..." -ForegroundColor Yellow
-try {
-    $testResult = Invoke-SqlCmd -Query "SELECT @@VERSION as SqlVersion" -ServerInstance $databaseServer -Database $databaseName -AccessToken $dbToken
-    if ($testResult) {
-        Write-Host "Database connection test successful" -ForegroundColor Green
-    }
-}
-catch {
-    Write-Warning "Database connection test failed: $($_.Exception.Message)"
-    throw "Unable to connect to database. Please verify database server and permissions."
-}
-
-# Execute database configuration
-Write-Host "Configuring database roles for $containerAppName..." -ForegroundColor Yellow
-
-Invoke-SqlCmd -Query "
-IF NOT EXISTS(SELECT 1 FROM sys.database_principals WHERE type_desc = 'EXTERNAL_USER' and name = '${containerAppName}')
-BEGIN
-  SELECT 'Add external user ${containerAppName}'
-  CREATE USER ""${containerAppName}"" FROM EXTERNAL PROVIDER
-END
-
-IF NOT EXISTS(SELECT 1 
-          FROM sys.database_role_members AS DRM 
-            RIGHT OUTER JOIN sys.database_principals AS DPRole  
-              ON DRM.role_principal_id = DPRole.principal_id  
-            LEFT OUTER JOIN sys.database_principals AS DPUser  
-              ON DRM.member_principal_id = DPUser.principal_id  
-          WHERE DPRole.name = 'db_datareader' AND DPUser.name = '${containerAppName}')
-BEGIN 
-  SELECT 'Add ${containerAppName} to db_datareader'
-  ALTER ROLE db_datareader ADD MEMBER ""${containerAppName}"";
-END
-
-IF NOT EXISTS(SELECT 1 
-          FROM sys.database_role_members AS DRM 
-            RIGHT OUTER JOIN sys.database_principals AS DPRole  
-              ON DRM.role_principal_id = DPRole.principal_id  
-            LEFT OUTER JOIN sys.database_principals AS DPUser  
-              ON DRM.member_principal_id = DPUser.principal_id  
-          WHERE DPRole.name = 'db_datawriter' AND DPUser.name = '${containerAppName}')
-BEGIN 
-  SELECT 'Add ${containerAppName} to db_datawriter'
-  ALTER ROLE db_datawriter ADD MEMBER ""${containerAppName}"";
-END
-
-IF NOT EXISTS(SELECT 1 
-          FROM sys.database_role_members AS DRM 
-            RIGHT OUTER JOIN sys.database_principals AS DPRole  
-              ON DRM.role_principal_id = DPRole.principal_id  
-            LEFT OUTER JOIN sys.database_principals AS DPUser  
-              ON DRM.member_principal_id = DPUser.principal_id  
-          WHERE DPRole.name = 'db_ddladmin' AND DPUser.name = '${containerAppName}')
-BEGIN 
-  SELECT 'Add ${containerAppName} to db_ddladmin'
-  ALTER ROLE db_ddladmin ADD MEMBER ""${containerAppName}"";
-END
-" -ServerInstance $databaseServer -database $databaseName -AccessToken $dbToken
-
-<# --------------------------------------------------------------------------------- #>
-<# Update Build Pipeline #>
-Write-Host "Update Azure DevOps Pipeline"
-
-function SetDevOpsPipelineVariable {
-    param(
-        [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
-        [PSCustomObject]$Variables,
-        [Parameter(Mandatory, Position = 1)]
-        [System.String]$Org,
-        [Parameter(Mandatory, Position = 2)]
-        [System.String]$Project,
-        [Parameter(Mandatory, Position = 3)]
-        [System.String]$PipelineName,
-        [Parameter(Mandatory, Position = 4)]
-        [System.String]$Name,
-        [Parameter(Mandatory, Position = 5)]
-        [System.String]$Value,
-        [Parameter(Position = 6)]
-        [System.Boolean]$Secret
-    )
-    if ($Variables.PSObject.Properties.Name.Contains($Name)) {
-        az pipelines variable update --org $Org --project $Project --pipeline-name $PipelineName --name $Name --value $Value --secret $Secret
-    }
-    else {
-        az pipelines variable create --org $Org --project $Project --pipeline-name $PipelineName --name $Name --value $Value --secret $Secret
-    }
-}
-
-$pipelineVariables = az pipelines variable list --org $devOpsOrg --project $devOpsProject --pipeline-name $devOpsPipelineName | ConvertFrom-Json 
-
-$siteDeploymentToken = az staticwebapp secrets list --resource-group $resourceGroupName --name $staticSiteName --query properties.apiKey
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerAppName" $containerAppName 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "containerRegistryLoginServer" $containerRegistryLoginServer 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraClientId" $entraClientId 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraTenantId" $tenantId 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "entraApplicationIdURI" $entraApplicationIdURI 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "resourceGroup" $resourceGroupName 
-SetDevOpsPipelineVariable $pipelineVariables $devOpsOrg $devOpsProject $devOpsPipelineName "siteDeploymentToken" $siteDeploymentToken $true
-
-<# --------------------------------------------------------------------------------- #>
-<# Cleanup #>
-az logout
-
-<# --------------------------------------------------------------------------------- #>
-<# Update Build Pipeline #>
-Write-Host "Finished"
