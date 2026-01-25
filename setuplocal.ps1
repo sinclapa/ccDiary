@@ -107,9 +107,5 @@ SetValueInHashTable $content "VITE_APPLICATIONID_URI" """$entraApplicationIdURI"
 $content | ConvertTo-StringData | Set-Content $vuePath
 
 <# --------------------------------------------------------------------------------- #>
-<# Cleanup #>
-az logout
-
-<# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished"

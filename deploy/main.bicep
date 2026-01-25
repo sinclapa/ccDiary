@@ -5,22 +5,24 @@ targetScope='subscription'
 @minLength(5)
 @maxLength(20)
 param name string
+
+param environment string
 param adminUser string
 param adminUserSID string
 param devApiContainerImage string
 param location string = deployment().location
 
-resource resourceGroupDev 'Microsoft.Resources/resourceGroups@2023-07-01' = {
-  name: 'rg-${name}-Dev'
+resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
+  name: 'rg-${name}-${environment}'
   location: location
 }
 
-module resourceGroupModuleDev 'resourceGroup.bicep' = {
-  name: 'resourceGroupDev'
-  scope: resourceGroupDev
+module resourceGroupModule 'resourceGroup.bicep' = {
+  name: 'resourceGroupModule-${environment}'
+  scope: resourceGroup
   params: {
     name: name
-    environment: 'Dev'
+    environment: environment
     adminUser: adminUser
     adminUserSID: adminUserSID
     containerImageName: devApiContainerImage
@@ -28,4 +30,4 @@ module resourceGroupModuleDev 'resourceGroup.bicep' = {
   }  
 }
 
-output devEnvironment object = resourceGroupModuleDev.outputs
+output environment object = resourceGroupModule.outputs

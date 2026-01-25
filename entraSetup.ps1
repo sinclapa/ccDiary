@@ -55,12 +55,15 @@ param(
     [string]$resourceGroupId
 )
 
-# Function to generate a GUID from a string
+# Function to generate a deterministic GUID from a string using SHA-256 (not for security-sensitive uses)
 function New-GuidFromString {
     param([string]$InputString)
-    $hasher = [System.Security.Cryptography.MD5]::Create()
+    $hasher = [System.Security.Cryptography.SHA256]::Create()
     $hashBytes = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($InputString))
-    return [System.Guid]::new($hashBytes)
+    # SHA-256 produces 32 bytes; use the first 16 bytes to construct a GUID
+    $guidBytes = New-Object byte[] 16
+    [Array]::Copy($hashBytes, $guidBytes, 16)
+    return [System.Guid]::new($guidBytes)
 }
 
 # Script logic starts here
@@ -137,7 +140,7 @@ try {
         resourceAppId = "00000003-0000-0000-c000-000000000000"
         resourceAccess = @(
         @{
-            id = New-GuidFromString "${resourceGroupId}-${AppName}-resourceAccess-scope-00000003-0000-0000-c000-000000000000"
+            id = New-GuidFromString "${resourceGroupId}-${AppName}-resourceAccess-scope"
             type = "Scope"
         }
         )    

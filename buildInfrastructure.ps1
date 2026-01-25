@@ -27,11 +27,15 @@ function ConvertTo-StringData {
     }
 }
 
+# Function to generate a deterministic GUID from a string using SHA-256 (not for security-sensitive uses)
 function New-GuidFromString {
     param([string]$InputString)
-    $hasher = [System.Security.Cryptography.MD5]::Create()
+    $hasher = [System.Security.Cryptography.SHA256]::Create()
     $hashBytes = $hasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($InputString))
-    return [System.Guid]::new($hashBytes)
+    # SHA-256 produces 32 bytes; use the first 16 bytes to construct a GUID
+    $guidBytes = New-Object byte[] 16
+    [Array]::Copy($hashBytes, $guidBytes, 16)
+    return [System.Guid]::new($guidBytes)
 }
 
 <# --------------------------------------------------------------------------------- #>
@@ -108,12 +112,9 @@ Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file ".\deploy\main.bicep" `
-  --parameters name=$name adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage `
+  --parameters name=$name environment="Dev" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage `
   --output json | ConvertFrom-Json
   
-Write-Host $deploymentResult.outputs.devEnvironment.value.environment
-Write-Host $deploymentResult
-
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Infrastructure deployment completed successfully" -ForegroundColor Green
@@ -123,20 +124,21 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 # Extract outputs (PowerShell style)
-$resourceGroupName = $deploymentResult.properties.outputs.devEnvironment.value.resourceGroupName.value
-$containerAppId = $deploymentResult.properties.outputs.devEnvironment.value.containerAppId.value
-$containerAppName = $deploymentResult.properties.outputs.devEnvironment.value.containerAppName.value
-$containerAppUrl = $deploymentResult.properties.outputs.devEnvironment.value.containerAppUrl.value
-$databaseServer = $deploymentResult.properties.outputs.devEnvironment.value.databaseServer.value
-$databaseId = $deploymentResult.properties.outputs.devEnvironment.value.databaseId.value
-$databaseName = $deploymentResult.properties.outputs.devEnvironment.value.databaseName.value
-$staticSiteName = $deploymentResult.properties.outputs.devEnvironment.value.staticSiteName.value
-$staticSiteUrl = $deploymentResult.properties.outputs.devEnvironment.value.staticSiteUrl.value
-$resourceGroupId = $deploymentResult.properties.outputs.devEnvironment.value.resourceGroupId.value
-$appName = $deploymentResult.properties.outputs.devEnvironment.value.appName.value
+$resourceGroupName = $deploymentResult.properties.outputs.environment.value.resourceGroupName.value
+$containerAppId = $deploymentResult.properties.outputs.environment.value.containerAppId.value
+$containerAppName = $deploymentResult.properties.outputs.environment.value.containerAppName.value
+$containerAppUrl = $deploymentResult.properties.outputs.environment.value.containerAppUrl.value
+$databaseServer = $deploymentResult.properties.outputs.environment.value.databaseServer.value
+$databaseId = $deploymentResult.properties.outputs.environment.value.databaseId.value
+$databaseName = $deploymentResult.properties.outputs.environment.value.databaseName.value
+$staticSiteName = $deploymentResult.properties.outputs.environment.value.staticSiteName.value
+$staticSiteUrl = $deploymentResult.properties.outputs.environment.value.staticSiteUrl.value
+$resourceGroupId = $deploymentResult.properties.outputs.environment.value.resourceGroupId.value
+$appName = $deploymentResult.properties.outputs.environment.value.appName.value
 
 Write-Output "resourceGroupName = $resourceGroupName"
 Write-Output "resourceGroupId = $resourceGroupId"
+Write-Output "containerAppName = $containerAppId"
 Write-Output "containerAppName = $containerAppName"
 Write-Output "containerAppUrl = $containerAppUrl"
 Write-Output "databaseServer = $databaseServer"
@@ -164,11 +166,13 @@ az containerapp update `
     "Entra__ClientId=${entraClientId}" `
     "Entra__ApplicationIdUri=${entraApplicationIdURI}" `
     "ASPNETCORE_ENVIRONMENT=UAT" `
-    "ConnectionStrings__SqlConnection=Server=tcp:${databaseServer},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Default;"
+    "ConnectionStrings__SqlConnection=Server=tcp:${databaseServer},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=`"Active Directory Default`";"
 
-az containerapp connection create sql --connection "sql_${New-GuidFromString(appName)}" --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
+az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_")  --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
 
-exit 1
+<# --------------------------------------------------------------------------------- #>
+<# Update Build Pipeline #>
+Write-Host "Finished"
 
 
 

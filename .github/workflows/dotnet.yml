@@ -128,6 +128,8 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
           cache-dependency-path: './src/ui/package-lock.json'
+      - name: Set UI version
+        run: sed -i "s/\(VITE_BUILDNUMBER="\)\([0-9]*\)/\1${{github.run_number}}/" .env                  
       - name: Install packages
         run: npm ci
       - name: Build UI
@@ -171,3 +173,18 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
+      - name: Deploy UI
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_WATER }}
+          #action: "upload"
+          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
+          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          app_location: "/dist" # App source code path
+          skip_app_build: true # Set to true to bypass build step
+          skip_api_build: true # Set to true to bypass API build step
+
+          #github_id_token: ${{ steps.idtoken.outputs.result }}
+          ###### End of Repository/Build Configurations ######
+

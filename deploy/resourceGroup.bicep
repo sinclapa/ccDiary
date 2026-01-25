@@ -56,7 +56,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
 }
 
 resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  name: 'sql-fw-${appName}'
+  name: 'sql-fw-${appName}-allow-azure-services'
   parent: sqlServer
   properties: {
     startIpAddress: '0.0.0.0'
