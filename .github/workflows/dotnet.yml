@@ -181,10 +181,10 @@ jobs:
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/dist" # App source code path
+          app_location: "/" # App source code path
           skip_app_build: true # Set to true to bypass build step
           skip_api_build: true # Set to true to bypass API build step
-
+          output_location: 'dist'
           #github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
 
