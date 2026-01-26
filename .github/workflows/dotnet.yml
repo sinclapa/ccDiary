@@ -185,8 +185,7 @@ jobs:
           #skip_deploy_on_missing_secrets: true
           app_location: "${{ github.workspace }}/src/ui/dist" # App source code path
           skip_app_build: true # Set to true to bypass build step
-          output_location: ''
-          workingDirectory: "${{ github.workspace }}/src/ui"
+          skip_api_build: true # Set to true to bypass API build step
           #github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
 
