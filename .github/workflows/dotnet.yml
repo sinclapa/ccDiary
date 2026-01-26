@@ -129,7 +129,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './src/ui/package-lock.json'
       - name: Set UI version
-        run: sed -i "s/\(VITE_BUILDNUMBER="\)\([0-9]*\)/\1${{github.run_number}}/" .env                  
+        run: sed -i "s/\(VITE_BUILDNUMBER=\"\)\([0-9]*\)/\${{github.run_number}}/" .env
       - name: Install packages
         run: npm ci
       - name: Build UI
