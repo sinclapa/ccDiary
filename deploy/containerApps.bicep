@@ -1,26 +1,21 @@
 targetScope = 'resourceGroup'
 
-param name string
-param environment string
+param appName string
 param containerAppsEnvironmentId string
-param containerRegistryLoginServer string
-param containerRegistryName string
-param imageName string
-@secure()
-param containerRegistryPassword string
-param location string = resourceGroup().location
-param containerAppName string = 'app-${name}-${environment}' 
+param containerImageName string
+var location string = resourceGroup().location
 
-resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
-  name: containerAppName
+resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
+  name: toLower('ca-${appName}')
   location: location
   properties: {
-    workloadProfileName: 'Consumption'
     managedEnvironmentId: containerAppsEnvironmentId
     configuration: {
+      activeRevisionsMode: 'Single'
       ingress: {
         external: true
         targetPort: 8080
+        transport: 'auto'
         allowInsecure: false
         traffic: [
           {
@@ -28,28 +23,14 @@ resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
             weight: 100
           }
         ]
-      }
-      activeRevisionsMode: 'Single'      
-      registries: [
-        {
-          server: containerRegistryLoginServer
-          username: containerRegistryName
-          passwordSecretRef: '${containerRegistryName}-password'
-        }
-      ]
-      secrets: [
-        {
-          name: '${containerRegistryName}-password'
-          value: containerRegistryPassword
-        }
-      ]      
+      } 
     }    
           
     template: {
       containers: [
         {
-          name: containerAppName      
-          image: imageName
+          image: containerImageName
+          name: toLower('ca-${appName}')
           resources: {
             cpu: json('0.25')
             memory: '0.5Gi'
@@ -67,5 +48,6 @@ resource containerApps 'Microsoft.App/containerApps@2023-11-02-preview' = {
   }
 }
 
+output containerAppId string = containerApps.id
 output containerAppName string = containerApps.name
 output containerAppUrl string = containerApps.properties.configuration.ingress.fqdn

@@ -3,11 +3,13 @@
 targetScope='subscription'
 
 @minLength(5)
-@maxLength(87)
+@maxLength(20)
 param name string
+
 param environment string
 param adminUser string
 param adminUserSID string
+param devApiContainerImage string
 param location string = deployment().location
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
@@ -16,24 +18,16 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
 }
 
 module resourceGroupModule 'resourceGroup.bicep' = {
-  name: 'resourceGroupTemplate'
+  name: 'resourceGroupModule-${environment}'
   scope: resourceGroup
   params: {
     name: name
     environment: environment
     adminUser: adminUser
     adminUserSID: adminUserSID
-    location: resourceGroup.location    
+    containerImageName: devApiContainerImage
+    location: location    
   }  
 }
 
-output resourceGroupName string = resourceGroup.name
-output containerAppName string = resourceGroupModule.outputs.containerAppName
-output containerAppUrl string = resourceGroupModule.outputs.containerAppUrl
-output containerRegistryName string = resourceGroupModule.outputs.containerRegistryName
-output containerRegistryLoginServer string = resourceGroupModule.outputs.containerRegistryLoginServer
-output databaseServer string = resourceGroupModule.outputs.databaseServer
-output databaseName string = resourceGroupModule.outputs.databaseName
-output staticSiteName string = resourceGroupModule.outputs.staticSiteName
-output staticSiteUrl string = resourceGroupModule.outputs.staticSiteUrl
-output resourceGroupId string = resourceGroupModule.outputs.resourceGroupId
+output environment object = resourceGroupModule.outputs
