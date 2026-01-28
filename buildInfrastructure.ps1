@@ -208,6 +208,10 @@ if ($LASTEXITCODE -eq 0) {
 $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --resource-group "$resourceGroupName" --output json | ConvertFrom-Json
 $token = $staticSiteSecrets.properties.apiKey
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
+gh secret set "API_URL_${environment}".ToUpper() --body "$containerAppUrl" --repo $gitHubRepo
+gh secret set "ENTRA_CLIENT_ID_${environment}".ToUpper() --body "$entraClientId" --repo $gitHubRepo
+gh secret set "ENTRA_APPLICATION_ID_URI_${environment}".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo
+gh secret set "TENANT_ID_${environment}".ToUpper() --body "$tenantId" --repo $gitHubRepo
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
