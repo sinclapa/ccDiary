@@ -134,7 +134,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './src/ui/package-lock.json'
       - name: Set UI version
-        run: sed -i "s/\(VITE_BUILDNUMBER=\"\)\([0-9]*\)/\1${{github.run_number}}/" .env       
+        run: sed -i "s/\(VITE_BUILDNUMBER=\"\)\([0-9]*\)/\1${{github.run_number}}/" .env
       - name: Install packages
         run: npm ci
       - name: Build UI
@@ -193,3 +193,4 @@ jobs:
           skip_api_build: true # Set to true to bypass API build step
           #github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
+
