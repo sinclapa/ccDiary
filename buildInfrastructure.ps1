@@ -12,6 +12,7 @@ if ((az extension list --query "[?name=='serviceconnector-passwordless']" ) -eq 
 
 <# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
+# Convert a Hashtable to string data format (key=value)
 function ConvertTo-StringData {
     [CmdletBinding()]
     param(
@@ -56,6 +57,13 @@ if (-Not ($params.ContainsKey("Name"))) {
 else {
     $name = $params["Name"]
 }
+if (-Not ($params.ContainsKey("Environment"))) {
+    $environment = Read-Host -Prompt "Enter the environment name"
+    $params.Add("Environment", $environment)
+}
+else {
+    $environment = $params["Environment"]
+}
 if (-Not ($params.ContainsKey("Location"))) {
     $location = Read-Host -Prompt "Enter the Azure location e.g. westeurope"
     $params.Add("Location", $location)
@@ -84,9 +92,14 @@ $params | ConvertTo-StringData | Set-Content $settingsFile
 
 Write-Host "Authenticating with Azure..." -ForegroundColor Cyan
 
-az account clear
-az config set core.enable_broker_on_windows=false
-az login
+$user = az account show --query "user.name" -o tsv 2>$null
+if ($?) { 
+    Write-Host "Logged in as: $user" 
+} else { 
+    az config set core.enable_broker_on_windows=false
+    az login
+}
+
 
 $userInfoJson = az ad signed-in-user show --output json | ConvertFrom-Json
 $userId = $userInfoJson.id
@@ -112,9 +125,9 @@ Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file ".\deploy\main.bicep" `
-  --parameters name=$name environment="Dev" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage `
+  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage `
   --output json | ConvertFrom-Json
-  
+
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Infrastructure deployment completed successfully" -ForegroundColor Green
@@ -129,6 +142,7 @@ $containerAppId = $deploymentResult.properties.outputs.environment.value.contain
 $containerAppName = $deploymentResult.properties.outputs.environment.value.containerAppName.value
 $containerAppUrl = $deploymentResult.properties.outputs.environment.value.containerAppUrl.value
 $databaseServer = $deploymentResult.properties.outputs.environment.value.databaseServer.value
+$databaseServerName = $deploymentResult.properties.outputs.environment.value.databaseServerName.value
 $databaseId = $deploymentResult.properties.outputs.environment.value.databaseId.value
 $databaseName = $deploymentResult.properties.outputs.environment.value.databaseName.value
 $staticSiteName = $deploymentResult.properties.outputs.environment.value.staticSiteName.value
@@ -138,10 +152,11 @@ $appName = $deploymentResult.properties.outputs.environment.value.appName.value
 
 Write-Output "resourceGroupName = $resourceGroupName"
 Write-Output "resourceGroupId = $resourceGroupId"
-Write-Output "containerAppName = $containerAppId"
+Write-Output "containerAppId = $containerAppId"
 Write-Output "containerAppName = $containerAppName"
 Write-Output "containerAppUrl = $containerAppUrl"
 Write-Output "databaseServer = $databaseServer"
+Write-Output "databaseServerName = $databaseServerName"
 Write-Output "databaseId = $databaseId"
 Write-Output "databaseName = $databaseName"
 Write-Output "staticSiteName = $staticSiteName"
@@ -157,18 +172,42 @@ $entraOut = & ".\entraSetup.ps1" `
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 
+Write-Host "Configuring SQL Firewall Rules..." -ForegroundColor Cyan
+$myIP = $(curl -s https://api.ipify.org)
+
+az sql server firewall-rule create `
+  --resource-group "${resourceGroupName}" `
+  --server "${databaseServerName}" `
+  --name "Allow_${env:COMPUTERNAME}_${myIP}" `
+  --start-ip-address "${myIP}" `
+  --end-ip-address "${myIP}"
+
+Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 az containerapp update `
   --name $containerAppName `
   --resource-group $resourceGroupName `
   --output none `
   --set-env-vars `
-    "Entra__TenantId=$tenantId" `
+    "Entra__TenantId=${tenantId}" `
     "Entra__ClientId=${entraClientId}" `
     "Entra__ApplicationIdUri=${entraApplicationIdURI}" `
     "ASPNETCORE_ENVIRONMENT=UAT" `
     "ConnectionStrings__SqlConnection=Server=tcp:${databaseServer},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=`"Active Directory Default`";"
 
+Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan 
 az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_")  --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
+
+Write-Host "Configure GitHub Actions Secrets..." -ForegroundColor Cyan
+gh auth status --hostname github.com > $null 2>&1
+if ($LASTEXITCODE -eq 0) { 
+    Write-Host "gh logged in" 
+} else {
+     gh auth login --web  
+}
+
+$staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --resource-group "$resourceGroupName" --output json | ConvertFrom-Json
+$token = $staticSiteSecrets.properties.apiKey
+gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>

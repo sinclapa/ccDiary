@@ -118,6 +118,7 @@ output containerAppId string = containerAppModule.outputs.containerAppId
 output containerAppName string = containerAppModule.outputs.containerAppName
 output containerAppUrl string = containerAppModule.outputs.containerAppUrl
 output databaseServer string = sqlServer.properties.fullyQualifiedDomainName
+output databaseServerName string = sqlServer.name
 output databaseId string = sqlDatabase.id
 output databaseName string = sqlDatabase.name
 output staticSiteName string = staticSite.name

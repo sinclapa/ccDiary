@@ -55,19 +55,38 @@ $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 
 Write-Host "Updating Local API Build"
 $envPath = ".\src\api\.env"
+$localDBPassword = $null
+# Read existing DB_PASSWORD from .env if present
 if (Test-Path $envPath) {
-    $envContent = Get-Content -Raw $envPath | ConvertFrom-StringData
+    $envLines = Get-Content -Path $envPath
+    foreach ($line in $envLines) {
+        # Skip empty lines and comments
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.TrimStart().StartsWith("#")) {
+            continue
+        }
+        # Split on the first '=' only
+        $parts = $line -split '=', 2
+        if ($parts.Count -lt 2) {
+            continue
+        }
+        $key = $parts[0].Trim()
+        $value = $parts[1]
+        if ($key -eq "DB_PASSWORD") {
+            $localDBPassword = $value
+            break
+        }
+    }
 }
-else {
-    $envContent = @{}
-}
-if (-Not ($envContent.ContainsKey("DB_PASSWORD"))) {
+if (-not $localDBPassword) {
     $localDBPassword = Read-Host -Prompt "Enter the password for the local database"
-    $envContent.Add("DB_PASSWORD", $localDBPassword)
-    $envContent | ConvertTo-StringData | Set-Content $envPath
-}
-else {
-    $localDBPassword = $envContent["DB_PASSWORD"]
+    # Append or create DB_PASSWORD entry in .env
+    $dbPasswordLine = "DB_PASSWORD=$localDBPassword"
+    if (Test-Path $envPath) {
+        Add-Content -Path $envPath -Value $dbPasswordLine
+    }
+    else {
+        $dbPasswordLine | Set-Content -Path $envPath
+    }
 }
 
 dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj init
