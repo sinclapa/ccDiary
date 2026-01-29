@@ -120,6 +120,11 @@ jobs:
       run:
         working-directory: ./src/ui
     
+    env:
+        VITE_API: ${{ secrets.API_URL_DEV }}
+        VITE_CLIENTID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
+        VITE_TENANTID: ${{ secrets.TENANT_ID_DEV }}
+        VITE_APPLICATIONID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
     steps:
       - uses: actions/checkout@v5
       - name: Setup Node.js
