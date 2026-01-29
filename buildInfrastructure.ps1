@@ -174,28 +174,38 @@ $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 
 Write-Host "Configuring SQL Firewall Rules..." -ForegroundColor Cyan
 $myIP = $(curl -s https://api.ipify.org)
+Write-Host "  Adding firewall rule for IP: $myIP"
 
 az sql server firewall-rule create `
   --resource-group "${resourceGroupName}" `
   --server "${databaseServerName}" `
   --name "Allow_${env:COMPUTERNAME}_${myIP}" `
   --start-ip-address "${myIP}" `
-  --end-ip-address "${myIP}"
+  --end-ip-address "${myIP}" `
+  --output none
 
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
+
+# Build connection string safely (escape inner quotes for Authentication)
+$connStr = "Server=tcp:$($databaseServer),1433;Initial Catalog=$($databaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=`"Active Directory Default`";"
+
+# Prepare environment variables as an array so PowerShell passes each as a separate argument
+$envVars = @(
+        "Entra__TenantId=$tenantId",
+        "Entra__ClientId=$entraClientId",
+        "Entra__ApplicationIdUri=$entraApplicationIdURI",
+        "ASPNETCORE_ENVIRONMENT=UAT",
+        "ConnectionStrings__SqlConnection=""$connStr"""
+)
+
 az containerapp update `
-  --name $containerAppName `
-  --resource-group $resourceGroupName `
-  --output none `
-  --set-env-vars `
-    "Entra__TenantId=${tenantId}" `
-    "Entra__ClientId=${entraClientId}" `
-    "Entra__ApplicationIdUri=${entraApplicationIdURI}" `
-    "ASPNETCORE_ENVIRONMENT=UAT" `
-    "ConnectionStrings__SqlConnection=Server=tcp:${databaseServer},1433;Initial Catalog=${databaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=`"Active Directory Default`";"
+    --name $containerAppName `
+    --resource-group $resourceGroupName `
+    --output none `
+    --set-env-vars $envVars
 
 Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan 
-az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_")  --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
+az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_") --output none --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
 
 Write-Host "Configure GitHub Actions Secrets..." -ForegroundColor Cyan
 gh auth status --hostname github.com > $null 2>&1
@@ -208,7 +218,7 @@ if ($LASTEXITCODE -eq 0) {
 $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --resource-group "$resourceGroupName" --output json | ConvertFrom-Json
 $token = $staticSiteSecrets.properties.apiKey
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
-gh secret set "API_URL_${environment}".ToUpper() --body "$containerAppUrl" --repo $gitHubRepo
+gh secret set "API_URL_${environment}".ToUpper() --body "https://$containerAppUrl/api" --repo $gitHubRepo
 gh secret set "ENTRA_CLIENT_ID_${environment}".ToUpper() --body "$entraClientId" --repo $gitHubRepo
 gh secret set "ENTRA_APPLICATION_ID_URI_${environment}".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo
 gh secret set "TENANT_ID_${environment}".ToUpper() --body "$tenantId" --repo $gitHubRepo
