@@ -191,12 +191,7 @@ jobs:
     defaults:
       run:
         working-directory: ./src/ui
-    
-    env:
-        VITE_API: ${{ secrets.API_URL_DEV }}
-        VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
-        VITE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
-        VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+
     steps:
       - name: Download UI Artifact
         uses: actions/download-artifact@v4
@@ -212,7 +207,7 @@ jobs:
           safe=${VITE_API//\"/\\\"}
           sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_DEV }}\2/" ./dist/config.js
-          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.
+          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.js
       - name: Deploy UI
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
