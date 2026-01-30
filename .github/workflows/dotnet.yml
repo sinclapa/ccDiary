@@ -182,14 +182,15 @@ jobs:
         run: echo ${{ secrets.API_URL_DEV}} | sed 's/./& /g'
       - name: 'Configure UI'
         run: |
+          echo 4
+          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
           echo 1
           sed -i "s/^\(\s*VITE_API:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_API }}\2/" ./dist/config.js          
           echo 2
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_CLIENT_ID }}\2/" ./dist/config.js
           echo 3
           sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_TENANT_ID }}\2/" ./dist/config.js
-          echo 4
-          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
+         
       - name: Deploy UI
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
