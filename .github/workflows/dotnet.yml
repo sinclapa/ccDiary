@@ -188,7 +188,8 @@ jobs:
           echo 4
           sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
           echo 1          
-          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
+          safe=${VITE_API//\"/\\\"}
+          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"$safe\"|" ./dist/config.js
           echo 2
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_CLIENT_ID }}\2/" ./dist/config.js
           echo 3
