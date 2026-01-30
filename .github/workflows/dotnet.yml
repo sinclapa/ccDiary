@@ -179,9 +179,11 @@ jobs:
           recreate: true
           path: code-coverage-results.md
       - name: 'Configure UI'
-        run: |
-          sed -i 's/^\(\s*VITE_API:\s*"\)[^"]*\("\s*,\)/\1test\2/' ./dist/config.js
-          
+        run: |          
+          sed -i "s/^\(\s*VITE_API:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.API_URL_DEV }}\2/" ./dist/config.js          
+          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_APPLICATION_ID_URI:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}\2/" ./dist/config.js
       - name: Deploy UI
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
