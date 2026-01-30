@@ -1,9 +1,10 @@
 import DiaryEntry from '@/services/models/diaryEntry'
+import { getAppConfigField } from '@/utils/appConfig'
 import dayjs from 'dayjs'
 
 export default class DiaryEntryAPIService {
   async createDiaryEntry (diaryEntry: DiaryEntry) : Promise<DiaryEntry | null> {
-    const api = new URL('v1/DiaryEntry/Create', import.meta.env.VITE_API)
+    const api = new URL('v1/DiaryEntry/Create', getAppConfigField('VITE_API'))
     const request = {
       method: 'POST',
       headers: {
@@ -20,7 +21,7 @@ export default class DiaryEntryAPIService {
   }
 
   async searchDiaryEntry (diaryId: string, year?: number, month?: number) : Promise<number[] | null> {
-    let api = new URL(`v1/DiaryEntry/Search/${diaryId}/`, import.meta.env.VITE_API)
+    let api = new URL(`v1/DiaryEntry/Search/${diaryId}/`, getAppConfigField('VITE_API'))
     if (year !== undefined) {
       api = new URL(`${year}/`, api)
     }
@@ -36,7 +37,7 @@ export default class DiaryEntryAPIService {
 
   async searchDiaryEntryForDay (diaryId: string, year: number, month: number, day: number) : Promise<DiaryEntry[]> {
     const utcOffsetMinutes : number = dayjs(new Date(year, month, day)).utcOffset()
-    const api = new URL(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}`, getAppConfigField('VITE_API'))
     let output : DiaryEntry[] = []
     const request = {
       headers: {
@@ -50,7 +51,7 @@ export default class DiaryEntryAPIService {
   }
 
   async getMinDate (diaryId: string) : Promise<Date> {
-    const api = new URL(`v1/DiaryEntry/GetMinDate/${diaryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/GetMinDate/${diaryId}`, getAppConfigField('VITE_API'))
     let output : Date = dayjs(new Date(0, 0, 1)).startOf('day').toDate()
     await fetch(api)
       .then(response => response.json())
@@ -59,7 +60,7 @@ export default class DiaryEntryAPIService {
   }
 
   async getMaxDate (diaryId: string) : Promise<Date> {
-    const api = new URL(`v1/DiaryEntry/GetMaxDate/${diaryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/GetMaxDate/${diaryId}`, getAppConfigField('VITE_API'))
     let output : Date = dayjs(new Date(9999, 0, 1)).endOf('day').toDate()
     await fetch(api)
       .then(response => response.json())
@@ -68,7 +69,7 @@ export default class DiaryEntryAPIService {
   }
 
   async updateDiaryEntry (diaryEntry: DiaryEntry) : Promise<DiaryEntry | null> {
-    const api = new URL('v1/DiaryEntry/Update', import.meta.env.VITE_API)
+    const api = new URL('v1/DiaryEntry/Update', getAppConfigField('VITE_API'))
     const request = {
       method: 'PUT',
       headers: {
@@ -85,7 +86,7 @@ export default class DiaryEntryAPIService {
   }
 
   async deleteDiaryEntry (diaryEntryId: string) : Promise<boolean> {
-    const api = new URL(`v1/DiaryEntry/Delete/${diaryEntryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/DiaryEntry/Delete/${diaryEntryId}`, getAppConfigField('VITE_API'))
     const request = {
       method: 'DELETE',
     }

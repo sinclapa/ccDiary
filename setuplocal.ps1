@@ -19,9 +19,13 @@ function ConvertTo-StringData {
 
 Write-Host "Authenticating with Azure..." -ForegroundColor Cyan
 
-az account clear
-az config set core.enable_broker_on_windows=false
-az login
+$user = az account show --query "user.name" -o tsv 2>$null
+if ($?) { 
+    Write-Host "Logged in as: $user" 
+} else { 
+    az config set core.enable_broker_on_windows=false
+    az login
+}
 
 $userInfoJson = az ad signed-in-user show --output json | ConvertFrom-Json
 $userId = $userInfoJson.id
@@ -120,9 +124,9 @@ if (Test-Path $vuePath) {
 else {
     $content = @{}
 }
-SetValueInHashTable $content "VITE_CLIENTID" """$entraClientId"""
-SetValueInHashTable $content "VITE_TENANTID" """$tenantId"""
-SetValueInHashTable $content "VITE_APPLICATIONID_URI" """$entraApplicationIdURI"""
+SetValueInHashTable $content "VITE_CLIENT_ID" """$entraClientId"""
+SetValueInHashTable $content "VITE_TENANT_ID" """$tenantId"""
+SetValueInHashTable $content "VITE_APPLICATION_ID_URI" """$entraApplicationIdURI"""
 $content | ConvertTo-StringData | Set-Content $vuePath
 
 <# --------------------------------------------------------------------------------- #>

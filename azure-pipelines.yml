@@ -25,9 +25,9 @@ stages:
   jobs:
   - job: Build_UI
     variables:
-      VITE_CLIENTID: '$(entraClientId)'
-      VITE_TENANTID: '$(entraTenantId)'
-      VITE_APPLICATIONID_URI: '$(entraApplicationIdURI)'   
+      VITE_CLIENT_ID: '$(entraClientId)'
+      VITE_TENANT_ID: '$(entraTenantId)'
+      VITE_APPLICATION_ID_URI: '$(entraApplicationIdURI)'   
       npm_config_cache: $(Pipeline.Workspace)/.npm
 
     steps:

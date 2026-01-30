@@ -1,8 +1,9 @@
 import Diary from '@/services/models/diary'
+import { getAppConfigField } from '@/utils/appConfig'
 
 export default class DiaryAPIService {
   async createDiary (diary: Diary) : Promise<Diary | null> {
-    const api = new URL('v1/Diary/Create', import.meta.env.VITE_API)
+    const api = new URL('v1/Diary/Create', getAppConfigField('VITE_API'))
     const request = {
       method: 'POST',
       headers: {
@@ -19,7 +20,7 @@ export default class DiaryAPIService {
   }
 
   async updateDiary (diary: Diary) : Promise<Diary | null> {
-    const api = new URL('v1/Diary/Update', import.meta.env.VITE_API)
+    const api = new URL('v1/Diary/Update', getAppConfigField('VITE_API'))
     const request = {
       method: 'PUT',
       headers: {
@@ -36,7 +37,7 @@ export default class DiaryAPIService {
   }
 
   async deleteDiary (diaryId: string) : Promise<boolean> {
-    const api = new URL(`v1/Diary/Delete/${diaryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/Diary/Delete/${diaryId}`, getAppConfigField('VITE_API'))
     const request = {
       method: 'DELETE',
     }
@@ -47,7 +48,7 @@ export default class DiaryAPIService {
   }
 
   async getDiaries () : Promise<Diary[]> {
-    const api = new URL('v1/Diary/Get', import.meta.env.VITE_API)
+    const api = new URL('v1/Diary/Get', getAppConfigField('VITE_API'))
     let output : Diary[] = []
     await fetch(api)
       .then(response => response.json())
@@ -56,7 +57,7 @@ export default class DiaryAPIService {
   }
 
   async getDiary (diaryId: string) : Promise<Diary | undefined> {
-    const api = new URL(`v1/Diary/Get/${diaryId}`, import.meta.env.VITE_API)
+    const api = new URL(`v1/Diary/Get/${diaryId}`, getAppConfigField('VITE_API'))
     let output : Diary | undefined
     await fetch(api)
       .then(response => response.json())

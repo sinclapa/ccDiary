@@ -122,9 +122,9 @@ jobs:
     
     env:
         VITE_API: ${{ secrets.API_URL_DEV }}
-        VITE_CLIENTID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
-        VITE_TENANTID: ${{ secrets.TENANT_ID_DEV }}
-        VITE_APPLICATIONID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+        VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
+        VITE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
+        VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
     steps:
       - uses: actions/checkout@v5
       - name: Setup Node.js
@@ -178,6 +178,12 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
+      - name: 'Configure UI'
+        run: |
+          sed -i "s/^\(\s*VITE_API:\s*"\)[^"]*\("\s*,\)/\1${{ secrets.API_URL_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*"\)[^"]*\("\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_TENANT_ID:\s*"\)[^"]*\("\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_APPLICATION_ID_URI:\s*"\)[^"]*\("\s*,\)/\1${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}\2/" ./dist/config.js
       - name: Deploy UI
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -193,4 +199,33 @@ jobs:
           skip_api_build: true # Set to true to bypass API build step
           #github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
+      - name: Store UI
+        uses: actions/upload-artifact@v4
+        with:
+            name: ui-dist
+            path: "${{ github.workspace }}/src/ui/dist"
+            retention-days: 5
+  deploy-ui:
+    needs: build-ui
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
+    defaults:
+      run:
+        working-directory: ./src/ui
+    
+    env:
+        VITE_API: ${{ secrets.API_URL_DEV }}
+        VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
+        VITE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
+        VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+    steps:
+      - name: Download UI Artifact
+        uses: actions/download-artifact@v4
+        with:
+            name: ui-dist
+            path: "${{ github.workspace }}/src/ui/dist"
