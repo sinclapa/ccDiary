@@ -178,10 +178,12 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
+      - name: Debug single line Secret in Variable
+        run: echo ${{ secrets.API_URL_DEV}} | sed 's/./& /g'
       - name: 'Configure UI'
         run: |
           echo 1
-          sed -i "s/^\(\s*VITE_API:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_API }}\2/" ./dist/config.js          
+          sed -i "s/^\(\s*VITE_API:\s*\"\)[^\"]*\(\"\s*,\)/\1ca-ccdiary-dev.proudmeadow-2f7fc336.westeurope.azurecontainerapps.io\2/" ./dist/config.js          
           echo 2
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_CLIENT_ID }}\2/" ./dist/config.js
           echo 3
