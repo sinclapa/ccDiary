@@ -119,12 +119,7 @@ jobs:
     defaults:
       run:
         working-directory: ./src/ui
-    
-    env:
-        VITE_API: ${{ secrets.API_URL_DEV }}
-        VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
-        VITE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
-        VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup Node.js
@@ -178,38 +173,6 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
-      - name: Debug single line Secret in Variable
-        run: echo ${{ secrets.API_URL_DEV}} | sed 's/./& /g'
-      - name: 'Configure UI'
-        env:
-          VITE_API: ${{ secrets.API_URL_DEV }}
-          VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
-        run: |
-          echo 4
-          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
-          echo 1          
-          safe=${VITE_API//\"/\\\"}
-          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"$safe\"|" ./dist/config.js
-          echo 2
-          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_CLIENT_ID }}\2/" ./dist/config.js
-          echo 3
-          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ env.VITE_TENANT_ID }}\2/" ./dist/config.js
-          cat ./dist/config.js
-      - name: Deploy UI
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: '${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}'
-          #repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          #skip_deploy_on_missing_secrets: true
-          app_location: "${{ github.workspace }}/src/ui/dist" # App source code path
-          skip_app_build: true # Set to true to bypass build step
-          skip_api_build: true # Set to true to bypass API build step
-          #github_id_token: ${{ steps.idtoken.outputs.result }}
-          ###### End of Repository/Build Configurations ######
       - name: Store UI
         uses: actions/upload-artifact@v4
         with:
@@ -240,3 +203,28 @@ jobs:
         with:
             name: ui-dist
             path: "${{ github.workspace }}/src/ui/dist"
+      - name: 'Configure UI'
+        env:
+          VITE_API: ${{ secrets.API_URL_DEV }}
+          VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+        run: |
+          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
+          safe=${VITE_API//\"/\\\"}
+          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
+          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.
+      - name: Deploy UI
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: '${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}'
+          #repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
+          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          #skip_deploy_on_missing_secrets: true
+          app_location: "${{ github.workspace }}/src/ui/dist" # App source code path
+          skip_app_build: true # Set to true to bypass build step
+          skip_api_build: true # Set to true to bypass API build step
+          #github_id_token: ${{ steps.idtoken.outputs.result }}
+          ###### End of Repository/Build Configurations ######
