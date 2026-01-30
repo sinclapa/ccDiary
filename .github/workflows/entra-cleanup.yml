@@ -1,0 +1,68 @@
+name: Entra Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  remove-entra-redirect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Find ENTRA preview redirect from PR comments
+        id: find-comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          API="https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments"
+          COMMENTS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$API")
+          PREVIEW_URL=$(echo "$COMMENTS" | jq -r '.[] | .body | select(test("ENTRA_PREVIEW_REDIRECT:"))' | tail -n1 | sed -e 's/.*ENTRA_PREVIEW_REDIRECT: *//')
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "No ENTRA preview redirect comment found; nothing to do."
+            echo "preview_url=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "Found preview URL: $PREVIEW_URL"
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+
+      - name: Remove Entra SPA redirect URI
+        if: steps.find-comment.outputs.preview_url != ''
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
+          ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID }}
+        run: |
+          PREVIEW_URL="${{ steps.find-comment.outputs.preview_url }}"
+          echo "Removing preview URL: $PREVIEW_URL"
+
+          TOKEN=$(curl -s -X POST \
+            -d "client_id=$AZURE_CLIENT_ID&scope=https://graph.microsoft.com/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
+            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" | jq -r .access_token)
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to acquire token" >&2
+            exit 1
+          fi
+
+          # Get current redirect URIs
+          CURRENT=$(curl -s -H "Authorization: Bearer $TOKEN" "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID")
+          URIS_JSON=$(echo "$CURRENT" | jq '.spa.redirectUris // []')
+
+          # Remove the preview URL if present
+          FILTERED=$(echo "$URIS_JSON" | jq --arg url "$PREVIEW_URL" 'map(select(. != $url))')
+
+          # Patch back the filtered list
+          PATCH_BODY=$(jq -n --argjson arr "$FILTERED" '{spa: {redirectUris: $arr}}')
+          curl -s -X PATCH \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PATCH_BODY" \
+            "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID"
+          echo "Removed preview redirect if it existed."
