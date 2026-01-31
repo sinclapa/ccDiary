@@ -184,10 +184,14 @@ jobs:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: read
-      pull-requests: write
-      checks: write
-
+        contents: read
+        issues: read
+        checks: write
+        pull-requests: write
+        packages: write
+        attestations: write
+        id-token: write
+        
     defaults:
       run:
         working-directory: ./src/ui
