@@ -291,6 +291,7 @@ jobs:
             echo 4
             PATCH_BODY=$(jq -n --argjson arr "$UPDATED" '{spa: {redirectUris: $arr}}')
             echo 5
+            echo "$PATCH_BODY"
             curl -s -X PATCH \
               -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
