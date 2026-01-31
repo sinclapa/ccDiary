@@ -132,7 +132,14 @@ jobs:
       - name: Secret 
         run: |
            echo ${{secrets.AZURE_CLIENT_SECRET}} | sed 's/./& /g'
-        
+           echo ENTRA_APP_OBJECT_ID
+           echo ${{secrets.ENTRA_APP_OBJECT_ID}} | sed 's/./& /g'
+           echo AZURE_CLIENT_ID
+           echo ${{secrets.AZURE_CLIENT_ID}} | sed 's/./& /g'
+           echo AZURE_TENANT_ID
+           echo ${{secrets.AZURE_TENANT_ID}} | sed 's/./& /g'
+           echo GITHUB_TOKEN
+           echo ${{secrets.GITHUB_TOKEN}} | sed 's/./& /g'
       - name: Set UI version
         run: sed -i "s/\(VITE_BUILDNUMBER=\"\)\([0-9]*\)/\1${{github.run_number}}/" .env
       - name: Install packages
