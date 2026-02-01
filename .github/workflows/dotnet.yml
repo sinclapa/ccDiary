@@ -128,18 +128,6 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
           cache-dependency-path: './src/ui/package-lock.json'
-
-      - name: Secret 
-        run: |
-           echo ${{secrets.ENTRA_CLIENT_SECRET_DEV}} | sed 's/./& /g'
-           echo ENTRA_APP_OBJECT_ID
-           echo ${{secrets.ENTRA_APP_OBJECT_ID_DEV}} | sed 's/./& /g'
-           echo AZURE_CLIENT_ID
-           echo ${{secrets.ENTRA_CLIENT_ID_DEV}} | sed 's/./& /g'
-           echo AZURE_TENANT_ID
-           echo ${{secrets.TENANT_ID_DEV}} | sed 's/./& /g'
-           echo GITHUB_TOKEN
-           echo ${{secrets.GITHUB_TOKEN}} | sed 's/./& /g'
       - name: Set UI version
         run: sed -i "s/\(VITE_BUILDNUMBER=\"\)\([0-9]*\)/\1${{github.run_number}}/" .env
       - name: Install packages
@@ -214,6 +202,7 @@ jobs:
         with:
             name: ui-dist
             path: "${{ github.workspace }}/src/ui/dist"
+            retention-days: 5
       - name: 'Configure UI'
         env:
           VITE_API: ${{ secrets.API_URL_DEV }}

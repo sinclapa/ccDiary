@@ -2,7 +2,7 @@ export function getAppConfigField(fieldName: string, options?: { placeholder?: s
   const placeholder = options?.placeholder ?? '__PLACEHOLDER__'
   const defaultValue = options?.defaultValue ?? 'NOT_SET'
 
-  const win = (window as any).APP_CONFIG
+  const win = window.APP_CONFIG
   const winVal = win?.[fieldName]
   if (winVal && winVal !== placeholder) return winVal
 
