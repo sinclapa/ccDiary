@@ -131,7 +131,7 @@ jobs:
 
       - name: Secret 
         run: |
-           echo ${{secrets.AZURE_CLIENT_SECRET}} | sed 's/./& /g'
+           echo ${{secrets.ENTRA_CLIENT_SECRET_DEV}} | sed 's/./& /g'
            echo ENTRA_APP_OBJECT_ID
            echo ${{secrets.ENTRA_APP_OBJECT_ID}} | sed 's/./& /g'
            echo AZURE_CLIENT_ID
