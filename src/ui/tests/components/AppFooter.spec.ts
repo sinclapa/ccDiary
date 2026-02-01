@@ -14,7 +14,7 @@ global.ResizeObserver = require('resize-observer-polyfill')
 
 test('Display AppFooter', () => {
   vi.stubEnv('VITE_VERSION', '1.2.3')
-  vi.stubEnv('VITE_BUILDNUMBER', '789')
+  vi.stubEnv('VITE_BUILD_NUMBER', '789')
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
   }, {

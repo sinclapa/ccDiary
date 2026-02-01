@@ -37,8 +37,9 @@
 
 <script setup lang="ts">
   import { state } from '@/services/authentication/msalConfig'
+  import { getAppConfigField } from '@/utils/appConfig';
 
-  const api = new URL('v1/WeatherForecast/Get', import.meta.env.VITE_API)
+  const api = new URL('v1/WeatherForecast/Get', getAppConfigField('VITE_API'))
   const weather = ref()
 
   async function data () {

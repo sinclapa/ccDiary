@@ -1,4 +1,5 @@
 import { msalInstance as defaultMsalInstance, state as defaultState } from '@/services/authentication/msalConfig'
+import { getAppConfigField } from '@/utils/appConfig'
 
 export function msalService(
   msalInstance = defaultMsalInstance,
@@ -65,7 +66,7 @@ export function msalService(
         throw new Error('No accounts found. Please login first.')
       }
       const silentRequest = {
-        scopes: [`${import.meta.env.VITE_APPLICATIONID_URI}/Diary.Update`],
+        scopes: [`${getAppConfigField('VITE_APPLICATION_ID_URI')}/Diary.Update`],
         account: accounts[0],
       }
       const silentResponse = await msalInstance.acquireTokenSilent(silentRequest)
@@ -79,7 +80,7 @@ export function msalService(
     const originalFetch = win.fetch // capture at call time, not module load time
     win.fetch = async (...args) => {
       let [resource, options] = args
-      if (resource.toString().includes(import.meta.env.VITE_API)) {
+      if (resource.toString().includes(getAppConfigField('VITE_API'))) {
         const accessToken = await getToken()
         if (options === undefined) {
           options = { headers: {} }

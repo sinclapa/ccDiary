@@ -119,12 +119,7 @@ jobs:
     defaults:
       run:
         working-directory: ./src/ui
-    
-    env:
-        VITE_API: ${{ secrets.API_URL_DEV }}
-        VITE_CLIENTID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
-        VITE_TENANTID: ${{ secrets.TENANT_ID_DEV }}
-        VITE_APPLICATIONID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+
     steps:
       - uses: actions/checkout@v5
       - name: Setup Node.js
@@ -178,6 +173,45 @@ jobs:
         with:
           recreate: true
           path: code-coverage-results.md
+      - name: Store UI
+        uses: actions/upload-artifact@v4
+        with:
+            name: ui-dist
+            path: "${{ github.workspace }}/src/ui/dist"
+            retention-days: 5
+  deploy-ui:
+    needs: build-ui
+    runs-on: ubuntu-latest
+    
+    permissions:
+        contents: read
+        issues: read
+        checks: write
+        pull-requests: write
+        packages: write
+        attestations: write
+        id-token: write
+        
+    defaults:
+      run:
+        working-directory: ./src/ui
+
+    steps:
+      - name: Download UI Artifact
+        uses: actions/download-artifact@v4
+        with:
+            name: ui-dist
+            path: "${{ github.workspace }}/src/ui/dist"
+      - name: 'Configure UI'
+        env:
+          VITE_API: ${{ secrets.API_URL_DEV }}
+          VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
+        run: |
+          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
+          safe=${VITE_API//\"/\\\"}
+          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
+          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_DEV }}\2/" ./dist/config.js
+          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.js
       - name: Deploy UI
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -193,4 +227,58 @@ jobs:
           skip_api_build: true # Set to true to bypass API build step
           #github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
+      - name: Install jq
+        if: github.event_name == 'pull_request'
+        run: sudo apt-get update && sudo apt-get install -y jq
 
+      - name: Add Entra SPA redirect URI for Preview
+        if: github.event_name == 'pull_request'
+        id: add-entra-redirect
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
+          AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET_DEV }}
+          AZURE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
+          ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID_DEV }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Try common outputs from the static web apps deploy action
+          PREVIEW_URL="${{ steps.builddeploy.outputs.static_web_app_url || steps.builddeploy.outputs.static_site_url || '' }}"
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "Warning: preview URL was not available from action outputs. Trying to use the Static Web Apps default preview hostname pattern."
+            PREVIEW_URL="https://${{ github.head_ref }}-${{ github.repository_owner }}.azurestaticapps.net"
+          fi
+
+          echo "Using preview URL: $PREVIEW_URL"
+
+          # Acquire Microsoft Graph token using client credentials
+          TOKEN=$(curl -s -X POST \
+            -d "client_id=$AZURE_CLIENT_ID&scope=https://graph.microsoft.com/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
+            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" | jq -r .access_token)
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to acquire token" >&2
+            exit 1
+          fi
+
+          # Read current spa.redirectUris for the app registration
+          CURRENT=$(curl -s -H "Authorization: Bearer $TOKEN" "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID")
+          URIS_JSON=$(echo "$CURRENT" | jq '.spa.redirectUris // []')
+
+          # If the preview URL already exists, do nothing
+          EXISTS=$(echo "$URIS_JSON" | jq --arg url "$PREVIEW_URL" 'index($url) != null')
+          if [ "$EXISTS" = "true" ]; then
+            echo "Redirect URI already present"
+          else
+            UPDATED=$(echo "$URIS_JSON" | jq --arg url "$PREVIEW_URL" '. + [$url]')
+            # Patch application with the new redirect URI list
+            PATCH_BODY=$(jq -n --argjson arr "$UPDATED" '{spa: {redirectUris: $arr}}')
+            curl -s -X PATCH \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$PATCH_BODY" \
+              "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID"
+            # Post a PR comment containing the added redirect so the cleanup workflow can find it later
+            PR_NUMBER=${{ github.event.pull_request.number }}
+            COMMENTS_API="https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments"
+            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"ENTRA_PREVIEW_REDIRECT: $PREVIEW_URL\"}" "$COMMENTS_API"
+            echo "Added redirect URI and left PR comment."
+          fi

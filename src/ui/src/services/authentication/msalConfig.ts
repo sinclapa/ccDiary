@@ -1,10 +1,11 @@
+import { getAppConfigField } from '@/utils/appConfig'
 import { type AccountInfo, PublicClientApplication, type RedirectRequest } from '@azure/msal-browser'
 import { reactive } from 'vue'
 
 export const msalConfig = {
   auth: {
-    clientId: import.meta.env.VITE_CLIENTID,
-    authority: 'https://login.microsoftonline.com/' + import.meta.env.VITE_TENANTID,
+    clientId: getAppConfigField('VITE_CLIENT_ID'),
+    authority: 'https://login.microsoftonline.com/' + getAppConfigField('VITE_TENANT_ID'),
     redirectUri: window.location.origin,
     postLogoutRedirectUri: window.location.origin,
   },

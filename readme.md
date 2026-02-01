@@ -150,8 +150,8 @@ DB_PASSWORD=<password>
 
 Create **.env.dev.local** file in .\src\ui
 ```
-VITE_CLIENTID="<Application (client) ID>"
-VITE_TENANTID="<Directory (tenant) ID>"
+VITE_CLIENT_ID="<Application (client) ID>"
+VITE_TENANT_ID="<Directory (tenant) ID>"
 ```
 
 ## Running 

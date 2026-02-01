@@ -22,6 +22,7 @@
     A PSCustomObject containing:
     - EntraApplicationIdURI: The Application ID URI of the created/updated Entra application.
     - EntraClientId: The Client ID of the created/updated Entra application.
+    - EntraObjectId: The Object ID of the created/updated Entra application.
 
 .EXAMPLE
     .\entraSetup.ps1 -AppName "App-Name" -spaUris @("https://example.com/") -webUris @("https://api.example.com/") -resourceGroupId "/subscriptions/xxxx/resourceGroups/Name"
@@ -82,7 +83,7 @@ try {
         
         # Update application
         az ad app update --id $appId `
-            --web-redirect-uris $webUris `
+            --web-redirect-uris=$webUris `
             --set spa=$appUpdateBody `
             --identifier-uris "api://${appId}" `
             --enable-id-token-issuance true `
@@ -126,7 +127,6 @@ try {
                     userConsentDescription = $null
                     userConsentDisplayName = $null  
                     isEnabled = $true
-                    type = "Admin"
                 }
             )
         }
@@ -135,31 +135,26 @@ try {
     $oauthJsonOutputBody = $oauthJsonOutput | ConvertTo-Json -d 4
     az ad app update --id $appId --set api=$oauthJsonOutputBody 
 
-    $resourceJson = @(
-    @{
-        resourceAppId = "00000003-0000-0000-c000-000000000000"
-        resourceAccess = @(
-        @{
-            id = New-GuidFromString "${resourceGroupId}-${AppName}-resourceAccess-scope"
-            type = "Scope"
-        }
-        )    
-    }
-    )
-    $resourceJsonOutput = $resourceJson | ConvertTo-Json -Depth 10 -Compress
-    $resourceJsonOutputBody = $resourceJsonOutput | ConvertTo-Json -d 4
-
-    az ad app update --id $appId --set requiredResourceAccess="[$resourceJsonOutputBody]"
-
+    $EntraObjectId = az ad app list --filter "displayName eq '$AppName'" --query "[0].id" -o tsv
     $EntraApplicationIdURI = "api://${appId}"
     $EntraClientId = $appId
     Write-Host "  EntraApplicationIdURI = $EntraApplicationIdURI"
     Write-Host "  EntraClientId = $EntraClientId"
+    Write-Host "  EntraObjectId = $EntraObjectId"
     
+    Write-Host "Add permissions to the application..."
+    $GraphAppId = "00000003-0000-0000-c000-000000000000"
+    # find the appRole id for Application.ReadWrite.All
+    $PermId = az ad sp show --id $GraphAppId --query "appRoles[?value=='Application.ReadWrite.All'].id" -o tsv
+    # attach that application permission to your app registration
+    az ad app permission add --id $EntraClientId --api $GraphAppId --api-permissions "$PermId=Role"
+    az ad app permission admin-consent --id "$EntraClientId"
+
     # Return object with 2 string properties
     return [PSCustomObject]@{
         EntraApplicationIdURI = $EntraApplicationIdURI
         EntraClientId = $EntraClientId
+        EntraObjectId = $EntraObjectId
     }
 } catch {
     Write-Error "Failed to setup Entra application: $($_.Exception.Message)"

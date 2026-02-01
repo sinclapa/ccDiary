@@ -3,7 +3,7 @@ import { msalService } from '@/services/authentication/msalService'
 import { msalInstance, state } from '@/services/authentication/msalConfig'
 
 const mockEnv = {
-  VITE_APPLICATIONID_URI: 'appIdUri',
+  VITE_APPLICATION_ID_URI: 'appIdUri',
   VITE_API: 'api',
 }
 Object.defineProperty(global, 'import.meta', {
