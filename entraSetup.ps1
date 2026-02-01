@@ -82,7 +82,7 @@ try {
         
         # Update application
         az ad app update --id $appId `
-            --web-redirect-uris $webUris `
+            --web-redirect-uris=$webUris `
             --set spa=$appUpdateBody `
             --identifier-uris "api://${appId}" `
             --enable-id-token-issuance true `
@@ -126,7 +126,6 @@ try {
                     userConsentDescription = $null
                     userConsentDisplayName = $null  
                     isEnabled = $true
-                    type = "Admin"
                 }
             )
         }

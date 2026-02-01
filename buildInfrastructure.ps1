@@ -120,6 +120,7 @@ Write-Host "  Tenant: $tenantId" -ForegroundColor Gray
 Write-Host "  Subscription: $(az account show --query "name" --output tsv)" -ForegroundColor Gray
 
 Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
+Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
 # Deploy using Azure CLI
 $deploymentResult = az deployment sub create `
@@ -150,18 +151,18 @@ $staticSiteUrl = $deploymentResult.properties.outputs.environment.value.staticSi
 $resourceGroupId = $deploymentResult.properties.outputs.environment.value.resourceGroupId.value
 $appName = $deploymentResult.properties.outputs.environment.value.appName.value
 
-Write-Output "resourceGroupName = $resourceGroupName"
-Write-Output "resourceGroupId = $resourceGroupId"
-Write-Output "containerAppId = $containerAppId"
-Write-Output "containerAppName = $containerAppName"
-Write-Output "containerAppUrl = $containerAppUrl"
-Write-Output "databaseServer = $databaseServer"
-Write-Output "databaseServerName = $databaseServerName"
-Write-Output "databaseId = $databaseId"
-Write-Output "databaseName = $databaseName"
-Write-Output "staticSiteName = $staticSiteName"
-Write-Output "staticSiteUrl = $staticSiteUrl"
-Write-Output "appName = $appName"
+Write-Output "  resourceGroupName = $resourceGroupName"
+Write-Output "  resourceGroupId = $resourceGroupId"
+Write-Output "  containerAppId = $containerAppId"
+Write-Output "  containerAppName = $containerAppName"
+Write-Output "  containerAppUrl = $containerAppUrl"
+Write-Output "  databaseServer = $databaseServer"
+Write-Output "  databaseServerName = $databaseServerName"
+Write-Output "  databaseId = $databaseId"
+Write-Output "  databaseName = $databaseName"
+Write-Output "  staticSiteName = $staticSiteName"
+Write-Output "  staticSiteUrl = $staticSiteUrl"
+Write-Output "  appName = $appName"
 
 Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
 $entraOut = & ".\entraSetup.ps1" `
@@ -173,7 +174,8 @@ $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 
 Write-Host "Configuring SQL Firewall Rules..." -ForegroundColor Cyan
-$myIP = $(curl -s https://api.ipify.org)
+$myIP = Invoke-WebRequest -UseBasicParsing -Uri "https://api.ipify.org"
+
 Write-Host "  Adding firewall rule for IP: $myIP"
 
 az sql server firewall-rule create `
@@ -207,6 +209,11 @@ az containerapp update `
 Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan 
 az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_") --output none --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
 
+
+Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
+$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
+$entraClientCredentialsPassword = $entraClientCredentials.password
+
 Write-Host "Configure GitHub Actions Secrets..." -ForegroundColor Cyan
 gh auth status --hostname github.com > $null 2>&1
 if ($LASTEXITCODE -eq 0) { 
@@ -220,6 +227,7 @@ $token = $staticSiteSecrets.properties.apiKey
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
 gh secret set "API_URL_${environment}".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo
 gh secret set "ENTRA_CLIENT_ID_${environment}".ToUpper() --body "$entraClientId" --repo $gitHubRepo
+gh secret set "ENTRA_CLIENT_SECRET_${environment}".ToUpper() --body "${entraClientCredentialsPassword}" --repo $gitHubRepo
 gh secret set "ENTRA_APPLICATION_ID_URI_${environment}".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo
 gh secret set "TENANT_ID_${environment}".ToUpper() --body "$tenantId" --repo $gitHubRepo
 

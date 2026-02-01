@@ -36,7 +36,7 @@ jobs:
         if: steps.find-comment.outputs.preview_url != ''
         env:
           AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET_DEV }}
           AZURE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
           ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID }}
         run: |

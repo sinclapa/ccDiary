@@ -248,7 +248,7 @@ jobs:
         id: add-entra-redirect
         env:
           AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET_DEV }}
           AZURE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
           ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -271,35 +271,23 @@ jobs:
             exit 1
           fi
 
-          echo 1
-
           # Read current spa.redirectUris for the app registration
           CURRENT=$(curl -s -H "Authorization: Bearer $TOKEN" "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID")
           URIS_JSON=$(echo "$CURRENT" | jq '.spa.redirectUris // []')
 
-          echo 2
-          
           # If the preview URL already exists, do nothing
           EXISTS=$(echo "$URIS_JSON" | jq --arg url "$PREVIEW_URL" 'index($url) != null')
           if [ "$EXISTS" = "true" ]; then
             echo "Redirect URI already present"
           else
-            echo 3
-          
             UPDATED=$(echo "$URIS_JSON" | jq --arg url "$PREVIEW_URL" '. + [$url]')
             # Patch application with the new redirect URI list
-            echo 4
             PATCH_BODY=$(jq -n --argjson arr "$UPDATED" '{spa: {redirectUris: $arr}}')
-            echo 5
-            echo "$TOKEN" | sed 's/./& /g'
-            echo 5.1
-            echo "$PATCH_BODY"
             curl -s -X PATCH \
               -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
               -d "$PATCH_BODY" \
               "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID"
-            echo 6
             # Post a PR comment containing the added redirect so the cleanup workflow can find it later
             PR_NUMBER=${{ github.event.pull_request.number }}
             COMMENTS_API="https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments"
