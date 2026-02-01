@@ -189,16 +189,12 @@ az sql server firewall-rule create `
 
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 
-# Build connection string safely (escape inner quotes for Authentication)
-$connStr = "Server=tcp:$($databaseServer),1433;Initial Catalog=$($databaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=`"Active Directory Default`";"
-
 # Prepare environment variables as an array so PowerShell passes each as a separate argument
 $envVars = @(
         "Entra__TenantId=$tenantId",
         "Entra__ClientId=$entraClientId",
         "Entra__ApplicationIdUri=$entraApplicationIdURI",
-        "ASPNETCORE_ENVIRONMENT=UAT",
-        "ConnectionStrings__SqlConnection=""$connStr"""
+        "ASPNETCORE_ENVIRONMENT=UAT"
 )
 
 az containerapp update `
