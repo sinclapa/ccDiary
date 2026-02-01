@@ -180,6 +180,7 @@ jobs:
             path: "${{ github.workspace }}/src/ui/dist"
             retention-days: 5
   deploy-ui:
+    if: github.event_name == 'pull_request'
     needs: build-ui
     runs-on: ubuntu-latest
     
@@ -282,7 +283,7 @@ jobs:
             curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"ENTRA_PREVIEW_REDIRECT: $PREVIEW_URL\"}" "$COMMENTS_API"
             echo "Added redirect URI and left PR comment."
           fi
-   deploy-ui-prod:
+  deploy-ui-prod:
       if: github.ref == 'refs/heads/main'
       needs: build-ui
       runs-on: ubuntu-latest
