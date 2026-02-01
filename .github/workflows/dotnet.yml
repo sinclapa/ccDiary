@@ -133,7 +133,7 @@ jobs:
         run: |
            echo ${{secrets.ENTRA_CLIENT_SECRET_DEV}} | sed 's/./& /g'
            echo ENTRA_APP_OBJECT_ID
-           echo ${{secrets.ENTRA_APP_OBJECT_ID}} | sed 's/./& /g'
+           echo ${{secrets.ENTRA_APP_OBJECT_ID_DEV}} | sed 's/./& /g'
            echo AZURE_CLIENT_ID
            echo ${{secrets.ENTRA_CLIENT_ID_DEV}} | sed 's/./& /g'
            echo AZURE_TENANT_ID
@@ -250,7 +250,7 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID_DEV }}
           AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET_DEV }}
           AZURE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
-          ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID }}
+          ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID_DEV }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Try common outputs from the static web apps deploy action

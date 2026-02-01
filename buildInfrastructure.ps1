@@ -172,6 +172,7 @@ $entraOut = & ".\entraSetup.ps1" `
     -resourceGroupId $resourceGroupId
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
+$entraObjectId = $entraOut.EntraObjectId
 
 Write-Host "Configuring SQL Firewall Rules..." -ForegroundColor Cyan
 $myIP = Invoke-WebRequest -UseBasicParsing -Uri "https://api.ipify.org"
@@ -227,6 +228,7 @@ $token = $staticSiteSecrets.properties.apiKey
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
 gh secret set "API_URL_${environment}".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo
 gh secret set "ENTRA_CLIENT_ID_${environment}".ToUpper() --body "$entraClientId" --repo $gitHubRepo
+gh secret set "ENTRA_APP_OBJECT_ID_${environment}".ToUpper() --body "$entraObjectId" --repo $gitHubRepo
 gh secret set "ENTRA_CLIENT_SECRET_${environment}".ToUpper() --body "${entraClientCredentialsPassword}" --repo $gitHubRepo
 gh secret set "ENTRA_APPLICATION_ID_URI_${environment}".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo
 gh secret set "TENANT_ID_${environment}".ToUpper() --body "$tenantId" --repo $gitHubRepo

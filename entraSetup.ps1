@@ -22,6 +22,7 @@
     A PSCustomObject containing:
     - EntraApplicationIdURI: The Application ID URI of the created/updated Entra application.
     - EntraClientId: The Client ID of the created/updated Entra application.
+    - EntraObjectId: The Object ID of the created/updated Entra application.
 
 .EXAMPLE
     .\entraSetup.ps1 -AppName "App-Name" -spaUris @("https://example.com/") -webUris @("https://api.example.com/") -resourceGroupId "/subscriptions/xxxx/resourceGroups/Name"
@@ -155,10 +156,13 @@ try {
     Write-Host "  EntraApplicationIdURI = $EntraApplicationIdURI"
     Write-Host "  EntraClientId = $EntraClientId"
     
+    $EntraObjectId = $(az ad app list --filter "displayName eq '$AppName'" --query "[0].id" -o tsv)
+
     # Return object with 2 string properties
     return [PSCustomObject]@{
         EntraApplicationIdURI = $EntraApplicationIdURI
         EntraClientId = $EntraClientId
+        EntraObjectId = $EntraObjectId
     }
 } catch {
     Write-Error "Failed to setup Entra application: $($_.Exception.Message)"
