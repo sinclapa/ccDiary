@@ -202,7 +202,6 @@ jobs:
         with:
             name: ui-dist
             path: "${{ github.workspace }}/src/ui/dist"
-            retention-days: 5
       - name: 'Configure UI'
         env:
           VITE_API: ${{ secrets.API_URL_DEV }}
