@@ -135,28 +135,20 @@ try {
     $oauthJsonOutputBody = $oauthJsonOutput | ConvertTo-Json -d 4
     az ad app update --id $appId --set api=$oauthJsonOutputBody 
 
-    $resourceJson = @(
-    @{
-        resourceAppId = "00000003-0000-0000-c000-000000000000"
-        resourceAccess = @(
-        @{
-            id = New-GuidFromString "${resourceGroupId}-${AppName}-resourceAccess-scope"
-            type = "Scope"
-        }
-        )    
-    }
-    )
-    $resourceJsonOutput = $resourceJson | ConvertTo-Json -Depth 10 -Compress
-    $resourceJsonOutputBody = $resourceJsonOutput | ConvertTo-Json -d 4
-
-    az ad app update --id $appId --set requiredResourceAccess="[$resourceJsonOutputBody]"
-
+    $EntraObjectId = az ad app list --filter "displayName eq '$AppName'" --query "[0].id" -o tsv
     $EntraApplicationIdURI = "api://${appId}"
     $EntraClientId = $appId
     Write-Host "  EntraApplicationIdURI = $EntraApplicationIdURI"
     Write-Host "  EntraClientId = $EntraClientId"
+    Write-Host "  EntraObjectId = $EntraObjectId"
     
-    $EntraObjectId = $(az ad app list --filter "displayName eq '$AppName'" --query "[0].id" -o tsv)
+    Write-Host "Add permissions to the application..."
+    $GraphAppId = "00000003-0000-0000-c000-000000000000"
+    # find the appRole id for Application.ReadWrite.All
+    $PermId = az ad sp show --id $GraphAppId --query "appRoles[?value=='Application.ReadWrite.All'].id" -o tsv
+    # attach that application permission to your app registration
+    az ad app permission add --id $EntraClientId --api $GraphAppId --api-permissions "$PermId=Role"
+    az ad app permission admin-consent --id "$EntraClientId"
 
     # Return object with 2 string properties
     return [PSCustomObject]@{
