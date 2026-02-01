@@ -106,7 +106,7 @@ jobs:
         file: ./src/api/Dockerfile  # <== This specifies the 'Dockerfile' in the subdirectory
         tags: |
           ghcr.io/sinclapa/ccdiary-api:latest
-        
+          ${{ github.ref == 'refs/heads/main' && 'ghcr.io/sinclapa/ccdiary-api:prod-latest' || '' }}
   build-ui:
 
     runs-on: ubuntu-latest
@@ -282,3 +282,41 @@ jobs:
             curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"ENTRA_PREVIEW_REDIRECT: $PREVIEW_URL\"}" "$COMMENTS_API"
             echo "Added redirect URI and left PR comment."
           fi
+   deploy-ui-prod:
+      if: github.ref == 'refs/heads/main'
+      needs: build-ui
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: ./src/ui
+
+      permissions:
+        contents: read
+        pull-requests: write
+        checks: write
+
+      steps:
+        - name: Download UI Artifact
+          uses: actions/download-artifact@v4
+          with:
+              name: ui-dist
+              path: "${{ github.workspace }}/src/ui/dist"
+        - name: 'Configure UI (prod)'
+          env:
+            VITE_API: ${{ secrets.API_URL_PROD }}
+            VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_PROD }}
+          run: |
+            sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
+            safe=${VITE_API//\"/\\\"}
+            sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
+            sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_PROD }}\2/" ./dist/config.js
+            sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_PROD }}\2/" ./dist/config.js
+        - name: Deploy UI to Prod
+          id: builddeploy-prod
+          uses: Azure/static-web-apps-deploy@v1
+          with:
+            azure_static_web_apps_api_token: '${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}'
+            action: "upload"
+            app_location: "${{ github.workspace }}/src/ui/dist"
+            skip_app_build: true
+            skip_api_build: true
