@@ -40,8 +40,9 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
-var connStrBuilder = new SqlConnectionStringBuilder(
-    builder.Configuration["ConnectionStrings:SqlConnection"]);
+string connectionString = builder.Configuration["AZURE_SQL_CONNECTIONSTRING"] ?? builder.Configuration["ConnectionStrings:SqlConnection"];
+
+var connStrBuilder = new SqlConnectionStringBuilder(connectionString);
 
 if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
 {
