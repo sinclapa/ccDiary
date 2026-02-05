@@ -129,7 +129,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './src/ui/package-lock.json'
       - name: Set UI version
-        run: sed -i "s/\(VITE_BUILDNUMBER=\"\)\([0-9]*\)/\1${{github.run_number}}/" .env
+        run: sed -i "s/\(VITE_BUILD_NUMBER=\"\)\([0-9]*\)/\1${{github.run_number}}/" .env
       - name: Install packages
         run: npm ci
       - name: Build UI
@@ -209,7 +209,6 @@ jobs:
           VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI_DEV }}
         run: |
           sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ./dist/config.js
-          safe=${VITE_API//\"/\\\"}
           sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID_DEV }}\2/" ./dist/config.js
           sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID_DEV }}\2/" ./dist/config.js
