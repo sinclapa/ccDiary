@@ -107,6 +107,7 @@ $userPrincipalName = $userInfoJson.userPrincipalName
 
 # Get tenant information via Azure CLI (replaces Get-AzTenant)
 $tenantId = az account show --query "tenantId" --output tsv
+$subscriptionId = az account show --query "id" --output tsv
 
 # Validate authentication was successful
 if (-not $userId -or -not $userPrincipalName -or -not $tenantId) {
@@ -118,6 +119,7 @@ Write-Host "Authentication successful:" -ForegroundColor Green
 Write-Host "  User: $userPrincipalName" -ForegroundColor Gray
 Write-Host "  Tenant: $tenantId" -ForegroundColor Gray
 Write-Host "  Subscription: $(az account show --query "name" --output tsv)" -ForegroundColor Gray
+Write-Host "  Subscription ID: $subscriptionId" -ForegroundColor Gray
 
 Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
@@ -211,6 +213,15 @@ Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
 $entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
 $entraClientCredentialsPassword = $entraClientCredentials.password
 
+Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
+
+$azureCredentials = az ad sp create-for-rbac `
+  --name "${containerAppName}-credentials" `
+  --role contributor `
+  --scopes /subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName} `
+  --json-auth `
+  --output json
+
 Write-Host "Configure GitHub Actions Secrets..." -ForegroundColor Cyan
 gh auth status --hostname github.com > $null 2>&1
 if ($LASTEXITCODE -eq 0) { 
@@ -221,6 +232,8 @@ if ($LASTEXITCODE -eq 0) {
 
 $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --resource-group "$resourceGroupName" --output json | ConvertFrom-Json
 $token = $staticSiteSecrets.properties.apiKey
+gh variable set "CONTAINER_APP_NAME_${environment}".ToUpper() --body "$containerAppName" --repo $gitHubRepo
+gh variable set "RESOURCE_GROUP_NAME_${environment}".ToUpper() --body "$resourceGroupName" --repo $gitHubRepo
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
 gh secret set "API_URL_${environment}".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo
 gh secret set "ENTRA_CLIENT_ID_${environment}".ToUpper() --body "$entraClientId" --repo $gitHubRepo
@@ -228,7 +241,7 @@ gh secret set "ENTRA_APP_OBJECT_ID_${environment}".ToUpper() --body "$entraObjec
 gh secret set "ENTRA_CLIENT_SECRET_${environment}".ToUpper() --body "${entraClientCredentialsPassword}" --repo $gitHubRepo
 gh secret set "ENTRA_APPLICATION_ID_URI_${environment}".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo
 gh secret set "TENANT_ID_${environment}".ToUpper() --body "$tenantId" --repo $gitHubRepo
-
+gh secret set "AZURE_CREDENTIALS_${environment}".ToUpper() --body "$azureCredentials" --repo $gitHubRepo
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished" -ForegroundColor Green

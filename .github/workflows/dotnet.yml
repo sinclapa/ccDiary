@@ -105,8 +105,41 @@ jobs:
         context: ./src/api  # <== This is the path to the 'api' subdirectory containing your application resources
         file: ./src/api/Dockerfile  # <== This specifies the 'Dockerfile' in the subdirectory
         tags: |
-          ghcr.io/sinclapa/ccdiary-api:latest
+          ghcr.io/sinclapa/ccdiary-api:${{ github.sha }}
           ${{ github.ref == 'refs/heads/main' && 'ghcr.io/sinclapa/ccdiary-api:prod-latest' || '' }}
+          
+  deploy-api:
+    if: github.event_name == 'pull_request'
+    needs: build-api
+    runs-on: ubuntu-latest
+    
+    permissions:
+        contents: read
+        issues: read
+        checks: write
+        pull-requests: write
+        packages: write
+        attestations: write
+        id-token: write
+
+    defaults:
+      run:
+        working-directory: ./src/api
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_DEV }}
+
+      - name: Deploy public GHCR image to Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+            containerAppName: ${{ vars.CONTAINER_APP_NAME_DEV }}
+            resourceGroup: ${{ vars.RESOURCE_GROUP_NAME_DEV }}
+            imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.sha }}
+            registryServer: ghcr.io
+
   build-ui:
 
     runs-on: ubuntu-latest
