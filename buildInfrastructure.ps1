@@ -196,7 +196,7 @@ $envVars = @(
         "Entra__TenantId=$tenantId",
         "Entra__ClientId=$entraClientId",
         "Entra__ApplicationIdUri=$entraApplicationIdURI",
-        "ASPNETCORE_ENVIRONMENT=UAT"
+        "ASPNETCORE_ENVIRONMENT=$environment"
 )
 
 az containerapp update `
