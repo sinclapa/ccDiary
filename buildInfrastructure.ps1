@@ -236,7 +236,7 @@ $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --res
 $token = $staticSiteSecrets.properties.apiKey
 gh api --method PUT repos/${gitHubOwnerRepo}/environments/${environment}
 gh variable set "CONTAINER_APP_NAME".ToUpper() --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
-gh variable set "RESOURCE_GROUP_NAME_${environment}".ToUpper() --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
+gh variable set "RESOURCE_GROUP_NAME".ToUpper() --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN".ToUpper() --body "$token" --repo $gitHubRepo --env "${environment}"
 gh secret set "API_URL".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo --env "${environment}"
 gh secret set "ENTRA_CLIENT_ID".ToUpper() --body "$entraClientId" --repo $gitHubRepo --env "${environment}"
