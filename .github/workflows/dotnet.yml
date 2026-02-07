@@ -217,7 +217,7 @@ jobs:
             path: "${{ github.workspace }}/src/ui/dist"
             retention-days: 5
   deploy-ui:
-    environment: dev
+    environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
     if: github.event_name == 'pull_request'
     needs: build-ui
     runs-on: ubuntu-latest
