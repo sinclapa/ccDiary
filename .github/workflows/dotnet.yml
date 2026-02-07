@@ -109,8 +109,7 @@ jobs:
           ${{ github.ref == 'refs/heads/main' && 'ghcr.io/sinclapa/ccdiary-api:latest' || '' }}
           
   deploy-api:
-    environment: dev
-    if: github.event_name == 'pull_request'
+    environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
     needs: build-api
     runs-on: ubuntu-latest
     
