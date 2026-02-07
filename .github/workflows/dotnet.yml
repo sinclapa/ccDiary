@@ -137,8 +137,8 @@ jobs:
       - name: Deploy public GHCR image to Container App
         uses: azure/container-apps-deploy-action@v1
         with:
-            containerAppName: ${{ vars.CONTAINER_APP_NAME_DEV }}
-            resourceGroup: ${{ vars.RESOURCE_GROUP_NAME_DEV }}
+            containerAppName: ${{ vars.CONTAINER_APP_NAME }}
+            resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
             imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.sha }}
             registryServer: ghcr.io
 
@@ -218,7 +218,7 @@ jobs:
             retention-days: 5
   deploy-ui:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
-    if: github.event_name == 'pull_request'
+    #if: github.event_name == 'pull_request'
     needs: build-ui
     runs-on: ubuntu-latest
     
@@ -320,10 +320,10 @@ jobs:
             curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"ENTRA_PREVIEW_REDIRECT: $PREVIEW_URL\"}" "$COMMENTS_API"
             echo "Added redirect URI and left PR comment."
           fi
-  deploy-ui-prod:
+  release-prod:
       environment: prod
       if: github.ref == 'refs/heads/main'
-      needs: build-ui
+      needs: deploy-ui
       runs-on: ubuntu-latest
       defaults:
         run:
