@@ -11,7 +11,6 @@ on:
 
 jobs:
   build-api:
-    environment: dev
     permissions:
         contents: read
         issues: write
@@ -143,7 +142,6 @@ jobs:
             registryServer: ghcr.io
 
   build-ui:
-    environment: dev
     runs-on: ubuntu-latest
     
     permissions:
@@ -322,6 +320,7 @@ jobs:
           fi  
   create-ui-release:
     name: Create UI Release
+    if: github.ref == 'refs/heads/main' 
     runs-on: ubuntu-latest
     permissions:
       contents: write
