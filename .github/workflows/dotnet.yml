@@ -14,7 +14,7 @@ jobs:
     environment: dev
     permissions:
         contents: read
-      issues: write
+        issues: write
         checks: write
         pull-requests: write
         packages: write
@@ -87,6 +87,7 @@ jobs:
       uses: marocchino/sticky-pull-request-comment@v2
       if: github.event_name == 'pull_request'
       with:
+        header: "API Code Coverage Report"
         recreate: true
         path: code-coverage-results.md
     - name: Publish api
@@ -206,6 +207,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         if: github.event_name == 'pull_request'
         with:
+          header: "UI Code Coverage Report"
           recreate: true
           path: code-coverage-results.md
       - name: Store UI
