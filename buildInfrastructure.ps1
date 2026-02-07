@@ -71,12 +71,14 @@ if (-Not ($params.ContainsKey("Location"))) {
 else {
     $location = $params["Location"]
 }
-if (-Not ($params.ContainsKey("GitHubRepo"))) {
-    $gitHubRepo = Read-Host -Prompt "Enter the GitHub Repository e.g. https://github.com/OWNER/REPO"
-    $params.Add("GitHubRepo", $gitHubRepo)
+if (-Not ($params.ContainsKey("GitHubOwnerRepo"))) {
+    $gitHubOwnerRepo = Read-Host -Prompt "Enter the GitHub Owner/Repo e.g. last part from https://github.com/OWNER/REPO"
+    $gitHubRepo = "https://github.com/${gitHubOwnerRepo}"
+    $params.Add("GitHubOwnerRepo", $gitHubRepo)
 }
 else {
-    $gitHubRepo = $params["GitHubRepo"]
+    $gitHubOwnerRepo = $params["GitHubOwnerRepo"]
+    $gitHubRepo = "https://github.com/${gitHubOwnerRepo}"
 }
 if (-Not ($params.ContainsKey("DevApiContainerImage"))) {
     $devApiContainerImage = Read-Host -Prompt "Enter the Dev API Container Image e.g. ghcr.io/OWNER/IMAGE"
@@ -232,19 +234,20 @@ if ($LASTEXITCODE -eq 0) {
 
 $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --resource-group "$resourceGroupName" --output json | ConvertFrom-Json
 $token = $staticSiteSecrets.properties.apiKey
-gh variable set "CONTAINER_APP_NAME_${environment}".ToUpper() --body "$containerAppName" --repo $gitHubRepo
-gh variable set "RESOURCE_GROUP_NAME_${environment}".ToUpper() --body "$resourceGroupName" --repo $gitHubRepo
-gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN_${environment}".ToUpper() --body "$token" --repo $gitHubRepo
-gh secret set "API_URL_${environment}".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo
-gh secret set "ENTRA_CLIENT_ID_${environment}".ToUpper() --body "$entraClientId" --repo $gitHubRepo
-gh secret set "ENTRA_APP_OBJECT_ID_${environment}".ToUpper() --body "$entraObjectId" --repo $gitHubRepo
-gh secret set "ENTRA_CLIENT_SECRET_${environment}".ToUpper() --body "${entraClientCredentialsPassword}" --repo $gitHubRepo
-gh secret set "ENTRA_APPLICATION_ID_URI_${environment}".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo
-gh secret set "TENANT_ID_${environment}".ToUpper() --body "$tenantId" --repo $gitHubRepo
-gh secret set "AZURE_CREDENTIALS_${environment}".ToUpper() --body "$azureCredentials" --repo $gitHubRepo
+gh api --method PUT repos/${gitHubOwnerRepo}/environments/${environment}
+gh variable set "CONTAINER_APP_NAME".ToUpper() --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
+gh variable set "RESOURCE_GROUP_NAME_${environment}".ToUpper() --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
+gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN".ToUpper() --body "$token" --repo $gitHubRepo --env "${environment}"
+gh secret set "API_URL".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo --env "${environment}"
+gh secret set "ENTRA_CLIENT_ID".ToUpper() --body "$entraClientId" --repo $gitHubRepo --env "${environment}"
+gh secret set "ENTRA_APP_OBJECT_ID".ToUpper() --body "$entraObjectId" --repo $gitHubRepo --env "${environment}"
+gh secret set "ENTRA_CLIENT_SECRET".ToUpper() --body "${entraClientCredentialsPassword}" --repo $gitHubRepo --env "${environment}"
+gh secret set "ENTRA_APPLICATION_ID_URI".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
+gh secret set "TENANT_ID".ToUpper() --body "$tenantId" --repo $gitHubRepo --env "${environment}"
+gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
-Write-Host "Finished" -ForegroundColor Green
+Write-Host "Finished ${name} ${environment}" -ForegroundColor Green
 
 
 
