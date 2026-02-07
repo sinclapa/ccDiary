@@ -323,6 +323,8 @@ jobs:
   create-ui-release:
     name: Create UI Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs: [build-ui, deploy-ui]
     steps:
       - name: Download Artifact
