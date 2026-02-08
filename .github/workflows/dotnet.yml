@@ -318,7 +318,7 @@ jobs:
             echo "Added redirect URI and left PR comment."
           fi  
   create-release:
-    name: Create UI Release
+    name: Create Release
     if: github.ref == 'refs/heads/main' 
     runs-on: ubuntu-latest
     permissions:
