@@ -346,7 +346,7 @@ jobs:
         # left pads the run number with zeros to a length of 4; better alphabetical order
         run: echo "tag_name=r-$(printf %04d $GITHUB_RUN_NUMBER)" >> $GITHUB_OUTPUT
       - name: Tag API Image
-        run: docker tag ghcr.io/sinclapa/ccdiary-api:${{ github.sha }} ghcr.io/sinclapa/ccdiary-api:${{ steps.create-release-tag.outputs.tag_name }}
+        run: docker image tag ghcr.io/sinclapa/ccdiary-api:${{ github.sha }} ghcr.io/sinclapa/ccdiary-api:${{ steps.create-release-tag.outputs.tag_name }}
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
