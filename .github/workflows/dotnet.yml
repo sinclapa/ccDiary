@@ -20,6 +20,8 @@ jobs:
         attestations: write
         id-token: write
 
+    environment: none
+    
     runs-on: ubuntu-latest
     defaults:
       run:
