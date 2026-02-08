@@ -40,3 +40,16 @@ jobs:
             app_location: "ui-dist"
             skip_app_build: true
             skip_api_build: true
+        - name: Log in to Azure
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+        - name: Deploy public GHCR image to Container App
+          uses: azure/container-apps-deploy-action@v1
+          with:
+                containerAppName: ${{ vars.CONTAINER_APP_NAME }}
+                resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
+                imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.event.release.tag_name }}
+                registryServer: ghcr.io
+
