@@ -317,7 +317,7 @@ jobs:
             curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"ENTRA_PREVIEW_REDIRECT: $PREVIEW_URL\"}" "$COMMENTS_API"
             echo "Added redirect URI and left PR comment."
           fi  
-  create-ui-release:
+  create-release:
     name: Create UI Release
     if: github.ref == 'refs/heads/main' 
     runs-on: ubuntu-latest
