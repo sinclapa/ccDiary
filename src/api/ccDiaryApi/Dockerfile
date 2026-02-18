@@ -8,6 +8,7 @@ EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
 WORKDIR /src
+ARG BUILD_CONFIGURATION=Release
 
 # Copy solution and projects into image
 COPY ["ccDiaryApi/ccDiaryApi.csproj", "ccDiaryApi/"]
@@ -17,22 +18,22 @@ RUN dotnet restore "./ccDiaryApiTest/ccDiaryApiTest.csproj"
 
 # Copy full solution into image
 COPY . .
-RUN dotnet build "ccDiaryApi/ccDiaryApi.csproj" -c Release -o /app/build --no-restore
-RUN dotnet build "ccDiaryApiTest/ccDiaryApiTest.csproj" -c Release -o /app/test --no-restore
+RUN dotnet build "ccDiaryApi/ccDiaryApi.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet build "ccDiaryApiTest/ccDiaryApiTest.csproj" -c $BUILD_CONFIGURATION -o /app/test --no-restore
 
 # run the unit tests
 FROM build AS test
 WORKDIR /src
 
 # run the unit tests
-RUN dotnet test "ccDiaryApiTest/ccDiaryApiTest.csproj" -c Release --no-build --logger "trx;LogFileName=testresults.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs" || exit 0
+RUN dotnet test "ccDiaryApiTest/ccDiaryApiTest.csproj" -c $BUILD_CONFIGURATION --no-build --logger "trx;LogFileName=testresults.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs" || exit 0
 
 FROM scratch AS export-test-results
 COPY --from=test /src/ccDiaryApiTest/TestResults/* .
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ccDiaryApi/ccDiaryApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ccDiaryApi/ccDiaryApi.csproj" -c $BUILD_CONFIGURATION --no-build -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

@@ -13,20 +13,28 @@ const vuetify = createVuetify({
 global.ResizeObserver = require('resize-observer-polyfill')
 
 test('Display AppFooter', () => {
-  vi.stubEnv('VITE_VERSION', '1.2.3')
-  vi.stubEnv('VITE_BUILD_NUMBER', '789')
-  const wrapper = mount({
-    template: '<v-layout><app-footer></app-footer></v-layout>',
-  }, {
-    props: {},
-    global: {
-      components: {
-        AppFooter,
-      },
-      plugins: [vuetify],
-    },
-  })
+  const originalGlobalVersion = (globalThis as any).__APP_VERSION__
+  ;(globalThis as any).__APP_VERSION__ = '1.2.3.789'
 
-  // Assert the rendered text of the component
-  expect(wrapper.text()).toContain(`Version 1.2.3.789 © 2023-${new Date().getFullYear()} CookingCode.com`)
+  try {
+    const wrapper = mount({
+      template: '<v-layout><app-footer></app-footer></v-layout>',
+    }, {
+      props: {},
+      global: {
+        components: {
+          AppFooter,
+        },
+        plugins: [vuetify],
+      },
+    })
+
+    expect(wrapper.text()).toContain(`Version 1.2.3.789 © 2023-${new Date().getFullYear()} CookingCode.com`)
+  } finally {
+    if (originalGlobalVersion === undefined) {
+      delete (globalThis as any).__APP_VERSION__
+    } else {
+      ;(globalThis as any).__APP_VERSION__ = originalGlobalVersion
+    }
+  }
 })

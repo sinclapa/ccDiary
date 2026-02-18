@@ -3,53 +3,52 @@ on:
     types: [published]
 
 jobs:
-    release-prod:
-      environment: prod
-      if: startsWith(github.ref_name, 'r-')
-      runs-on: ubuntu-latest
+  release-prod:
+    environment: prod
+    if: startsWith(github.ref_name, 'r-')
+    runs-on: ubuntu-latest
 
-      permissions:
-        contents: read
-        pull-requests: write
-        checks: write
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
-      steps:
-        - name: Get Artifact from Release
-          uses: dsaltares/fetch-gh-release-asset@master
-          with:
-            version: ${{ github.event.release.id }}
-            file: ui-dist.zip
-        - name: Unzip Artifact
-          run: unzip ui-dist.zip
-          
-        - name: 'Configure UI (prod)'
-          env:
-            VITE_API: ${{ secrets.API_URL }}
-            VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI }}
-          run: |
-            sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ui-dist/config.js
-            sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ui-dist/config.js
-            sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ui-dist/config.js
-            sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ui-dist/config.js
-        - name: Deploy UI to Prod
-          id: builddeploy-prod
-          uses: Azure/static-web-apps-deploy@v1
-          with:
-            azure_static_web_apps_api_token: '${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN}}'
-            action: "upload"
-            app_location: "ui-dist"
-            skip_app_build: true
-            skip_api_build: true
-        - name: Log in to Azure
-          uses: azure/login@v1
-          with:
-            creds: ${{ secrets.AZURE_CREDENTIALS }}
+    steps:
+      - name: Get Artifact from Release
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: ${{ github.event.release.id }}
+          file: ui-dist.zip
+      - name: Unzip Artifact
+        run: unzip ui-dist.zip
 
-        - name: Deploy public GHCR image to Container App
-          uses: azure/container-apps-deploy-action@v1
-          with:
-                containerAppName: ${{ vars.CONTAINER_APP_NAME }}
-                resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
-                imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.event.release.tag_name }}
-                registryServer: ghcr.io
+      - name: "Configure UI (prod)"
+        env:
+          VITE_API: ${{ secrets.API_URL }}
+          VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI }}
+        run: |
+          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ui-dist/config.js
+          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ui-dist/config.js
+          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ui-dist/config.js
+          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ui-dist/config.js
+      - name: Deploy UI to Prod
+        id: builddeploy-prod
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN}}"
+          action: "upload"
+          app_location: "ui-dist"
+          skip_app_build: true
+          skip_api_build: true
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Deploy public GHCR image to Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ vars.CONTAINER_APP_NAME }}
+          resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
+          imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.event.release.tag_name }}
+          registryServer: ghcr.io

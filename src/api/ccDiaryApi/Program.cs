@@ -22,7 +22,7 @@ using Steeltoe.Management.Endpoint.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
-if (builder.Environment.IsEnvironment("Local"))
+if (builder.Environment.IsEnvironment("Local") || builder.Environment.IsEnvironment("LocalContainer"))
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
@@ -40,7 +40,11 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
-string connectionString = builder.Configuration["AZURE_SQL_CONNECTIONSTRING"] ?? builder.Configuration["ConnectionStrings:SqlConnection"];
+string? connectionString = builder.Configuration["AZURE_SQL_CONNECTIONSTRING"] ?? builder.Configuration["ConnectionStrings:SqlConnection"];
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("A valid SQL connection string must be provided in configuration.");
+}
 
 var connStrBuilder = new SqlConnectionStringBuilder(connectionString);
 

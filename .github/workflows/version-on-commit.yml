@@ -1,0 +1,86 @@
+name: Version On Commit
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  set-semver:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[skip version]')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next semantic version
+        id: semver
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          CURRENT_VERSION=$(cat VERSION)
+
+          if [[ "$COMMIT_MESSAGE" == *"BREAKING CHANGE"* ]] || [[ "$COMMIT_MESSAGE" =~ ^[a-zA-Z]+\(.*\)!: ]] || [[ "$COMMIT_MESSAGE" =~ ^[a-zA-Z]+!: ]]; then
+            BUMP="major"
+          elif [[ "$COMMIT_MESSAGE" =~ ^feat\(.*\): ]] || [[ "$COMMIT_MESSAGE" =~ ^feat: ]]; then
+            BUMP="minor"
+          else
+            BUMP="patch"
+          fi
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          case "$BUMP" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update root version file
+        run: echo "${{ steps.semver.outputs.next_version }}" > VERSION
+
+      - name: Apply version to Node project
+        working-directory: src/ui
+        run: npm version "${{ steps.semver.outputs.next_version }}" --no-git-tag-version
+
+      - name: Commit and tag version changes
+        env:
+          NEW_VERSION: ${{ steps.semver.outputs.next_version }}
+        run: |
+          if git diff --quiet; then
+            echo "No version changes detected."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add VERSION src/ui/package.json src/ui/package-lock.json
+          git commit -m "chore(version): bump to ${NEW_VERSION} [skip version]"
+          git tag "v${NEW_VERSION}"
+
+          git push
+          git push --tags

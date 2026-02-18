@@ -6,6 +6,7 @@ namespace ccDiaryApi
 {
     using System.Reflection;
     using Asp.Versioning.ApiExplorer;
+    using ccDiaryApi.Utilities;
     using Microsoft.Extensions.Options;
     using Microsoft.OpenApi.Models;
     using Swashbuckle.AspNetCore.SwaggerGen;
@@ -37,9 +38,9 @@ namespace ccDiaryApi
                 {
                     Title = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyProductAttribute>()?.Product}",
                     Version = description.ApiVersion.ToString(),
-                    Description = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description +
-                        $"<p><strong>Build: </strong>{Assembly.GetExecutingAssembly().GetName().Version}</p>" +
-                        $"<p><strong>Environment: </strong>{_webHostEnvironment.EnvironmentName}</p>",
+                    Description = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description}" +
+                        $"<p><strong>Build: </strong>{AssemblyVersionInfo.GetInformationalVersion()}</p>" +
+                        $"<p><strong>Environment: </strong>{_webHostEnvironment.EnvironmentName}</p>"
                 });
             }
 

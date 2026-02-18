@@ -129,6 +129,13 @@ SetValueInHashTable $content "VITE_TENANT_ID" """$tenantId"""
 SetValueInHashTable $content "VITE_APPLICATION_ID_URI" """$entraApplicationIdURI"""
 $content | ConvertTo-StringData | Set-Content $vuePath
 
+Write-Host "Starting local SQL Server instance..." -ForegroundColor Cyan
+$containerName = "LocalSqlServer"
+$exists = docker ps -a --filter "name=$containerName" --format "{{.Names}}"
+
+if (-not $exists) {
+    docker run -p 1433:1433 --name $containerName --rm -d -v local-sql-server-volume:/var/opt/mssql -e ACCEPT_EULA=Y -e SA_PASSWORD=$localDBPassword mcr.microsoft.com/mssql/server:latest
+}
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished"

@@ -28,10 +28,7 @@
 </template>
 
 <script setup lang="ts">
-  import { getAppConfigField } from '@/utils/appConfig'
-
-  const buildNumber = getAppConfigField('VITE_BUILD_NUMBER')
-  const version = `${import.meta.env.VITE_VERSION}.${buildNumber}`
+  const version =(globalThis as any).__APP_VERSION__ ?? '0.0.0'
   const items = [
     {
       title: 'Vuetify Documentation',
