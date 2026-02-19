@@ -16,6 +16,8 @@ on:
 jobs:
   check-changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     # Always run this job, but only check files on push events to main
     outputs:
       only_version_files: ${{ steps.changed-files.outputs.only_changed }}
