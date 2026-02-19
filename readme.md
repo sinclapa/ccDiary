@@ -192,7 +192,7 @@ Update the workflows that need to push commits (like `version-on-commit.yml`) to
     NEW_VERSION: ${{ steps.semver.outputs.next_version }}
   run: |
     git config user.name "ccDiary-bot"  # Use your bot's username
-    git config user.email "bot@example.com"  # Use your bot's email
+    git config user.email "ccDiary-bot@users.noreply.github.com"  # Use format: username@users.noreply.github.com
     
     git add VERSION src/ui/package.json src/ui/package-lock.json
     git commit -m "chore(version): bump to ${NEW_VERSION} [skip version]"
@@ -219,7 +219,7 @@ Update the workflows that need to push commits (like `version-on-commit.yml`) to
 * Rotate bot tokens regularly (every 90 days recommended)
 * Use the minimum required token scopes
 * Never commit tokens to the repository
-* Consider using fine-grained personal access tokens for better security
+* **Fine-grained vs Classic tokens**: While fine-grained personal access tokens offer better security with repository-specific permissions, classic tokens are recommended here because they work more reliably with GitHub Actions workflows. If you use fine-grained tokens, ensure you grant access to the specific repository and enable all required permissions.
 * Enable 2FA on the bot account
 * Monitor bot account activity regularly
 
