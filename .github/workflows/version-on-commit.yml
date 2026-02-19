@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   set-semver:
-    if: github.actor != 'sinclapa-bot' && !contains(github.event.head_commit.message, '[skip version]')
+    if: github.actor != 'sinclapa-bot' && !contains(github.event.head_commit.message, '[skip ci]')
     runs-on: ubuntu-latest
 
     steps:
@@ -89,7 +89,7 @@ jobs:
           git config user.email "sinclapa-bot@users.noreply.github.com"
 
           git add VERSION src/ui/package.json src/ui/package-lock.json
-          git commit -m "chore(version): bump to ${NEW_VERSION} [skip version]"
+          git commit -m "chore(version): bump to ${NEW_VERSION} [skip ci]"
           git tag "v${NEW_VERSION}"
 
           git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git"
