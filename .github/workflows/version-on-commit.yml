@@ -72,10 +72,6 @@ jobs:
       - name: Update root version file
         run: echo "${{ steps.semver.outputs.next_version }}" > VERSION
 
-      - name: Apply version to Node project
-        working-directory: src/ui
-        run: npm version "${{ steps.semver.outputs.next_version }}" --no-git-tag-version
-
       - name: Commit and tag version changes
         env:
           NEW_VERSION: ${{ steps.semver.outputs.next_version }}
