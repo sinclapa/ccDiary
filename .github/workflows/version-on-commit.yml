@@ -14,10 +14,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate bot token
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          if [ -z "$BOT_TOKEN" ]; then
+            echo "BOT_TOKEN secret is missing. Add it in repository Settings > Secrets and variables > Actions." >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          token: ${{ secrets.BOT_TOKEN }}
 
       - name: Calculate next semantic version
         id: semver
@@ -69,7 +79,10 @@ jobs:
       - name: Commit and tag version changes
         env:
           NEW_VERSION: ${{ steps.semver.outputs.next_version }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
+          set -euo pipefail
+
           if git diff --quiet; then
             echo "No version changes detected."
             exit 0
@@ -82,5 +95,17 @@ jobs:
           git commit -m "chore(version): bump to ${NEW_VERSION} [skip version]"
           git tag "v${NEW_VERSION}"
 
-          git push
-          git push --tags
+          git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git"
+
+          if ! PUSH_OUTPUT=$(git push origin HEAD:main 2>&1); then
+            echo "$PUSH_OUTPUT"
+            if echo "$PUSH_OUTPUT" | grep -q "GH013"; then
+              echo "Push blocked by repository rules (GH013). Ensure BOT_TOKEN identity is added as a ruleset bypass for main and required checks policy allows this automation path." >&2
+            fi
+            exit 1
+          fi
+
+          if ! TAG_PUSH_OUTPUT=$(git push origin --tags 2>&1); then
+            echo "$TAG_PUSH_OUTPUT"
+            exit 1
+          fi
