@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   set-semver:
@@ -67,20 +66,21 @@ jobs:
         working-directory: src/ui
         run: npm version "${{ steps.semver.outputs.next_version }}" --no-git-tag-version
 
-      - name: Create version bump pull request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: chore/version-bump-${{ steps.semver.outputs.next_version }}
-          commit-message: "chore(version): bump to ${{ steps.semver.outputs.next_version }} [skip version]"
-          title: "chore(version): bump to ${{ steps.semver.outputs.next_version }}"
-          body: |
-            Automated semantic version bump.
+      - name: Commit and tag version changes
+        env:
+          NEW_VERSION: ${{ steps.semver.outputs.next_version }}
+        run: |
+          if git diff --quiet; then
+            echo "No version changes detected."
+            exit 0
+          fi
 
-            - Source of truth: `VERSION`
-            - Synced UI package version via `npm version --no-git-tag-version`
-          add-paths: |
-            VERSION
-            src/ui/package.json
-            src/ui/package-lock.json
-          delete-branch: true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add VERSION src/ui/package.json src/ui/package-lock.json
+          git commit -m "chore(version): bump to ${NEW_VERSION} [skip version]"
+          git tag "v${NEW_VERSION}"
+
+          git push
+          git push --tags
