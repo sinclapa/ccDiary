@@ -133,6 +133,96 @@ It is recommended to install the following applications
     GO
     ```
 
+## Setup GitHub Bot User (Optional)
+By default, the repository uses the built-in `github-actions[bot]` user for automated commits (e.g., version bumps). If you prefer to use a dedicated bot account for better tracking and control, follow these steps:
+
+### 1. Create a GitHub Bot Account
+1. Sign out of your personal GitHub account
+2. Go to https://github.com/signup
+3. Create a new GitHub account with a descriptive name (e.g., `ccDiary-bot` or `<yourorg>-automation`)
+4. Complete the account setup and verify the email address
+5. Add a profile picture and description to make it clear this is a bot account
+
+> [!TIP]
+> Consider using a naming convention like `<project>-bot` or `<org>-automation` to make the bot's purpose clear.
+
+### 2. Generate a Personal Access Token (PAT)
+1. While logged in as the bot user, go to **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+2. Click **Generate new token** → **Generate new token (classic)**
+3. Give the token a descriptive name (e.g., "ccDiary Workflow Token")
+4. Set an expiration date (or select "No expiration" if your security policy allows)
+5. Select the following scopes:
+   * `repo` (Full control of private repositories) - Required for pushing commits and tags
+   * `workflow` (Update GitHub Actions workflows) - Required if the bot needs to trigger workflows
+6. Click **Generate token**
+7. **IMPORTANT**: Copy the token immediately - you won't be able to see it again
+
+> [!WARNING]
+> Store the token securely. Anyone with this token has the same permissions as the bot account.
+
+### 3. Add Bot as Repository Collaborator
+1. Log back in with your personal/organization account
+2. Go to the repository **Settings** → **Collaborators and teams**
+3. Click **Add people**
+4. Search for and add the bot account you created
+5. Grant **Write** or **Admin** permissions (Write is sufficient for most automation tasks)
+6. The bot account will need to accept the invitation (check the bot account's email or notifications)
+
+### 4. Configure Repository Secrets
+1. In your repository, go to **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Create a secret named `BOT_TOKEN` (or `BOT_PAT`)
+4. Paste the Personal Access Token you generated earlier
+5. Click **Add secret**
+
+### 5. Update Workflows to Use Bot Token
+Update the workflows that need to push commits (like `version-on-commit.yml`) to use the bot token:
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v5
+  with:
+    fetch-depth: 0
+    token: ${{ secrets.BOT_TOKEN }}  # Use bot token instead of default GITHUB_TOKEN
+
+# ... other steps ...
+
+- name: Commit and tag version changes
+  env:
+    NEW_VERSION: ${{ steps.semver.outputs.next_version }}
+  run: |
+    git config user.name "ccDiary-bot"  # Use your bot's username
+    git config user.email "bot@example.com"  # Use your bot's email
+    
+    git add VERSION src/ui/package.json src/ui/package-lock.json
+    git commit -m "chore(version): bump to ${NEW_VERSION} [skip version]"
+    git tag "v${NEW_VERSION}"
+    
+    git push
+    git push --tags
+```
+
+> [!NOTE]
+> The key differences when using a bot token:
+> * Add `token: ${{ secrets.BOT_TOKEN }}` to the checkout step
+> * Configure git with the bot's username and email
+> * The commits will appear as being made by your bot account instead of `github-actions[bot]`
+
+### 6. Benefits of Using a Dedicated Bot Account
+* **Better tracking**: See exactly which commits were made by automation vs. team members
+* **More control**: Manage bot permissions independently from workflow permissions
+* **Easier auditing**: Filter and search for bot activity across repositories
+* **Custom identity**: Give your automation a personality with a custom avatar and name
+* **Cross-repository automation**: Use the same bot account across multiple repositories in your organization
+
+### 7. Security Best Practices
+* Rotate bot tokens regularly (every 90 days recommended)
+* Use the minimum required token scopes
+* Never commit tokens to the repository
+* Consider using fine-grained personal access tokens for better security
+* Enable 2FA on the bot account
+* Monitor bot account activity regularly
+
 # Running Local Development 
 ## Initial Setup
 Set password for database in user-secrets
