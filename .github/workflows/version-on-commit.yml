@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   set-semver:
-    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[skip version]')
+    if: github.actor != 'sinclapa-bot' && !contains(github.event.head_commit.message, '[skip version]')
     runs-on: ubuntu-latest
 
     steps:
