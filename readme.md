@@ -147,10 +147,27 @@ By default, the repository uses the built-in `github-actions[bot]` user for auto
 > Consider using a naming convention like `<project>-bot` or `<org>-automation` to make the bot's purpose clear.
 
 ### 2. Generate a Personal Access Token (PAT)
+
+#### Option A: Fine-Grained Personal Access Token (Recommended)
+Fine-grained tokens provide better security with repository-specific permissions:
+1. While logged in as the bot user, go to **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**
+2. Click **Generate new token**
+3. Give the token a descriptive name (e.g., "ccDiary Workflow Token")
+4. Set an expiration date (90 days recommended for security)
+5. Under **Repository access**, select "Only select repositories" and choose your repository
+6. Under **Repository permissions**, configure:
+   * **Contents**: Read and write (for pushing commits)
+   * **Metadata**: Read-only (automatically selected)
+   * **Workflows**: Read and write (if the bot needs to trigger workflows)
+7. Click **Generate token**
+8. **IMPORTANT**: Copy the token immediately - you won't be able to see it again
+
+#### Option B: Classic Personal Access Token (Legacy)
+If you prefer the classic approach:
 1. While logged in as the bot user, go to **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
 2. Click **Generate new token** → **Generate new token (classic)**
 3. Give the token a descriptive name (e.g., "ccDiary Workflow Token")
-4. Set an expiration date (or select "No expiration" if your security policy allows)
+4. Set an expiration date (90 days recommended for security)
 5. Select the following scopes:
    * `repo` (Full control of private repositories) - Required for pushing commits and tags
    * `workflow` (Update GitHub Actions workflows) - Required if the bot needs to trigger workflows
@@ -216,12 +233,13 @@ Update the workflows that need to push commits (like `version-on-commit.yml`) to
 * **Cross-repository automation**: Use the same bot account across multiple repositories in your organization
 
 ### 7. Security Best Practices
+* **Use fine-grained tokens**: Prefer fine-grained personal access tokens for better security with repository-specific permissions
 * Rotate bot tokens regularly (every 90 days recommended)
-* Use the minimum required token scopes
+* Use the minimum required token scopes/permissions
 * Never commit tokens to the repository
-* **Fine-grained vs Classic tokens**: While fine-grained personal access tokens offer better security with repository-specific permissions, classic tokens are recommended here because they work more reliably with GitHub Actions workflows. If you use fine-grained tokens, ensure you grant access to the specific repository and enable all required permissions.
 * Enable 2FA on the bot account
 * Monitor bot account activity regularly
+* Set token expiration dates rather than creating tokens without expiration
 
 # Running Local Development 
 ## Initial Setup
