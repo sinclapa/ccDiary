@@ -26,10 +26,9 @@ jobs:
     environment: none
 
     runs-on: ubuntu-latest
+
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
-    outputs:
-      image_tag: ${{ steps.image_tag.outputs.value }}
-    
+
     defaults:
       run:
         working-directory: ./src/api
@@ -143,10 +142,16 @@ jobs:
           tags: |
              ${{ env.IMAGE_TAG }}
 
+    outputs:
+      image_tag: ${{ env.IMAGE_TAG }}
+    
   deploy-api:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
+
     needs: build-api
+
     runs-on: ubuntu-latest
+
     env:
       IMAGE_TAG: ${{ needs['build-api'].outputs.image_tag }}
 
@@ -178,7 +183,9 @@ jobs:
 
   build-ui:
     runs-on: ubuntu-latest
+
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
     environment: none
 
     permissions:
