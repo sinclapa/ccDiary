@@ -23,11 +23,11 @@ runs:
             BASE_VERSION="${BASE_TAG#v}"
             N=$(echo "$DESCRIBE" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
             SHORT_SHA=$(git rev-parse --short HEAD)
-            BASE_VERSION="${BASE_VERSION}-dev.${N}+${SHORT_SHA}"
+            BASE_VERSION="${BASE_VERSION}-dev-${N}-${SHORT_SHA}"
           else
             N=$(git rev-list --count HEAD)
             SHORT_SHA=$(git rev-parse --short HEAD)
-            BASE_VERSION="0.0.0-dev.${N}+${SHORT_SHA}"
+            BASE_VERSION="0.0.0-dev-${N}-${SHORT_SHA}"
           fi
         fi
         echo "value=$BASE_VERSION" >> "$GITHUB_OUTPUT"
