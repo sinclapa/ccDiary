@@ -27,7 +27,7 @@ jobs:
     environment: none
 
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     defaults:
       run:
@@ -35,6 +35,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -47,13 +50,24 @@ jobs:
         id: app_version
         shell: bash
         run: |
-          BASE_VERSION=$(cat "${{ github.workspace }}/VERSION")
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            EFFECTIVE_VERSION="${BASE_VERSION}-alpha-${{ github.event.pull_request.number }}"
+          TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          if [ -n "$TAG" ]; then
+            BASE_VERSION="${TAG#v}"
           else
-            EFFECTIVE_VERSION="$BASE_VERSION"
+            DESCRIBE=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --long 2>/dev/null || echo "")
+            if [ -n "$DESCRIBE" ]; then
+              BASE_TAG=$(echo "$DESCRIBE" | sed 's/-[0-9]*-g[0-9a-f]*$//')
+              BASE_VERSION="${BASE_TAG#v}"
+              N=$(echo "$DESCRIBE" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
+              SHORT_SHA=$(git rev-parse --short HEAD)
+              BASE_VERSION="${BASE_VERSION}-dev.${N}+${SHORT_SHA}"
+            else
+              N=$(git rev-list --count HEAD)
+              SHORT_SHA=$(git rev-parse --short HEAD)
+              BASE_VERSION="0.0.0-dev.${N}+${SHORT_SHA}"
+            fi
           fi
-          echo "value=$EFFECTIVE_VERSION" >> $GITHUB_OUTPUT
+          echo "value=$BASE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Restore API dependencies
         run: dotnet restore ccDiary.sln
@@ -171,7 +185,7 @@ jobs:
 
   build-ui:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     environment: none
 
     permissions:
@@ -186,6 +200,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -196,13 +213,24 @@ jobs:
         id: app_version
         shell: bash
         run: |
-          BASE_VERSION=$(cat "${{ github.workspace }}/VERSION")
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            EFFECTIVE_VERSION="${BASE_VERSION}-alpha-${{ github.event.pull_request.number }}"
+          TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          if [ -n "$TAG" ]; then
+            BASE_VERSION="${TAG#v}"
           else
-            EFFECTIVE_VERSION="$BASE_VERSION"
+            DESCRIBE=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --long 2>/dev/null || echo "")
+            if [ -n "$DESCRIBE" ]; then
+              BASE_TAG=$(echo "$DESCRIBE" | sed 's/-[0-9]*-g[0-9a-f]*$//')
+              BASE_VERSION="${BASE_TAG#v}"
+              N=$(echo "$DESCRIBE" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
+              SHORT_SHA=$(git rev-parse --short HEAD)
+              BASE_VERSION="${BASE_VERSION}-dev.${N}+${SHORT_SHA}"
+            else
+              N=$(git rev-list --count HEAD)
+              SHORT_SHA=$(git rev-parse --short HEAD)
+              BASE_VERSION="0.0.0-dev.${N}+${SHORT_SHA}"
+            fi
           fi
-          echo "value=$EFFECTIVE_VERSION" >> $GITHUB_OUTPUT
+          echo "value=$BASE_VERSION" >> $GITHUB_OUTPUT
       - name: Set UI version
         run: npm version "${{ steps.app_version.outputs.value }}" --no-git-tag-version
       - name: Install packages
