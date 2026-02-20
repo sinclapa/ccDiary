@@ -5,7 +5,9 @@ on:
 jobs:
   release-prod:
     environment: prod
+    
     if: startsWith(github.ref_name, 'r-')
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -19,6 +21,7 @@ jobs:
         with:
           version: ${{ github.event.release.id }}
           file: ui-dist.zip
+
       - name: Unzip Artifact
         run: unzip ui-dist.zip
 
@@ -31,6 +34,7 @@ jobs:
           sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ui-dist/config.js
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ui-dist/config.js
           sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ui-dist/config.js
+
       - name: Deploy UI to Prod
         id: builddeploy-prod
         uses: Azure/static-web-apps-deploy@v1
@@ -40,6 +44,7 @@ jobs:
           app_location: "ui-dist"
           skip_app_build: true
           skip_api_build: true
+
       - name: Log in to Azure
         uses: azure/login@v1
         with:

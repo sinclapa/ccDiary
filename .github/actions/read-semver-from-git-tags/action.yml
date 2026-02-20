@@ -1,0 +1,31 @@
+name: Read Semver From Git Tags
+description: Resolves semantic version from current tag or nearest semver tag and commit distance.
+outputs:
+  value:
+    description: Resolved semantic version string.
+    value: ${{ steps.resolve.outputs.value }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve version
+      id: resolve
+      shell: bash
+      run: |
+        TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+        if [ -n "$TAG" ]; then
+          BASE_VERSION="${TAG#v}"
+        else
+          DESCRIBE=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --long 2>/dev/null || echo "")
+          if [ -n "$DESCRIBE" ]; then
+            BASE_TAG=$(echo "$DESCRIBE" | sed 's/-[0-9]*-g[0-9a-f]*$//')
+            BASE_VERSION="${BASE_TAG#v}"
+            N=$(echo "$DESCRIBE" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            BASE_VERSION="${BASE_VERSION}-dev.${N}+${SHORT_SHA}"
+          else
+            N=$(git rev-list --count HEAD)
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            BASE_VERSION="0.0.0-dev.${N}+${SHORT_SHA}"
+          fi
+        fi
+        echo "value=$BASE_VERSION" >> "$GITHUB_OUTPUT"

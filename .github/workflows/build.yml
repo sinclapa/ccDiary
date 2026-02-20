@@ -1,19 +1,18 @@
 # This workflow will build a .NET project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
 
-name: Build
+name: Build and Test
 
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-  workflow_dispatch:
   workflow_run:
-    workflows: ["Version On Commit"] #Its the name of an workflow
+    workflows: ["Version On Commit"]
     types:
       - completed
-jobs:
+jobs:    
   build-api:
     permissions:
       contents: read
@@ -28,13 +27,16 @@ jobs:
 
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
-
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.value }}
+    
     defaults:
       run:
         working-directory: ./src/api
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -48,26 +50,7 @@ jobs:
 
       - name: Read Version
         id: app_version
-        shell: bash
-        run: |
-          TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
-          if [ -n "$TAG" ]; then
-            BASE_VERSION="${TAG#v}"
-          else
-            DESCRIBE=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --long 2>/dev/null || echo "")
-            if [ -n "$DESCRIBE" ]; then
-              BASE_TAG=$(echo "$DESCRIBE" | sed 's/-[0-9]*-g[0-9a-f]*$//')
-              BASE_VERSION="${BASE_TAG#v}"
-              N=$(echo "$DESCRIBE" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
-              SHORT_SHA=$(git rev-parse --short HEAD)
-              BASE_VERSION="${BASE_VERSION}-dev.${N}+${SHORT_SHA}"
-            else
-              N=$(git rev-list --count HEAD)
-              SHORT_SHA=$(git rev-parse --short HEAD)
-              BASE_VERSION="0.0.0-dev.${N}+${SHORT_SHA}"
-            fi
-          fi
-          echo "value=$BASE_VERSION" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/read-semver-from-git-tags
 
       - name: Restore API dependencies
         run: dotnet restore ccDiary.sln
@@ -76,7 +59,7 @@ jobs:
         run: dotnet build ccDiary.sln --configuration Release --no-restore /p:Version=${{ steps.app_version.outputs.value }}
 
       - name: Test API
-        run: dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger "trx" /p:Version=${{ steps.app_version.outputs.value }} /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs"
+        run: dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger "trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs"
 
       - name: Upload Test Result Files
         uses: actions/upload-artifact@v4
@@ -95,14 +78,14 @@ jobs:
       - name: Combine Coverage Reports # This is because one report is produced per project, and we want one result for all of them.
         uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
         with:
-          reports: "./src/api/**/*.cobertura.xml" # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
-          targetdir: "${{ github.workspace }}" # REQUIRED # The directory where the generated report should be saved.
-          reporttypes: "Cobertura" # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, Html_Dark, Html_Light, Html_BlueRed, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlInline_AzurePipelines_Light, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MarkdownSummary, MarkdownSummaryGithub, MarkdownDeltaSummary, MHtml, PngChart, SonarQube, TeamCitySummary, TextSummary, TextDeltaSummary, Xml, XmlSummary
-          verbosity: "Info" # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
-          title: "API Code Coverage" # Optional title.
-          tag: "${{ github.run_number }}_${{ github.run_id }}" # Optional tag or build version.
-          customSettings: "" # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
-          toolpath: "reportgeneratortool" # Default directory for installing the dotnet tool.
+          reports: "./src/api/**/*.cobertura.xml" # <== REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
+          targetdir: "${{ github.workspace }}" # <== REQUIRED # The directory where the generated report should be saved.
+          reporttypes: "Cobertura" # <== The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, Html_Dark, Html_Light, Html_BlueRed, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlInline_AzurePipelines_Light, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MarkdownSummary, MarkdownSummaryGithub, MarkdownDeltaSummary, MHtml, PngChart, SonarQube, TeamCitySummary, TextSummary, TextDeltaSummary, Xml, XmlSummary
+          verbosity: "Info" # <== The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
+          title: "API Code Coverage" # <== Optional title.
+          tag: "${{ github.run_number }}_${{ github.run_id }}" # <== Optional tag or build version.
+          customSettings: "" # <== Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
+          toolpath: "reportgeneratortool" # <== Default directory for installing the dotnet tool.
 
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
@@ -133,7 +116,7 @@ jobs:
           path: code-coverage-results.md
   
       - name: Publish api
-        run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish /p:Version=${{ steps.app_version.outputs.value }}
+        run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish
   
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -142,6 +125,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set image tag
+        id: image_tag
+        shell: bash
+        run: |
+          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/${{ github.repository }}-api:${{ steps.app_version.outputs.value }}"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v4
         with:
@@ -149,13 +140,14 @@ jobs:
           context: ./src/api # <== This is the path to the 'api' subdirectory containing your application resources
           file: ./src/api/Dockerfile # <== This specifies the 'Dockerfile' in the subdirectory
           tags: |
-            ghcr.io/sinclapa/ccdiary-api:${{ github.sha }}
-            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/sinclapa/ccdiary-api:latest' || '' }}
+             ${{ env.IMAGE_TAG }}
 
   deploy-api:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
     needs: build-api
     runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ needs['build-api'].outputs.image_tag }}
 
     permissions:
       contents: read
@@ -171,17 +163,20 @@ jobs:
         working-directory: ./src/api
 
     steps:
+      - name: Show app version
+        run: echo "Deploying app version ${APP_VERSION}"
+
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy public GHCR image to Container App
+      - name: Deploy GHCR image to Container App
         uses: azure/container-apps-deploy-action@v2
         with:
           containerAppName: ${{ vars.CONTAINER_APP_NAME }}
           resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
-          imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.sha }}
+          imageToDeploy: ${{ env.IMAGE_TAG }}
 
   build-ui:
     runs-on: ubuntu-latest
@@ -203,61 +198,54 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
           cache: "npm"
           cache-dependency-path: "./src/ui/package-lock.json"
+          
       - name: Read Version
         id: app_version
-        shell: bash
-        run: |
-          TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
-          if [ -n "$TAG" ]; then
-            BASE_VERSION="${TAG#v}"
-          else
-            DESCRIBE=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --long 2>/dev/null || echo "")
-            if [ -n "$DESCRIBE" ]; then
-              BASE_TAG=$(echo "$DESCRIBE" | sed 's/-[0-9]*-g[0-9a-f]*$//')
-              BASE_VERSION="${BASE_TAG#v}"
-              N=$(echo "$DESCRIBE" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
-              SHORT_SHA=$(git rev-parse --short HEAD)
-              BASE_VERSION="${BASE_VERSION}-dev.${N}+${SHORT_SHA}"
-            else
-              N=$(git rev-list --count HEAD)
-              SHORT_SHA=$(git rev-parse --short HEAD)
-              BASE_VERSION="0.0.0-dev.${N}+${SHORT_SHA}"
-            fi
-          fi
-          echo "value=$BASE_VERSION" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/read-semver-from-git-tags
+
       - name: Set UI version
         run: npm version "${{ steps.app_version.outputs.value }}" --no-git-tag-version
+
       - name: Install packages
         run: npm ci
+
       - name: Build UI
         run: npm run build --if-present
+
       - name: Run UI Tests
         run: npm run test:ci
+
       - name: Upload Test Result Files
         uses: actions/upload-artifact@v4
         with:
           name: ui-test-results
           path: "${{ github.workspace }}/**/reports/junit.xml"
           retention-days: 5
+
       - name: Publish UI Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.16.1
         if: always()
         with:
           check_name: "UI Tests"
           files: "${{ github.workspace }}/**/reports/junit.xml"
+
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
         with:
           name: ui-coverage
           path: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
           retention-days: 5
+      
+      # TODO: ideally we would point the coverage action directly at the artifact, but that doesn't seem to be working, so for now we copy it to the root of the workspace where the action can find it. This is a bit hacky, but it works.
       - run: cp "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml" "${{ github.workspace }}/cobertura-coverage.xml"
+
       - name: Publish Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
@@ -270,6 +258,7 @@ jobs:
           indicators: true
           output: both
           thresholds: "80 90"
+
       - name: Add Coverage PR Comment
         uses: marocchino/sticky-pull-request-comment@v2
         if: github.event_name == 'pull_request'
@@ -277,16 +266,19 @@ jobs:
           header: "UI Code Coverage Report"
           recreate: true
           path: code-coverage-results.md
+
       - name: Store UI
         uses: actions/upload-artifact@v4
         with:
           name: ui-dist
           path: "${{ github.workspace }}/src/ui/dist"
           retention-days: 5
+
   deploy-ui:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
-    #if: github.event_name == 'pull_request'
+    
     needs: build-ui
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -308,6 +300,7 @@ jobs:
         with:
           name: ui-dist
           path: "${{ github.workspace }}/src/ui/dist"
+
       - name: "Configure UI"
         env:
           VITE_API: ${{ secrets.API_URL }}
@@ -317,8 +310,9 @@ jobs:
           sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ./dist/config.js
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ./dist/config.js
           sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ./dist/config.js
+          
       - name: Deploy UI
-        id: builddeploy
+        id: deploy_ui_to_azure
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}"
@@ -330,7 +324,6 @@ jobs:
           app_location: "${{ github.workspace }}/src/ui/dist" # App source code path
           skip_app_build: true # Set to true to bypass build step
           skip_api_build: true # Set to true to bypass API build step
-          #github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
       - name: Install jq
         if: github.event_name == 'pull_request'
@@ -347,7 +340,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Try common outputs from the static web apps deploy action
-          PREVIEW_URL="${{ steps.builddeploy.outputs.static_web_app_url || steps.builddeploy.outputs.static_site_url || '' }}"
+          PREVIEW_URL="${{ steps.deploy_ui_to_azure.outputs.static_web_app_url || steps.deploy_ui_to_azure.outputs.static_site_url || '' }}"
           if [ -z "$PREVIEW_URL" ]; then
             echo "Warning: preview URL was not available from action outputs. Trying to use the Static Web Apps default preview hostname pattern."
             PREVIEW_URL="https://${{ github.head_ref }}-${{ github.repository_owner }}.azurestaticapps.net"
@@ -387,44 +380,40 @@ jobs:
             curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"ENTRA_PREVIEW_REDIRECT: $PREVIEW_URL\"}" "$COMMENTS_API"
             echo "Added redirect URI and left PR comment."
           fi
+
   create-release:
     name: Create Release
+    
     if: github.ref == 'refs/heads/main'
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
       packages: write
-    needs: [build-ui, deploy-ui, build-api, deploy-api]
+
+    needs: [deploy-ui, deploy-api]
+
     steps:
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read Version
+        id: app_version
+        uses: ./.github/actions/read-semver-from-git-tags
+
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: ui-dist
           path: ui-dist
-      # we can't attach a folder to a release
+
       - name: Zip Artifact
         run: |
           zip -r ui-dist.zip ui-dist
-      - name: Create Release Tag
-        id: create-release-tag
-        # left pads the run number with zeros to a length of 4; better alphabetical order
-        run: echo "tag_name=r-$(printf %04d $GITHUB_RUN_NUMBER)" >> $GITHUB_OUTPUT
-      - name: Tag API Image
-        run: |
-          docker pull ghcr.io/sinclapa/ccdiary-api:${{ github.sha }}
-          docker tag ghcr.io/sinclapa/ccdiary-api:${{ github.sha }} ghcr.io/sinclapa/ccdiary-api:${{ steps.create-release-tag.outputs.tag_name }}
-          docker push ghcr.io/sinclapa/ccdiary-api:${{ steps.create-release-tag.outputs.tag_name }}
+
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.create-release-tag.outputs.tag_name }}
-          name: Release ${{ steps.create-release-tag.outputs.tag_name }}
+          tag_name: ${{ steps.app_version.outputs.value }}
+          name: Release ${{ steps.app_version.outputs.value }}
           body: |
             ## Info
             Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
