@@ -1,6 +1,6 @@
 {
   "name": "ccdiary-ui",
-  "version": "0.0.0",
+  "version": "0.2.23-dev-2-522ca17",
   "scripts": {
     "dev": "vite --mode dev",
     "build": "vue-tsc --noEmit && vite build",
