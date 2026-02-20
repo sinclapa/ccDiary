@@ -6,8 +6,6 @@ name: Build and Test
 on:
   push:
     branches: ["main"]
-    tags-ignore:
-      - "**"
   pull_request:
     branches: ["main"]    
   workflow_run:
@@ -429,7 +427,7 @@ jobs:
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build-prep.outputs.app_version }}
+          tag_name: r-${{ needs.build-prep.outputs.app_version }}
           name: Release ${{ needs.build-prep.outputs.app_version }}
           body: |
             ## Info
