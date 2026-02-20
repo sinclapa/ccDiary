@@ -411,7 +411,7 @@ jobs:
       contents: write
       packages: write
 
-    needs: [build-prep, deploy-ui, deploy-api]
+    needs: [build-prep, build-api, deploy-ui, deploy-api]
 
     steps:
       - name: Download Artifact
@@ -423,6 +423,10 @@ jobs:
       - name: Zip Artifact
         run: |
           zip -r ui-dist.zip ui-dist
+
+      - name: Write API image tag asset
+        run: |
+          echo "${{ needs.build-api.outputs.image_tag }}" > api-image.txt
 
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
@@ -438,4 +442,6 @@ jobs:
             ## How to Promote?
             In order to promote this to prod, edit the draft and press **"Publish release"**.
           draft: true
-          files: ui-dist.zip
+          files: |
+            ui-dist.zip
+            api-image.txt

@@ -22,8 +22,18 @@ jobs:
           version: ${{ github.event.release.id }}
           file: ui-dist.zip
 
+      - name: Get API image tag from Release
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: ${{ github.event.release.id }}
+          file: api-image.txt
+
       - name: Unzip Artifact
         run: unzip ui-dist.zip
+
+      - name: Read API image tag
+        id: api_image
+        run: echo "value=$(tr -d '\n\r' < api-image.txt)" >> $GITHUB_OUTPUT
 
       - name: "Configure UI (prod)"
         env:
@@ -55,5 +65,4 @@ jobs:
         with:
           containerAppName: ${{ vars.CONTAINER_APP_NAME }}
           resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
-          imageToDeploy: ghcr.io/sinclapa/ccdiary-api:${{ github.event.release.tag_name }}
-          registryServer: ghcr.io
+          imageToDeploy: ${{ steps.api_image.outputs.value }}
