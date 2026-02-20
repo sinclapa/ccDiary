@@ -427,7 +427,7 @@ jobs:
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: r-${{ needs.build-prep.outputs.app_version }}
+          tag_name: v${{ needs.build-prep.outputs.app_version }}
           name: Release ${{ needs.build-prep.outputs.app_version }}
           body: |
             ## Info
