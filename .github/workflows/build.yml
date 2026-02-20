@@ -13,6 +13,22 @@ on:
     types:
       - completed
 jobs:    
+  build-prep:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      app_version: ${{ steps.app_version.outputs.value }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Read Version
+        id: app_version
+        uses: ./.github/actions/read-semver-from-git-tags
+
   build-api:
     permissions:
       contents: read
@@ -28,6 +44,8 @@ jobs:
     runs-on: ubuntu-latest
 
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
+    needs: build-prep
 
     defaults:
       run:
@@ -47,15 +65,11 @@ jobs:
           cache: true
           cache-dependency-path: "**/packages.lock.json"
 
-      - name: Read Version
-        id: app_version
-        uses: ./.github/actions/read-semver-from-git-tags
-
       - name: Restore API dependencies
         run: dotnet restore ccDiary.sln
 
       - name: Build API
-        run: dotnet build ccDiary.sln --configuration Release --no-restore /p:Version=${{ steps.app_version.outputs.value }}
+        run: dotnet build ccDiary.sln --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
 
       - name: Test API
         run: dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger "trx" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput="TestResults/coverage" /p:ExcludeByFile="**/*Migrations/*.cs"
@@ -128,10 +142,10 @@ jobs:
         id: image_tag
         shell: bash
         run: |
-          IMAGE_TAG="ghcr.io/${{ github.repository }}-api:${{ steps.app_version.outputs.value }}"
+          IMAGE_TAG="ghcr.io/${{ github.repository }}-api:${{ needs.build-prep.outputs.app_version }}"
           IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '[:upper:]' '[:lower:]')"
           echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "value=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v4
@@ -140,10 +154,10 @@ jobs:
           context: ./src/api # <== This is the path to the 'api' subdirectory containing your application resources
           file: ./src/api/Dockerfile # <== This specifies the 'Dockerfile' in the subdirectory
           tags: |
-             ${{ env.IMAGE_TAG }}
+             ${{ steps.image_tag.outputs.value }}
 
     outputs:
-      image_tag: ${{ env.IMAGE_TAG }}
+      image_tag: ${{ steps.image_tag.outputs.value }}
     
   deploy-api:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
@@ -186,6 +200,8 @@ jobs:
 
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
+    needs: build-prep
+
     environment: none
 
     permissions:
@@ -211,12 +227,8 @@ jobs:
           cache: "npm"
           cache-dependency-path: "./src/ui/package-lock.json"
           
-      - name: Read Version
-        id: app_version
-        uses: ./.github/actions/read-semver-from-git-tags
-
       - name: Set UI version
-        run: npm version "${{ steps.app_version.outputs.value }}" --no-git-tag-version
+        run: npm version "${{ needs.build-prep.outputs.app_version }}" --no-git-tag-version
 
       - name: Install packages
         run: npm ci
@@ -389,6 +401,8 @@ jobs:
   create-release:
     name: Create Release
 
+    environment: none
+
     if: github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-latest
@@ -397,13 +411,9 @@ jobs:
       contents: write
       packages: write
 
-    needs: [deploy-ui, deploy-api]
+    needs: [build-prep, deploy-ui, deploy-api]
 
     steps:
-      - name: Read Version
-        id: app_version
-        uses: ./.github/actions/read-semver-from-git-tags
-
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
@@ -417,8 +427,8 @@ jobs:
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.app_version.outputs.value }}
-          name: Release ${{ steps.app_version.outputs.value }}
+          tag_name: ${{ needs.build-prep.outputs.app_version }}
+          name: Release ${{ needs.build-prep.outputs.app_version }}
           body: |
             ## Info
             Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
