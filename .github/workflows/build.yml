@@ -4,6 +4,8 @@
 name: Build and Test
 
 on:
+  push:
+    branches: ["main"]
   pull_request:
     branches: ["main"]    
   workflow_run:
@@ -20,9 +22,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
           fetch-tags: true
+
+    
+      - name: Wait for version tag on commit
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Waiting for Version On Commit to tag commit ${GITHUB_SHA}..."
+          TAG=""
+
+          for _ in {1..30}; do
+            git fetch --tags --force
+            TAG=$(git tag --points-at "$GITHUB_SHA" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+            if [ -n "$TAG" ]; then
+              echo "Found tag: $TAG"
+              break
+            fi
+            sleep 5
+          done
+
+          if [ -z "$TAG" ]; then
+            echo "No semver tag found on commit ${GITHUB_SHA} after waiting. Ensure Version On Commit completed successfully." >&2
+            exit 1
+          fi
+
 
       - name: Read Version
         id: app_version
@@ -54,7 +81,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -224,7 +250,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
           fetch-tags: true
 
