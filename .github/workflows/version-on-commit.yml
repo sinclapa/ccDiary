@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-    
 
 permissions:
   contents: write
@@ -24,20 +23,28 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout
+      - name: Checkout (full history + tags)
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.BOT_TOKEN }}
 
-      - name: Calculate next semantic version
+      - name: Calculate next semantic version (from git tags)
         id: semver
         shell: bash
         run: |
           set -euo pipefail
 
           COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
-          CURRENT_VERSION=$(cat VERSION)
+
+          git fetch --tags --force
+
+          LATEST_TAG="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || true)"
+          if [ -z "${LATEST_TAG}" ]; then
+            CURRENT_VERSION="0.0.0"
+          else
+            CURRENT_VERSION="${LATEST_TAG#v}"
+          fi
 
           if [[ "$COMMIT_MESSAGE" == *"BREAKING CHANGE"* ]] || [[ "$COMMIT_MESSAGE" =~ ^[a-zA-Z]+\(.*\)!: ]] || [[ "$COMMIT_MESSAGE" =~ ^[a-zA-Z]+!: ]]; then
             BUMP="major"
@@ -50,59 +57,43 @@ jobs:
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
           case "$BUMP" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
           esac
 
           NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
 
-          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
           echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Update root version file
-        run: echo "${{ steps.semver.outputs.next_version }}" > VERSION
-
-      - name: Commit and tag version changes
+      - name: Create and push tag
         env:
           NEW_VERSION: ${{ steps.semver.outputs.next_version }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           set -euo pipefail
 
-          if git diff --quiet; then
-            echo "No version changes detected."
+          TAG="v${NEW_VERSION}"
+
+          # Avoid failing if tag already exists (e.g., rerun)
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Nothing to do."
             exit 0
           fi
 
           git config user.name "sinclapa-bot"
           git config user.email "sinclapa-bot@users.noreply.github.com"
 
-          git add VERSION src/ui/package.json src/ui/package-lock.json
-          git commit -m "chore(version): bump to ${NEW_VERSION} [skip ci]"
-          git tag "v${NEW_VERSION}"
+          # Lightweight tag; switch to annotated if you want: git tag -a "$TAG" -m "$TAG"
+          git tag "$TAG"
 
           git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git"
 
-          if ! PUSH_OUTPUT=$(git push origin HEAD:main 2>&1); then
-            echo "$PUSH_OUTPUT"
-            if echo "$PUSH_OUTPUT" | grep -q "GH013"; then
+          if ! TAG_PUSH_OUTPUT=$(git push origin "$TAG" 2>&1); then
+            echo "$TAG_PUSH_OUTPUT"
+            if echo "$TAG_PUSH_OUTPUT" | grep -q "GH013"; then
               echo "Push blocked by repository rules (GH013). Ensure BOT_TOKEN identity is added as a ruleset bypass for main and required checks policy allows this automation path." >&2
             fi
-            exit 1
-          fi
-
-          if ! TAG_PUSH_OUTPUT=$(git push origin --tags 2>&1); then
-            echo "$TAG_PUSH_OUTPUT"
             exit 1
           fi
