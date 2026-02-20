@@ -1,0 +1,96 @@
+name: Bump and Tag Version
+description: Calculates next semver from commit message and pushes a tag.
+inputs:
+  bot-token:
+    description: Token used to push git tags.
+    required: true
+  commit-message:
+    description: Commit message used to determine semver bump level.
+    required: true
+  bot-name:
+    description: Git user.name for tagging commit.
+    required: false
+    default: sinclapa-bot
+  bot-email:
+    description: Git user.email for tagging commit.
+    required: false
+    default: sinclapa-bot@users.noreply.github.com
+outputs:
+  current_version:
+    description: Current version before bump.
+    value: ${{ steps.bump.outputs.current_version }}
+  next_version:
+    description: New version that was tagged.
+    value: ${{ steps.bump.outputs.next_version }}
+runs:
+  using: composite
+  steps:
+    - name: Calculate next semantic version
+      id: bump
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        COMMIT_MESSAGE="${{ inputs.commit-message }}"
+
+        git fetch --tags --force
+
+        LATEST_TAG="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || true)"
+        if [ -z "${LATEST_TAG}" ]; then
+          CURRENT_VERSION="0.0.0"
+        else
+          CURRENT_VERSION="${LATEST_TAG#v}"
+        fi
+
+        if [[ "$COMMIT_MESSAGE" == *"BREAKING CHANGE"* ]] || [[ "$COMMIT_MESSAGE" =~ ^[a-zA-Z]+\(.*\)!: ]] || [[ "$COMMIT_MESSAGE" =~ ^[a-zA-Z]+!: ]]; then
+          BUMP="major"
+        elif [[ "$COMMIT_MESSAGE" =~ ^feat\(.*\): ]] || [[ "$COMMIT_MESSAGE" =~ ^feat: ]]; then
+          BUMP="minor"
+        else
+          BUMP="patch"
+        fi
+
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+        case "$BUMP" in
+          major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH + 1)) ;;
+        esac
+
+        NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+        echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+        echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Create and push tag
+      shell: bash
+      env:
+        BOT_TOKEN: ${{ inputs.bot-token }}
+        NEW_VERSION: ${{ steps.bump.outputs.next_version }}
+        BOT_NAME: ${{ inputs.bot-name }}
+        BOT_EMAIL: ${{ inputs.bot-email }}
+      run: |
+        set -euo pipefail
+
+        TAG="v${NEW_VERSION}"
+
+        if git rev-parse "$TAG" >/dev/null 2>&1; then
+          echo "Tag $TAG already exists. Nothing to do."
+          exit 0
+        fi
+
+        git config user.name "$BOT_NAME"
+        git config user.email "$BOT_EMAIL"
+
+        git tag "$TAG"
+
+        git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git"
+
+        if ! TAG_PUSH_OUTPUT=$(git push origin "$TAG" 2>&1); then
+          echo "$TAG_PUSH_OUTPUT"
+          if echo "$TAG_PUSH_OUTPUT" | grep -q "GH013"; then
+            echo "Push blocked by repository rules (GH013). Ensure BOT_TOKEN identity is added as a ruleset bypass for main and required checks policy allows this automation path." >&2
+          fi
+          exit 1
+        fi

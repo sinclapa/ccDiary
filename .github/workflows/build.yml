@@ -7,15 +7,10 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main"]    
-  workflow_run:
-    workflows: ["Version On Commit"]
-    types:
-      - completed
+    branches: ["main"]
 jobs:    
   build-prep:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
       app_version: ${{ steps.app_version.outputs.value }}
     steps:
@@ -25,7 +20,23 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-    
+      - name: Validate bot token
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'sinclapa-bot' && !contains(github.event.head_commit.message, '[skip ci]') }}
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          if [ -z "$BOT_TOKEN" ]; then
+            echo "BOT_TOKEN secret is missing. Add it in repository Settings > Secrets and variables > Actions." >&2
+            exit 1
+          fi
+
+      - name: Bump and tag version
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'sinclapa-bot' && !contains(github.event.head_commit.message, '[skip ci]') }}
+        uses: ./.github/actions/bump-and-tag-version
+        with:
+          bot-token: ${{ secrets.BOT_TOKEN }}
+          commit-message: ${{ github.event.head_commit.message }}
+
       - name: Wait for version tag on commit
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         shell: bash
@@ -68,8 +79,6 @@ jobs:
     environment: none
 
     runs-on: ubuntu-latest
-
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     needs: build-prep
 
@@ -207,10 +216,6 @@ jobs:
       attestations: write
       id-token: write
 
-    defaults:
-      run:
-        working-directory: ./src/api
-
     steps:
       - name: Export image tag
         id: export_image_tag
@@ -230,8 +235,6 @@ jobs:
 
   build-ui:
     runs-on: ubuntu-latest
-
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     needs: build-prep
 
