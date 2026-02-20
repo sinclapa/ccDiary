@@ -164,9 +164,6 @@ jobs:
         working-directory: ./src/api
 
     steps:
-      - name: Show app version
-        run: echo "Deploying app version ${APP_VERSION}"
-
       - name: Log in to Azure
         uses: azure/login@v1
         with:
