@@ -73,6 +73,19 @@ runs:
       run: |
         set -euo pipefail
 
+        TOKEN_LOGIN=$(curl -sS -H "Authorization: Bearer ${BOT_TOKEN}" -H "Accept: application/vnd.github+json" https://api.github.com/user | sed -n 's/.*"login"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+        if [ -z "$TOKEN_LOGIN" ]; then
+          echo "Unable to resolve BOT_TOKEN identity from GitHub API. Check token validity/expiration and SSO authorization." >&2
+          exit 1
+        fi
+
+        echo "BOT_TOKEN resolves to: ${TOKEN_LOGIN}"
+
+        if [ "$TOKEN_LOGIN" = "github-actions[bot]" ]; then
+          echo "BOT_TOKEN resolves to github-actions[bot]. Use a PAT/App token for your bot user with repository write permissions instead of GITHUB_TOKEN." >&2
+          exit 1
+        fi
+
         TAG="v${NEW_VERSION}"
 
         if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -89,6 +102,9 @@ runs:
 
         if ! TAG_PUSH_OUTPUT=$(git push origin "$TAG" 2>&1); then
           echo "$TAG_PUSH_OUTPUT"
+          if echo "$TAG_PUSH_OUTPUT" | grep -q "403"; then
+            echo "Tag push was denied (403). Ensure token owner '${TOKEN_LOGIN}' has Write access to the repository and, if needed, SSO is authorized for the token." >&2
+          fi
           if echo "$TAG_PUSH_OUTPUT" | grep -q "GH013"; then
             echo "Push blocked by repository rules (GH013). Ensure BOT_TOKEN identity is added as a ruleset bypass for main and required checks policy allows this automation path." >&2
           fi
