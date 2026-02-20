@@ -12,10 +12,12 @@ runs:
       shell: bash
       run: |
         TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+        echo "TAG=$TAG"
         if [ -n "$TAG" ]; then
           BASE_VERSION="${TAG#v}"
         else
           DESCRIBE=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --long 2>/dev/null || echo "")
+          echo "DESCRIBE=$DESCRIBE"
           if [ -n "$DESCRIBE" ]; then
             BASE_TAG=$(echo "$DESCRIBE" | sed 's/-[0-9]*-g[0-9a-f]*$//')
             BASE_VERSION="${BASE_TAG#v}"
@@ -29,3 +31,4 @@ runs:
           fi
         fi
         echo "value=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+        echo "Resolved version: $BASE_VERSION"
