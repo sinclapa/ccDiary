@@ -10,6 +10,8 @@ on:
     branches: ["main"]
 jobs:    
   build-prep:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       app_version: ${{ steps.app_version.outputs.value }}
