@@ -5,8 +5,8 @@ on:
 jobs:
   release-prod:
     environment: prod
-    
-    if: startsWith(github.ref_name, 'r-')
+
+    if: startsWith(github.ref_name, 'v')
 
     runs-on: ubuntu-latest
 
