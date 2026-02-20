@@ -31,4 +31,4 @@ runs:
           fi
         fi
         echo "value=$BASE_VERSION" >> "$GITHUB_OUTPUT"
-        echo "Resolved version: $BASE_VERSION"
+        echo "Resolved tag: $BASE_VERSION"
