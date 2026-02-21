@@ -355,6 +355,7 @@ jobs:
           app_location: "${{ github.workspace }}/src/ui/dist" # App source code path
           skip_app_build: true # Set to true to bypass build step
           skip_api_build: true # Set to true to bypass API build step
+          deployment_environment: ${{ github.event.pull_request.number }}
           ###### End of Repository/Build Configurations ######
       - name: Install jq
         if: github.event_name == 'pull_request'

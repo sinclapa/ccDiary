@@ -73,54 +73,11 @@ jobs:
             "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID"
           echo "Removed preview redirect if it existed."
 
-      - name: Log in to Azure
-        uses: azure/login@v1
+      - name: Close SWA preview environment for PR
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Remove SWA preview environment
-        env:
-          RESOURCE_GROUP_NAME: ${{ vars.RESOURCE_GROUP_NAME }}
-          STATIC_WEB_APP_NAME: ${{ vars.STATIC_WEB_APP_NAME }}
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-
-          if [ -z "$RESOURCE_GROUP_NAME" ]; then
-            echo "RESOURCE_GROUP_NAME variable is missing; skipping SWA preview deletion."
-            exit 0
-          fi
-
-          APP_NAME="$STATIC_WEB_APP_NAME"
-          if [ -z "$APP_NAME" ]; then
-            APP_NAME=$(az staticwebapp list --resource-group "$RESOURCE_GROUP_NAME" --query "[0].name" -o tsv)
-          fi
-
-          if [ -z "$APP_NAME" ]; then
-            echo "No Static Web App found in resource group '$RESOURCE_GROUP_NAME'; nothing to delete."
-            exit 0
-          fi
-
-          ENVS_JSON=$(az staticwebapp environment list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" -o json)
-
-          echo "Available SWA environments (name/sourceBranch/url):"
-          echo "$ENVS_JSON" | jq -r '(if type=="array" then . else (.environments // []) end)[]? | "- \(.name // "<none>") | \(.sourceBranch // "<none>") | \(.hostname // .url // "<none>")"'
-
-          ENV_NAME=$(echo "$ENVS_JSON" | jq -r --arg pr "$PR_NUMBER" '
-            (if type=="array" then . else (.environments // []) end)
-            | map(select(
-                (.sourceBranch // "") == ("refs/pull/" + $pr + "/merge")
-                or (.sourceBranch // "") == ("refs/pull/" + $pr + "/head")
-                or (.hostname // .url // "" | test("-" + $pr + "\\."))
-              ))
-            | map(.name // empty)
-            | map(select(. != "default"))
-            | .[0] // empty
-          ')
-
-          if [ -z "$ENV_NAME" ]; then
-            echo "No matching preview environment found for PR $PR_NUMBER; nothing to delete."
-            exit 0
-          fi
-
-          echo "Deleting SWA preview environment '$ENV_NAME' from app '$APP_NAME'"
-          az staticwebapp environment delete --yes --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" --environment-name "$ENV_NAME"
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: close
+          app_location: "/"
+          deployment_environment: ${{ github.event.pull_request.number }}
