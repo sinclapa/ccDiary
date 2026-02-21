@@ -101,11 +101,26 @@ jobs:
           fi
 
           ENVS_JSON=$(az staticwebapp environment list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" -o json)
-          ENV_NAME=$(echo "$ENVS_JSON" | jq -r --arg pr "$PR_NUMBER" '.[] | select((.hostname // .url // "" | test("-" + $pr + "\\.")) or (.name // "" == $pr) or (.name // "" | test("(^|[-/])" + $pr + "$"))) | .name' | head -n1)
 
-          if [ -z "$ENV_NAME" ] || [ "$ENV_NAME" = "null" ]; then
-            ENV_NAME="$PR_NUMBER"
+          echo "Available SWA environments (name/sourceBranch/url):"
+          echo "$ENVS_JSON" | jq -r '(if type=="array" then . else (.environments // []) end)[]? | "- \(.name // "<none>") | \(.sourceBranch // "<none>") | \(.hostname // .url // "<none>")"'
+
+          ENV_NAME=$(echo "$ENVS_JSON" | jq -r --arg pr "$PR_NUMBER" '
+            (if type=="array" then . else (.environments // []) end)
+            | map(select(
+                (.sourceBranch // "") == ("refs/pull/" + $pr + "/merge")
+                or (.sourceBranch // "") == ("refs/pull/" + $pr + "/head")
+                or (.hostname // .url // "" | test("-" + $pr + "\\."))
+              ))
+            | map(.name // empty)
+            | map(select(. != "default"))
+            | .[0] // empty
+          ')
+
+          if [ -z "$ENV_NAME" ]; then
+            echo "No matching preview environment found for PR $PR_NUMBER; nothing to delete."
+            exit 0
           fi
 
           echo "Deleting SWA preview environment '$ENV_NAME' from app '$APP_NAME'"
-          az staticwebapp environment delete --yes --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" --environment-name "$ENV_NAME" || echo "Preview environment '$ENV_NAME' not found or already deleted."
+          az staticwebapp environment delete --yes --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" --environment-name "$ENV_NAME"
