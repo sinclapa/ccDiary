@@ -1,4 +1,4 @@
-name: Entra Cleanup
+name: Cleanup PR
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   issues: read
 
 jobs:
-  remove-entra-redirect:
+  cleanup-pr:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
