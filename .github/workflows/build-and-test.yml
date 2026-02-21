@@ -47,12 +47,9 @@ jobs:
   build-api:
     permissions:
       contents: read
-      issues: write
       checks: write
       pull-requests: write
       packages: write
-      attestations: write
-      id-token: write
 
     environment: none
 
@@ -187,12 +184,6 @@ jobs:
 
     permissions:
       contents: read
-      issues: read
-      checks: write
-      pull-requests: write
-      packages: write
-      attestations: write
-      id-token: write
 
     steps:
       - name: Export image tag
@@ -219,10 +210,9 @@ jobs:
     environment: none
 
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
       checks: write
-      issues: write
 
     defaults:
       run:
@@ -314,12 +304,7 @@ jobs:
 
     permissions:
       contents: read
-      issues: read
-      checks: write
-      pull-requests: write
-      packages: write
-      attestations: write
-      id-token: write
+      issues: write
 
     defaults:
       run:
@@ -424,7 +409,6 @@ jobs:
 
     permissions:
       contents: write
-      packages: write
 
     needs: [build-prep, deploy-ui, deploy-api]
 
