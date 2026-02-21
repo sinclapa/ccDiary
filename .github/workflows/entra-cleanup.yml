@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   remove-entra-redirect:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     environment: dev
@@ -71,3 +72,40 @@ jobs:
             -d "$PATCH_BODY" \
             "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID"
           echo "Removed preview redirect if it existed."
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Remove SWA preview environment
+        env:
+          RESOURCE_GROUP_NAME: ${{ vars.RESOURCE_GROUP_NAME }}
+          STATIC_WEB_APP_NAME: ${{ vars.STATIC_WEB_APP_NAME }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
+          if [ -z "$RESOURCE_GROUP_NAME" ]; then
+            echo "RESOURCE_GROUP_NAME variable is missing; skipping SWA preview deletion."
+            exit 0
+          fi
+
+          APP_NAME="$STATIC_WEB_APP_NAME"
+          if [ -z "$APP_NAME" ]; then
+            APP_NAME=$(az staticwebapp list --resource-group "$RESOURCE_GROUP_NAME" --query "[0].name" -o tsv)
+          fi
+
+          if [ -z "$APP_NAME" ]; then
+            echo "No Static Web App found in resource group '$RESOURCE_GROUP_NAME'; nothing to delete."
+            exit 0
+          fi
+
+          ENVS_JSON=$(az staticwebapp environment list --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" -o json)
+          ENV_NAME=$(echo "$ENVS_JSON" | jq -r --arg pr "$PR_NUMBER" '.[] | select((.hostname // .url // "" | test("-" + $pr + "\\.")) or (.name // "" == $pr) or (.name // "" | test("(^|[-/])" + $pr + "$"))) | .name' | head -n1)
+
+          if [ -z "$ENV_NAME" ] || [ "$ENV_NAME" = "null" ]; then
+            ENV_NAME="$PR_NUMBER"
+          fi
+
+          echo "Deleting SWA preview environment '$ENV_NAME' from app '$APP_NAME'"
+          az staticwebapp environment delete --yes --name "$APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" --environment-name "$ENV_NAME" || echo "Preview environment '$ENV_NAME' not found or already deleted."
