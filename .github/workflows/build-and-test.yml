@@ -196,17 +196,21 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy GHCR image to Container App
-        id: deploy_container_app
         uses: azure/container-apps-deploy-action@v2
         with:
           containerAppName: ${{ vars.CONTAINER_APP_NAME }}
           resourceGroup: ${{ vars.RESOURCE_GROUP_NAME }}
           imageToDeploy: ${{ env.IMAGE_TAG }}
 
-      - name: Display Container App URL
+      - name: Get Container App URL
         run: |
+          APP_URL=$(az containerapp show \
+            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+            --name ${{ vars.CONTAINER_APP_NAME }} \
+            --query 'properties.configuration.ingress.fqdn' \
+            --output tsv)
           echo "Container App deployed successfully!"
-          echo "App URL: ${{ steps.deploy_container_app.outputs.url }}"
+          echo "App URL: https://${APP_URL}"
 
   build-ui:
     runs-on: ubuntu-latest
