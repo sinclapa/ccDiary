@@ -263,14 +263,11 @@ jobs:
           name: ui-coverage
           path: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
           retention-days: 5
-      
-      # TODO: ideally we would point the coverage action directly at the artifact, but that doesn't seem to be working, so for now we copy it to the root of the workspace where the action can find it. This is a bit hacky, but it works.
-      - run: cp "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml" "${{ github.workspace }}/cobertura-coverage.xml"
 
       - name: Publish Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          filename: "cobertura-coverage.xml"
+          filename: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
           badge: true
           fail_below_min: true
           format: markdown
