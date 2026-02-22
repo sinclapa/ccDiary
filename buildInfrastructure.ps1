@@ -1,3 +1,25 @@
+<#
+.SYNOPSIS
+    Builds and deploys infrastructure for a specified environment.
+
+.PARAMETER EnvironmentParam
+    Optional. The environment to deploy (e.g., dev, staging, prod). 
+    If not provided, the script will use the value from buildInfrastructure.settings or prompt for it.
+
+.EXAMPLE
+    .\buildInfrastructure.ps1
+    Runs interactively, using settings file or prompting for values.
+
+.EXAMPLE
+    .\buildInfrastructure.ps1 -EnvironmentParam staging
+    Deploys to the staging environment, overriding any value in the settings file.
+#>
+
+param(
+    [Parameter(Mandatory=$false)]
+    [string]$EnvironmentParam
+)
+
 <# --------------------------------------------------------------------------------- #>
 <# Setup az extensions #>
 if ((az extension list --query "[?name=='containerapp']" ) -eq "[]") {
@@ -57,13 +79,22 @@ if (-Not ($params.ContainsKey("Name"))) {
 else {
     $name = $params["Name"]
 }
-if (-Not ($params.ContainsKey("Environment"))) {
+
+# Handle environment parameter - command line argument takes precedence
+if ($PSBoundParameters.ContainsKey('EnvironmentParam')) {
+    $environment = $EnvironmentParam
+    Write-Host "Using environment from command line parameter: $environment" -ForegroundColor Gray
+    # Update settings file with the new environment value
+    $params["Environment"] = $environment
+}
+elseif (-Not ($params.ContainsKey("Environment"))) {
     $environment = Read-Host -Prompt "Enter the environment name"
     $params.Add("Environment", $environment)
 }
 else {
     $environment = $params["Environment"]
 }
+
 if (-Not ($params.ContainsKey("Location"))) {
     $location = Read-Host -Prompt "Enter the Azure location e.g. westeurope"
     $params.Add("Location", $location)
