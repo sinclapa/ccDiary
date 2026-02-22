@@ -40,11 +40,12 @@ namespace ccDiaryApi
                     Version = description.ApiVersion.ToString(),
                     Description = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description}" +
                         $"<p><strong>Build: </strong>{AssemblyVersionInfo.GetInformationalVersion()}</p>" +
-                        $"<p><strong>Environment: </strong>{_webHostEnvironment.EnvironmentName}</p>"
+                        $"<p><strong>Environment: </strong>{_webHostEnvironment.EnvironmentName}</p>",
                 });
             }
 
             options.OperationFilter<AuthorizeCheckOperationFilter>();
+
             var scopes = new Dictionary<string, string>
             {
                 {
