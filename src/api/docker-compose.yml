@@ -11,16 +11,23 @@ services:
     volumes:
       - ccdiarydbvolume:/var/opt/mssql
     healthcheck:
-        test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" || exit 1
-        interval: 10s
-        timeout: 3s
-        retries: 10
-        start_period: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\"; else /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\"; fi || exit 1"
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     networks:
       - ccdiarynet
   ccdiaryapi:
     image: ${DOCKER_REGISTRY-}ccdiaryapi
     container_name: ccdiaryapi
+    depends_on:
+      ccdiary:
+        condition: service_healthy
     build:
       context: .
       dockerfile: ccDiaryApi/Dockerfile

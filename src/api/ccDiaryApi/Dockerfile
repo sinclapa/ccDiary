@@ -33,7 +33,7 @@ COPY --from=test /src/ccDiaryApiTest/TestResults/* .
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "ccDiaryApi/ccDiaryApi.csproj" -c $BUILD_CONFIGURATION --no-build -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ccDiaryApi/ccDiaryApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

@@ -1,0 +1,5 @@
+{
+  "name": "ccDiary",
+  "postCreateCommand": "bash ./scripts/install-powershell.sh && bash ./scripts/install-azure-cli.sh",
+  "postStartCommand": "bash ./scripts/install-powershell.sh && bash ./scripts/install-azure-cli.sh"
+}

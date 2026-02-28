@@ -72,68 +72,48 @@ Write-Host "Setting up Entra application: $AppName" -ForegroundColor Cyan
 
 # Your script implementation goes here
 try {
-
-    $appSpaJson = @{redirectUris = $spaUris} | ConvertTo-Json -Depth 3 -Compress
-    $appUpdateBody = $appSpaJson | ConvertTo-Json -Depth 4
-
     $appId=$(az ad app list --filter "displayName eq '$AppName'" --query "[0].appId" -o tsv)
+
+    $spaJson = @{ redirectUris = $spaUris } | ConvertTo-Json -Depth 5 -Compress
+    $webJson = @{ 
+        redirectUris = $webUris
+        implicitGrantSettings = @{
+            enableIdTokenIssuance = $true
+            enableAccessTokenIssuance = $false
+        }
+    } | ConvertTo-Json -Depth 8 -Compress
+
+    $oauthScopes = @(
+        @{
+            id = (New-GuidFromString "${resourceGroupId}-${AppName}-oauth2-diary-update").ToString()
+            value = "Diary.Update"
+            adminConsentDisplayName = "Update ${AppName} details"
+            adminConsentDescription = "Update ${AppName} details permission"
+            userConsentDescription = "Allow the app to update ${AppName} details on your behalf"
+            userConsentDisplayName = "Update ${AppName} details"
+            type = "User"
+            isEnabled = $true
+        }
+    )
+    $apiJson = @{ oauth2PermissionScopes = $oauthScopes } | ConvertTo-Json -Depth 10 -Compress
 
     if ($appId -ne "" -and $null -ne $appId) {
         Write-Host "  Updating existing application: $appId"
-        
-        # Update application
-        az ad app update --id $appId `
-            --web-redirect-uris=$webUris `
-            --set spa=$appUpdateBody `
-            --identifier-uris "api://${appId}" `
-            --enable-id-token-issuance true `
-            --sign-in-audience AzureADMyOrg
     } else {
         Write-Host "  Creating new application..."
-        
+
         # Create application
         $appId = az ad app create `
             --display-name $AppName `
-            --web-redirect-uris $webUris `
-            --enable-id-token-issuance true `
             --sign-in-audience AzureADMyOrg `
             --query "appId" -o tsv
-
-        az ad app update --id $appId `
-            --set spa=$appUpdateBody `
-            --identifier-uris "api://${appId}" `
-            --enable-id-token-issuance true `
-            --sign-in-audience AzureADMyOrg
     }
 
-    $existingApp = az ad app show --id $appId | ConvertFrom-Json
-    if ($existingApp.api.oauth2PermissionScopes) {
-        foreach ($scope in $existingApp.api.oauth2PermissionScopes) {
-            $scope.isEnabled = $false
-        }
-        $disabledScopesJson = @{ oauth2PermissionScopes = $existingApp.api.oauth2PermissionScopes } | ConvertTo-Json -Depth 10 -Compress
-        $disabledScopesBody = $disabledScopesJson | ConvertTo-Json -d 4
-        az ad app update --id $appId --set api=$disabledScopesBody
-    }
-
-    $oauthJson = @(
-        @{
-            oauth2PermissionScopes = @(
-                @{
-                    id = New-GuidFromString "${resourceGroupId}-${AppName}-oauth2-diary-update"
-                    value = "Diary.Update"
-                    adminConsentDisplayName = "Update ${AppName} details"
-                    adminConsentDescription = "Update ${AppName} details permission"
-                    userConsentDescription = $null
-                    userConsentDisplayName = $null  
-                    isEnabled = $true
-                }
-            )
-        }
-    )
-    $oauthJsonOutput = $oauthJson | ConvertTo-Json -Depth 10 -Compress
-    $oauthJsonOutputBody = $oauthJsonOutput | ConvertTo-Json -d 4
-    az ad app update --id $appId --set api=$oauthJsonOutputBody 
+    az ad app update --id $appId `
+        --identifier-uris "api://${appId}" `
+        --enable-id-token-issuance true `
+        --sign-in-audience AzureADMyOrg `
+        --set "spa=$spaJson" "web=$webJson" "api=$apiJson"
 
     $EntraObjectId = az ad app list --filter "displayName eq '$AppName'" --query "[0].id" -o tsv
     $EntraApplicationIdURI = "api://${appId}"
@@ -141,14 +121,6 @@ try {
     Write-Host "  EntraApplicationIdURI = $EntraApplicationIdURI"
     Write-Host "  EntraClientId = $EntraClientId"
     Write-Host "  EntraObjectId = $EntraObjectId"
-    
-    Write-Host "Add permissions to the application..."
-    $GraphAppId = "00000003-0000-0000-c000-000000000000"
-    # find the appRole id for Application.ReadWrite.All
-    $PermId = az ad sp show --id $GraphAppId --query "appRoles[?value=='Application.ReadWrite.All'].id" -o tsv
-    # attach that application permission to your app registration
-    az ad app permission add --id $EntraClientId --api $GraphAppId --api-permissions "$PermId=Role"
-    az ad app permission admin-consent --id "$EntraClientId"
 
     # Return object with 2 string properties
     return [PSCustomObject]@{

@@ -13,6 +13,26 @@ It is recommended to install the following applications
 * Code (https://github.com/sinclapa/ccDiary)
 * GitHub CLI (https://cli.github.com/)
 
+## GitHub Codespaces: install PowerShell and Azure CLI
+Run this from the repository root in the Codespace terminal:
+
+```bash
+bash ./scripts/install-powershell.sh
+bash ./scripts/install-azure-cli.sh
+```
+
+Then start PowerShell with:
+
+```bash
+pwsh
+```
+
+Check Azure CLI with:
+
+```bash
+az --version
+```
+
 # Setup Azure
 ## Build Infrastructure
 1. Login to Azure
@@ -255,6 +275,22 @@ Create .env file to hold database password for docker-compose in .\src\api
 ```
 DB_PASSWORD=<password>
 ```
+
+> [!NOTE]
+> Running `./setuplocal.ps1` populates additional values in `src/api/.env`, including `USER_SECRETS_PATH`, `HTTPS_CERTS_PATH`, and `COMPOSE_FILE`.
+> `COMPOSE_FILE` is set per OS:
+> * **Windows**: `docker-compose.yml;docker-compose.override.yml`
+> * **Linux/Codespaces**: `docker-compose.yml:docker-compose.override.yml:docker-compose.linux.override.yml`
+>
+> This keeps Linux-specific container user mapping out of Windows runs while still fixing mounted secret permissions on Linux.
+
+> [!NOTE]
+> `./setuplocal.ps1` also provisions a development HTTPS certificate for Docker and writes these values into `src/api/.env`:
+> * `HTTPS_CERTS_PATH`
+> * `HTTPS_CERT_FILE`
+> * `HTTPS_CERT_PASSWORD`
+>
+> The certificate is exported to a repository-local folder (`.certs/https`) so container HTTPS startup does not depend on host-specific certificate locations.
 
 Create **.env.dev.local** file in .\src\ui
 ```

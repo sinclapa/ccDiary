@@ -10,6 +10,7 @@ using ccDiaryApi.Data.Migration;
 using ccDiaryApi.Extensions;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
@@ -107,11 +108,22 @@ var app = builder.Build();
 
 app.MigrateDatabase();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    KnownNetworks = { },
+    KnownProxies = { },
+});
+
 app.UseSwagger();
 
 app.AddSwaggerUI(builder.Configuration);
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection when not behind a proxy (e.g., true localhost, not Codespaces)
+if (!app.Configuration.GetValue<bool>("DisableHttpsRedirection", false))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("cors");
 
