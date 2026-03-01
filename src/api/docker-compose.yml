@@ -2,7 +2,9 @@ services:
   ccdiary:
     image: "mcr.microsoft.com/mssql/server:2022-latest" 
     container_name: ccdiarydb
-    hostname: ccdiarydb    
+    hostname: ccdiarydb
+    env_file:
+      - .env
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${DB_PASSWORD}
@@ -25,6 +27,8 @@ services:
   ccdiaryapi:
     image: ${DOCKER_REGISTRY-}ccdiaryapi
     container_name: ccdiaryapi
+    env_file:
+      - .env
     depends_on:
       ccdiary:
         condition: service_healthy

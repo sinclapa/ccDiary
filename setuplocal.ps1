@@ -1,4 +1,3 @@
-
 <# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
 function ConvertTo-StringData {
@@ -86,7 +85,7 @@ $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 <# --------------------------------------------------------------------------------- #>
 <# Update Local Build Environment #>
 
-Write-Host "Updating Local API Build"
+Write-Host "Updating Local API Build" -ForegroundColor Cyan
 $envPath = "./src/api/.env"
 $apiEnv = @{}
 if (Test-Path $envPath) {
@@ -125,25 +124,126 @@ if (-not $httpsCertPassword) {
 $userSecretsPath = $null
 $httpsCertsPath = $null
 $composeFiles = $null
-$httpsCertOutputPath = $null
-if ($IsWindows -or $env:OS -eq "Windows_NT") {
+$onWindows = $IsWindows -or $env:OS -eq "Windows_NT"
+
+if ($onWindows) {
     $userSecretsPath = Join-Path $env:APPDATA "Microsoft\UserSecrets"
-    $httpsCertsPath = Join-Path $PSScriptRoot ".certs\https"
+    # For Windows, certificates are auto-managed by Visual Studio at this location
+    $httpsCertsPath = Join-Path $env:APPDATA "ASP.NET\Https"
     $composeFiles = "docker-compose.yml;docker-compose.override.yml"
+    Write-Host "Detected Windows environment" -ForegroundColor Gray
 }
 else {
     $userSecretsPath = Join-Path $HOME ".microsoft/usersecrets"
+    # For Linux/Codespaces, use local .certs directory
     $httpsCertsPath = Join-Path $PSScriptRoot ".certs/https"
     $composeFiles = "docker-compose.yml:docker-compose.override.yml:docker-compose.linux.override.yml"
+    Write-Host "Detected Linux environment" -ForegroundColor Gray
 }
 
-New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
-$httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
-dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword | Out-Null
+Write-Host "Configuring HTTPS certificate..." -ForegroundColor Cyan
 
-if (-not (Test-Path $httpsCertOutputPath)) {
-    Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
-    exit 1
+if ($onWindows) {
+    Write-Host "  Windows detected: Installing development certificate" -ForegroundColor Green
+    
+    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
+    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
+    
+    # Check if certificate exists and validate password
+    $needsRegeneration = $false
+    if (Test-Path $httpsCertOutputPath) {
+        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
+        try {
+            # Try to load the certificate with the password
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
+            $cert.Dispose()
+            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
+        } catch {
+            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
+            $needsRegeneration = $true
+        }
+    } else {
+        Write-Host "  Certificate not found" -ForegroundColor Gray
+        $needsRegeneration = $true
+    }
+    
+    if ($needsRegeneration) {
+        # Remove existing certificate if it exists
+        if (Test-Path $httpsCertOutputPath) {
+            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
+            Remove-Item $httpsCertOutputPath -Force
+        }
+        
+        # Clean existing dev-certs to ensure fresh generation
+        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
+        dotnet dev-certs https --clean 2>&1 | Out-Null
+        
+        # Generate new certificate with the password - this is what Visual Studio does
+        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
+        dotnet dev-certs https --trust 2>&1 | Out-Null
+        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
+        
+        if (-not (Test-Path $httpsCertOutputPath)) {
+            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
+            exit 1
+        }
+        
+        Write-Host "  Certificate created successfully" -ForegroundColor Green
+    }
+    
+    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
+    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
+} else {
+    # Linux/Codespaces: Generate and manage certificates locally
+    Write-Host "  Linux detected: Generating development certificate" -ForegroundColor Green
+    
+    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
+    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
+    
+    # Check if certificate exists and validate password
+    $needsRegeneration = $false
+    if (Test-Path $httpsCertOutputPath) {
+        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
+        try {
+            # Try to load the certificate with the password
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
+            $cert.Dispose()
+            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
+        } catch {
+            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
+            $needsRegeneration = $true
+        }
+    } else {
+        Write-Host "  Certificate not found" -ForegroundColor Gray
+        $needsRegeneration = $true
+    }
+    
+    if ($needsRegeneration) {
+        # Remove existing certificate if it exists
+        if (Test-Path $httpsCertOutputPath) {
+            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
+            Remove-Item $httpsCertOutputPath -Force
+        }
+        
+        # Clean existing dev-certs to ensure fresh generation
+        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
+        dotnet dev-certs https --clean 2>&1 | Out-Null
+        
+        # Generate new certificate with the password from config
+        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
+        dotnet dev-certs https --trust 2>&1 | Out-Null
+        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
+        
+        if (-not (Test-Path $httpsCertOutputPath)) {
+            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
+            exit 1
+        }
+        
+        Write-Host "  Certificate created successfully" -ForegroundColor Green
+    }
+    
+    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
+    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
 }
 
 $apiEnv["DB_PASSWORD"] = $localDBPassword
@@ -159,6 +259,7 @@ $apiEnv | ConvertTo-StringData | Set-Content -Path $envPath
 Write-Host "  USER_SECRETS_PATH set to: $userSecretsPath" -ForegroundColor Gray
 Write-Host "  HTTPS_CERTS_PATH set to: $httpsCertsPath" -ForegroundColor Gray
 Write-Host "  HTTPS_CERT_FILE set to: $httpsCertFile" -ForegroundColor Gray
+Write-Host "  HTTPS_CERT_PASSWORD set to: $httpsCertPassword" -ForegroundColor Gray
 Write-Host "  COMPOSE_FILE set to: $composeFiles" -ForegroundColor Gray
 
 dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj init
@@ -167,7 +268,7 @@ dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:TenantI
 dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:ClientId" "$entraClientId"
 dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
 
-Write-Host "Updating Local UI Build"
+Write-Host "Updating Local UI Build" -ForegroundColor Cyan
 function SetValueInHashTable {
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
@@ -206,4 +307,4 @@ if (-not $exists) {
 }
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
-Write-Host "Finished"
+Write-Host "Finished" -ForegroundColor Green

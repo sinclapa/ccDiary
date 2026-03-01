@@ -1,7 +1,5 @@
 services:
   ccdiaryapi:
-    env_file:
-      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
@@ -16,8 +14,4 @@ services:
       - type: bind
         source: ${USER_SECRETS_PATH}
         target: /home/app/.microsoft/usersecrets
-        read_only: true
-      - type: bind
-        source: ${HTTPS_CERTS_PATH}
-        target: /home/app/.aspnet/https
         read_only: true

@@ -74,14 +74,6 @@ Write-Host "Setting up Entra application: $AppName" -ForegroundColor Cyan
 try {
     $appId=$(az ad app list --filter "displayName eq '$AppName'" --query "[0].appId" -o tsv)
 
-    $spaJson = @{ redirectUris = $spaUris } | ConvertTo-Json -Depth 5 -Compress
-    $webJson = @{ 
-        redirectUris = $webUris
-        implicitGrantSettings = @{
-            enableIdTokenIssuance = $true
-            enableAccessTokenIssuance = $false
-        }
-    } | ConvertTo-Json -Depth 8 -Compress
 
     $oauthScopes = @(
         @{
@@ -95,7 +87,6 @@ try {
             isEnabled = $true
         }
     )
-    $apiJson = @{ oauth2PermissionScopes = $oauthScopes } | ConvertTo-Json -Depth 10 -Compress
 
     if ($appId -ne "" -and $null -ne $appId) {
         Write-Host "  Updating existing application: $appId"
@@ -109,13 +100,44 @@ try {
             --query "appId" -o tsv
     }
 
-    az ad app update --id $appId `
-        --identifier-uris "api://${appId}" `
-        --enable-id-token-issuance true `
-        --sign-in-audience AzureADMyOrg `
-        --set "spa=$spaJson" "web=$webJson" "api=$apiJson"
+    # Get the object ID for the application
+    $objectId = az ad app show --id $appId --query "id" -o tsv
 
-    $EntraObjectId = az ad app list --filter "displayName eq '$AppName'" --query "[0].id" -o tsv
+    # Build the request body for Graph API  
+    # Update spa and web redirect URIs, identifier URI, and API scopes
+    $requestBody = @{
+        identifierUris = @("api://${appId}")
+        spa = @{ redirectUris = $spaUris }
+        web = @{ 
+            redirectUris = $webUris
+            implicitGrantSettings = @{
+                enableIdTokenIssuance = $true
+                enableAccessTokenIssuance = $false
+            }
+        }
+        api = @{ oauth2PermissionScopes = $oauthScopes }
+    } | ConvertTo-Json -Depth 10
+
+    # Write JSON to temp file
+    $tempBodyFile = [System.IO.Path]::GetTempFileName()
+    Set-Content -Path $tempBodyFile -Value $requestBody -Encoding UTF8
+    
+    try {
+        if ($objectId) {
+            # Use Get-Content to read file and pipe to az rest
+            Get-Content -Path $tempBodyFile | az rest --method PATCH `
+                --uri "https://graph.microsoft.com/v1.0/applications/$objectId" `
+                --headers "Content-Type=application/json" `
+                --body "@-"
+        } else {
+            Write-Error "Failed to retrieve application object ID for $AppName"
+            exit 1
+        }
+    } finally {
+        Remove-Item -Path $tempBodyFile -Force -ErrorAction SilentlyContinue
+    }
+
+    $EntraObjectId = $objectId
     $EntraApplicationIdURI = "api://${appId}"
     $EntraClientId = $appId
     Write-Host "  EntraApplicationIdURI = $EntraApplicationIdURI"
