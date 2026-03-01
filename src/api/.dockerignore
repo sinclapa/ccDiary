@@ -9,11 +9,7 @@
 README.md
 *.md
 
-# Source code (not needed for artifact-based build)
-ccDiaryApi/
-ccDiaryApiTest/
-ccDiary.sln
-stylecop.json
+# Source code and solution files (required by compose build)
 launchSettings.json
 
 # Build outputs (except publish directory)

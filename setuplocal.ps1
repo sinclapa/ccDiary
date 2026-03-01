@@ -45,61 +45,230 @@ Write-Host "  User: $userPrincipalName" -ForegroundColor Gray
 Write-Host "  Tenant: $tenantId" -ForegroundColor Gray
 Write-Host "  Subscription: $(az account show --query "name" --output tsv)" -ForegroundColor Gray
 
+$machineName = $env:COMPUTERNAME
+if ([string]::IsNullOrWhiteSpace($machineName)) {
+    $machineName = $env:HOSTNAME
+}
+if ([string]::IsNullOrWhiteSpace($machineName)) {
+    $machineName = [System.Net.Dns]::GetHostName()
+}
+if ([string]::IsNullOrWhiteSpace($machineName)) {
+    Write-Error "Failed to resolve machine name"
+    exit 1
+}
+
 Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
-$entraOut = & ".\entraSetup.ps1" `
-    -AppName "ccdiary-local-$env:COMPUTERNAME" `
-    -spaUris @("https://localhost:54629/swagger/oauth2-redirect.html", "http://localhost:8080/") `
-    -webUris @("https://localhost:54629/") `
-    -resourceGroupId $env:COMPUTERNAME
+
+# Detect if running in GitHub Codespace and build appropriate URLs
+if ($env:CODESPACE_NAME -and $env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
+    Write-Host "  Detected GitHub Codespace environment" -ForegroundColor Gray
+    $baseUrlApi = "https://$env:CODESPACE_NAME-54628.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
+    $baseUrl8080 = "https://$env:CODESPACE_NAME-8080.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
+    Write-Host "  Using Codespace URLs:" -ForegroundColor Gray
+    Write-Host "    API (54629): $baseUrlApi" -ForegroundColor Gray
+    Write-Host "    UI (8080): $baseUrl8080" -ForegroundColor Gray
+}
+else {
+    Write-Host "  Using localhost URLs" -ForegroundColor Gray
+    $baseUrlApi = "https://localhost:54629"
+    $baseUrl8080 = "http://localhost:8080"
+}
+
+$entraOut = & "./entraSetup.ps1" `
+    -AppName "ccdiary-local-$machineName" `
+    -spaUris @("$baseUrlApi/swagger/oauth2-redirect.html", "$baseUrl8080/") `
+    -webUris @("$baseUrlApi/") `
+    -resourceGroupId $machineName
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Local Build Environment #>
 
-Write-Host "Updating Local API Build"
-$envPath = ".\src\api\.env"
-$localDBPassword = $null
-# Read existing DB_PASSWORD from .env if present
+Write-Host "Updating Local API Build" -ForegroundColor Cyan
+$envPath = "./src/api/.env"
+$apiEnv = @{}
 if (Test-Path $envPath) {
     $envLines = Get-Content -Path $envPath
     foreach ($line in $envLines) {
-        # Skip empty lines and comments
         if ([string]::IsNullOrWhiteSpace($line) -or $line.TrimStart().StartsWith("#")) {
             continue
         }
-        # Split on the first '=' only
         $parts = $line -split '=', 2
         if ($parts.Count -lt 2) {
             continue
         }
         $key = $parts[0].Trim()
         $value = $parts[1]
-        if ($key -eq "DB_PASSWORD") {
-            $localDBPassword = $value
-            break
+        if (-not [string]::IsNullOrWhiteSpace($key)) {
+            $apiEnv[$key] = $value
         }
     }
 }
+
+$localDBPassword = $apiEnv["DB_PASSWORD"]
 if (-not $localDBPassword) {
     $localDBPassword = Read-Host -Prompt "Enter the password for the local database"
-    # Append or create DB_PASSWORD entry in .env
-    $dbPasswordLine = "DB_PASSWORD=$localDBPassword"
-    if (Test-Path $envPath) {
-        Add-Content -Path $envPath -Value $dbPasswordLine
-    }
-    else {
-        $dbPasswordLine | Set-Content -Path $envPath
-    }
 }
 
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj init
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "SA_PASSWORD" "$localDBPassword"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:TenantId" "$tenantId"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ClientId" "$entraClientId"
-dotnet user-secrets -p .\src\api\ccDiaryApi\ccDiaryApi.csproj set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+$httpsCertFile = $apiEnv["HTTPS_CERT_FILE"]
+if (-not $httpsCertFile) {
+    $httpsCertFile = "ccdiaryapi.pfx"
+}
 
-Write-Host "Updating Local UI Build"
+$httpsCertPassword = $apiEnv["HTTPS_CERT_PASSWORD"]
+if (-not $httpsCertPassword) {
+    $httpsCertPassword = "local-dev-cert-password"
+}
+
+$userSecretsPath = $null
+$httpsCertsPath = $null
+$composeFiles = $null
+$onWindows = $IsWindows -or $env:OS -eq "Windows_NT"
+
+if ($onWindows) {
+    $userSecretsPath = Join-Path $env:APPDATA "Microsoft\UserSecrets"
+    # For Windows, certificates are auto-managed by Visual Studio at this location
+    $httpsCertsPath = Join-Path $env:APPDATA "ASP.NET\Https"
+    $composeFiles = "docker-compose.yml;docker-compose.override.yml"
+    Write-Host "Detected Windows environment" -ForegroundColor Gray
+}
+else {
+    $userSecretsPath = Join-Path $HOME ".microsoft/usersecrets"
+    # For Linux/Codespaces, use local .certs directory
+    $httpsCertsPath = Join-Path $PSScriptRoot ".certs/https"
+    $composeFiles = "docker-compose.yml:docker-compose.override.yml:docker-compose.linux.override.yml"
+    Write-Host "Detected Linux environment" -ForegroundColor Gray
+}
+
+Write-Host "Configuring HTTPS certificate..." -ForegroundColor Cyan
+
+if ($onWindows) {
+    Write-Host "  Windows detected: Installing development certificate" -ForegroundColor Green
+    
+    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
+    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
+    
+    # Check if certificate exists and validate password
+    $needsRegeneration = $false
+    if (Test-Path $httpsCertOutputPath) {
+        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
+        try {
+            # Try to load the certificate with the password
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
+            $cert.Dispose()
+            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
+        } catch {
+            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
+            $needsRegeneration = $true
+        }
+    } else {
+        Write-Host "  Certificate not found" -ForegroundColor Gray
+        $needsRegeneration = $true
+    }
+    
+    if ($needsRegeneration) {
+        # Remove existing certificate if it exists
+        if (Test-Path $httpsCertOutputPath) {
+            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
+            Remove-Item $httpsCertOutputPath -Force
+        }
+        
+        # Clean existing dev-certs to ensure fresh generation
+        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
+        dotnet dev-certs https --clean 2>&1 | Out-Null
+        
+        # Generate new certificate with the password - this is what Visual Studio does
+        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
+        dotnet dev-certs https --trust 2>&1 | Out-Null
+        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
+        
+        if (-not (Test-Path $httpsCertOutputPath)) {
+            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
+            exit 1
+        }
+        
+        Write-Host "  Certificate created successfully" -ForegroundColor Green
+    }
+    
+    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
+    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
+} else {
+    # Linux/Codespaces: Generate and manage certificates locally
+    Write-Host "  Linux detected: Generating development certificate" -ForegroundColor Green
+    
+    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
+    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
+    
+    # Check if certificate exists and validate password
+    $needsRegeneration = $false
+    if (Test-Path $httpsCertOutputPath) {
+        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
+        try {
+            # Try to load the certificate with the password
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
+            $cert.Dispose()
+            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
+        } catch {
+            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
+            $needsRegeneration = $true
+        }
+    } else {
+        Write-Host "  Certificate not found" -ForegroundColor Gray
+        $needsRegeneration = $true
+    }
+    
+    if ($needsRegeneration) {
+        # Remove existing certificate if it exists
+        if (Test-Path $httpsCertOutputPath) {
+            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
+            Remove-Item $httpsCertOutputPath -Force
+        }
+        
+        # Clean existing dev-certs to ensure fresh generation
+        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
+        dotnet dev-certs https --clean 2>&1 | Out-Null
+        
+        # Generate new certificate with the password from config
+        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
+        dotnet dev-certs https --trust 2>&1 | Out-Null
+        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
+        
+        if (-not (Test-Path $httpsCertOutputPath)) {
+            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
+            exit 1
+        }
+        
+        Write-Host "  Certificate created successfully" -ForegroundColor Green
+    }
+    
+    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
+    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
+}
+
+$apiEnv["DB_PASSWORD"] = $localDBPassword
+$apiEnv["USER_SECRETS_PATH"] = $userSecretsPath
+$apiEnv["HTTPS_CERTS_PATH"] = $httpsCertsPath
+$apiEnv["HTTPS_CERT_FILE"] = $httpsCertFile
+$apiEnv["HTTPS_CERT_PASSWORD"] = $httpsCertPassword
+$apiEnv["COMPOSE_FILE"] = $composeFiles
+$apiEnv["Entra__TenantId"] = $tenantId
+$apiEnv["Entra__ClientId"] = $entraClientId
+$apiEnv["Entra__ApplicationIdUri"] = $entraApplicationIdURI
+$apiEnv | ConvertTo-StringData | Set-Content -Path $envPath
+Write-Host "  USER_SECRETS_PATH set to: $userSecretsPath" -ForegroundColor Gray
+Write-Host "  HTTPS_CERTS_PATH set to: $httpsCertsPath" -ForegroundColor Gray
+Write-Host "  HTTPS_CERT_FILE set to: $httpsCertFile" -ForegroundColor Gray
+Write-Host "  HTTPS_CERT_PASSWORD set to: $httpsCertPassword" -ForegroundColor Gray
+Write-Host "  COMPOSE_FILE set to: $composeFiles" -ForegroundColor Gray
+
+dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj init
+dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "SA_PASSWORD" "$localDBPassword"
+dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:TenantId" "$tenantId"
+dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:ClientId" "$entraClientId"
+dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+
+Write-Host "Updating Local UI Build" -ForegroundColor Cyan
 function SetValueInHashTable {
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
@@ -117,7 +286,7 @@ function SetValueInHashTable {
     }
 }
 
-$vuePath = ".\src\ui\.env.dev.local"
+$vuePath = "./src/ui/.env.dev.local"
 if (Test-Path $vuePath) {
     $content = Get-Content -Raw $vuePath | ConvertFrom-StringData
 }
@@ -138,4 +307,4 @@ if (-not $exists) {
 }
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
-Write-Host "Finished"
+Write-Host "Finished" -ForegroundColor Green

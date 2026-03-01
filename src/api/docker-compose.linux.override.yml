@@ -1,0 +1,10 @@
+services:
+  ccdiaryapi:
+    environment:
+      - DisableHttpsRedirection=true
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    volumes:
+      - type: bind
+        source: ${HTTPS_CERTS_PATH}
+        target: /home/app/.aspnet/https
+        read_only: true
