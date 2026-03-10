@@ -1,0 +1,408 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.40.2.10011",
+      "templateHash": "1992952650756896340"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 20
+    },
+    "environment": {
+      "type": "string"
+    },
+    "adminUser": {
+      "type": "string"
+    },
+    "adminUserSID": {
+      "type": "string"
+    },
+    "devApiContainerImage": {
+      "type": "string"
+    },
+    "externalDomainName": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[deployment().location]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2023-07-01",
+      "name": "[format('rg-{0}-{1}', parameters('name'), parameters('environment'))]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('resourceGroupModule-{0}', parameters('environment'))]",
+      "resourceGroup": "[format('rg-{0}-{1}', parameters('name'), parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[parameters('name')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "adminUser": {
+            "value": "[parameters('adminUser')]"
+          },
+          "adminUserSID": {
+            "value": "[parameters('adminUserSID')]"
+          },
+          "containerImageName": {
+            "value": "[parameters('devApiContainerImage')]"
+          },
+          "externalDomainName": {
+            "value": "[parameters('externalDomainName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "languageVersion": "2.0",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.40.2.10011",
+              "templateHash": "5594914856685623679"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "environment": {
+              "type": "string"
+            },
+            "adminUser": {
+              "type": "string"
+            },
+            "adminUserSID": {
+              "type": "string"
+            },
+            "externalDomainName": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]"
+            },
+            "containerImageName": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "appName": "[format('{0}-{1}', parameters('name'), parameters('environment'))]"
+          },
+          "resources": {
+            "logAnalytics": {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('logs-{0}', variables('appName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "retentionInDays": 30,
+                "workspaceCapping": {
+                  "dailyQuotaGb": -1
+                }
+              }
+            },
+            "containerAppEnvironment": {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[format('cae-{0}', variables('appName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "zoneRedundant": false,
+                "appLogsConfiguration": {
+                  "destination": "azure-monitor"
+                },
+                "workloadProfiles": [
+                  {
+                    "workloadProfileType": "Consumption",
+                    "name": "Consumption"
+                  }
+                ]
+              }
+            },
+            "sqlServer": {
+              "type": "Microsoft.Sql/servers",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('sql-{0}', variables('appName'))]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "publicNetworkAccess": "Enabled",
+                "administrators": {
+                  "administratorType": "ActiveDirectory",
+                  "principalType": "User",
+                  "login": "[parameters('adminUser')]",
+                  "sid": "[parameters('adminUserSID')]",
+                  "tenantId": "[subscription().tenantId]",
+                  "azureADOnlyAuthentication": true
+                }
+              }
+            },
+            "databaseServerFirewall": {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', format('sql-{0}', variables('appName')), format('sql-fw-{0}-allow-azure-services', variables('appName')))]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "sqlServer"
+              ]
+            },
+            "sqlDatabase": {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', format('sql-{0}', variables('appName')), format('sqldb-{0}', variables('appName')))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "createMode": "Default",
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "maxSizeBytes": 34359738368,
+                "zoneRedundant": false,
+                "availabilityZone": "NoPreference",
+                "autoPauseDelay": 60,
+                "readScale": "Disabled",
+                "minCapacity": "[json('0.5')]",
+                "requestedBackupStorageRedundancy": "Local",
+                "catalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+                "isLedgerOn": false,
+                "useFreeLimit": true,
+                "freeLimitExhaustionBehavior": "AutoPause",
+                "maintenanceConfigurationId": "[subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')]"
+              },
+              "sku": {
+                "name": "GP_S_Gen5_1",
+                "tier": "GeneralPurpose"
+              },
+              "dependsOn": [
+                "sqlServer"
+              ]
+            },
+            "staticSite": {
+              "type": "Microsoft.Web/staticSites",
+              "apiVersion": "2023-01-01",
+              "name": "[format('stapp-{0}', variables('appName'))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "free"
+              },
+              "properties": {
+                "stagingEnvironmentPolicy": "Enabled",
+                "allowConfigFileUpdates": true,
+                "provider": "None",
+                "enterpriseGradeCdnStatus": "Disabled"
+              }
+            },
+            "staticSiteCustomDomain": {
+              "condition": "[and(equals(parameters('environment'), 'prod'), not(empty(parameters('externalDomainName'))))]",
+              "type": "Microsoft.Web/staticSites/customDomains",
+              "apiVersion": "2024-11-01",
+              "name": "[format('{0}/{1}', format('stapp-{0}', variables('appName')), parameters('externalDomainName'))]",
+              "properties": {},
+              "dependsOn": [
+                "staticSite"
+              ]
+            },
+            "containerAppModule": {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "containerApps",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "appName": {
+                    "value": "[variables('appName')]"
+                  },
+                  "containerAppsEnvironmentId": {
+                    "value": "[resourceId('Microsoft.App/managedEnvironments', format('cae-{0}', variables('appName')))]"
+                  },
+                  "containerImageName": {
+                    "value": "[parameters('containerImageName')]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "languageVersion": "2.0",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.40.2.10011",
+                      "templateHash": "15449211509638702220"
+                    }
+                  },
+                  "parameters": {
+                    "appName": {
+                      "type": "string"
+                    },
+                    "containerAppsEnvironmentId": {
+                      "type": "string"
+                    },
+                    "containerImageName": {
+                      "type": "string"
+                    }
+                  },
+                  "variables": {
+                    "location": "[resourceGroup().location]"
+                  },
+                  "resources": {
+                    "containerApps": {
+                      "type": "Microsoft.App/containerApps",
+                      "apiVersion": "2024-03-01",
+                      "name": "[toLower(format('ca-{0}', parameters('appName')))]",
+                      "location": "[variables('location')]",
+                      "properties": {
+                        "managedEnvironmentId": "[parameters('containerAppsEnvironmentId')]",
+                        "configuration": {
+                          "activeRevisionsMode": "Single",
+                          "ingress": {
+                            "external": true,
+                            "targetPort": 8080,
+                            "transport": "auto",
+                            "allowInsecure": false,
+                            "traffic": [
+                              {
+                                "latestRevision": true,
+                                "weight": 100
+                              }
+                            ]
+                          }
+                        },
+                        "template": {
+                          "containers": [
+                            {
+                              "image": "[parameters('containerImageName')]",
+                              "name": "[toLower(format('ca-{0}', parameters('appName')))]",
+                              "resources": {
+                                "cpu": "[json('0.25')]",
+                                "memory": "0.5Gi"
+                              }
+                            }
+                          ],
+                          "scale": {
+                            "minReplicas": 0,
+                            "maxReplicas": 1
+                          }
+                        }
+                      },
+                      "identity": {
+                        "type": "SystemAssigned"
+                      }
+                    }
+                  },
+                  "outputs": {
+                    "containerAppId": {
+                      "type": "string",
+                      "value": "[resourceId('Microsoft.App/containerApps', toLower(format('ca-{0}', parameters('appName'))))]"
+                    },
+                    "containerAppName": {
+                      "type": "string",
+                      "value": "[toLower(format('ca-{0}', parameters('appName')))]"
+                    },
+                    "containerAppUrl": {
+                      "type": "string",
+                      "value": "[reference('containerApps').configuration.ingress.fqdn]"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "containerAppEnvironment"
+              ]
+            }
+          },
+          "outputs": {
+            "containerAppId": {
+              "type": "string",
+              "value": "[reference('containerAppModule').outputs.containerAppId.value]"
+            },
+            "containerAppName": {
+              "type": "string",
+              "value": "[reference('containerAppModule').outputs.containerAppName.value]"
+            },
+            "containerAppUrl": {
+              "type": "string",
+              "value": "[reference('containerAppModule').outputs.containerAppUrl.value]"
+            },
+            "databaseServer": {
+              "type": "string",
+              "value": "[reference('sqlServer').fullyQualifiedDomainName]"
+            },
+            "databaseServerName": {
+              "type": "string",
+              "value": "[format('sql-{0}', variables('appName'))]"
+            },
+            "databaseId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Sql/servers/databases', format('sql-{0}', variables('appName')), format('sqldb-{0}', variables('appName')))]"
+            },
+            "databaseName": {
+              "type": "string",
+              "value": "[format('sqldb-{0}', variables('appName'))]"
+            },
+            "staticSiteName": {
+              "type": "string",
+              "value": "[format('stapp-{0}', variables('appName'))]"
+            },
+            "staticSiteUrl": {
+              "type": "string",
+              "value": "[reference('staticSite').defaultHostname]"
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "value": "[resourceGroup().id]"
+            },
+            "resourceGroupName": {
+              "type": "string",
+              "value": "[resourceGroup().name]"
+            },
+            "appName": {
+              "type": "string",
+              "value": "[variables('appName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', parameters('name'), parameters('environment')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "environment": {
+      "type": "object",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', parameters('name'), parameters('environment'))), 'Microsoft.Resources/deployments', format('resourceGroupModule-{0}', parameters('environment'))), '2025-04-01').outputs]"
+    }
+  }
+}

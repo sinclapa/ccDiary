@@ -10,6 +10,7 @@ param environment string
 param adminUser string
 param adminUserSID string
 param devApiContainerImage string
+param externalDomainName string = ''
 param location string = deployment().location
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
@@ -26,8 +27,9 @@ module resourceGroupModule 'resourceGroup.bicep' = {
     adminUser: adminUser
     adminUserSID: adminUserSID
     containerImageName: devApiContainerImage
-    location: location    
-  }  
+    externalDomainName: externalDomainName
+    location: location
+  }
 }
 
 output environment object = resourceGroupModule.outputs
