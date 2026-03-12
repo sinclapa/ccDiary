@@ -22,13 +22,21 @@
         <v-row>
         <v-date-picker
           v-model="selectedDate"
+          :month="calendarMonth"
+          :year="calendarYear"
           :max="maxDate"
           :min="minDate"
           :max-height="datePickerHeight"
           @update:model-value="selectDate"
           @update:month="updateMonth"
-          @update:year="updateMonth"
+          @update:year="updateYear"
         >
+          <template #day="{ item, props }">
+            <div class="diary-day-content">
+              <v-btn v-bind="props" />
+              <span v-if="hasDiaryEntryOnDate(item.isoDate)" class="diary-day-marker" />
+            </div>
+          </template>
         </v-date-picker>
         </v-row>
         <v-row >
@@ -36,7 +44,7 @@
         <v-btn
           class="mb-2"
           :color="'white'"
-          :disabled="dayjs(selectedDate).get('date') == dayjs(minDate).get('date')"
+          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
           @click="moveStart()"
         >
           <v-icon>
@@ -48,7 +56,7 @@
         <v-btn
           class="mb-2"
           :color="'white'"
-          :disabled="dayjs(selectedDate).get('date') == dayjs(minDate).get('date')"
+          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
           @click="moveBackward()"
         >
           <v-icon>
@@ -83,7 +91,7 @@
         <v-btn
           class="mb-2"
           :color="'white'"
-          :disabled="dayjs(selectedDate).get('date') == dayjs(maxDate).get('date')"
+          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
           @click="moveForward()"
         >
           <v-icon>
@@ -95,7 +103,7 @@
         <v-btn
           class="mb-2"
           :color="'white'"
-          :disabled="dayjs(selectedDate).get('date') == dayjs(maxDate).get('date')"
+          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
           @click="moveEnd()"
         >
           <v-icon>
@@ -182,6 +190,12 @@
   const minDate = ref<Date>()
   const maxDate = ref<Date>()
   const isDatePickerExpanded = ref( window.innerWidth >= 600)
+  const calendarMonth = ref<number>()
+  const calendarYear = ref<number>()
+  const visibleMonth = ref<number>()
+  const visibleYear = ref<number>()
+  const markedDays = ref<number[]>([])
+  const latestMarkedDaysRequest = ref(0)
 
   // Computed height
   const datePickerHeight = computed(() =>
@@ -197,6 +211,44 @@
 
   async function loadDiary (diaryId: string) {
     diary.value = await diaryAPI.getDiary(diaryId)
+  }
+
+  function normalizeMonth (month: number) : number {
+    if (month >= 0 && month <= 11) {
+      return month + 1
+    }
+    return month
+  }
+
+  async function refreshMarkedDays (year: number, month: number) {
+    const requestId = ++latestMarkedDaysRequest.value
+    const response = await diaryEntryAPI.searchDiaryEntry(diaryId, year, month) ?? []
+    if (requestId === latestMarkedDaysRequest.value) {
+      markedDays.value = response
+    }
+  }
+
+  async function refreshMarkedDaysForVisibleMonth () {
+    if (visibleYear.value === undefined || visibleMonth.value === undefined) {
+      return
+    }
+    await refreshMarkedDays(visibleYear.value, visibleMonth.value)
+  }
+
+  function getDatePart (input: unknown) : number | null {
+    if (input instanceof Date) {
+      return input.getDate()
+    }
+    if (typeof input === 'string' || typeof input === 'number') {
+      const parsed = dayjs(input)
+      return parsed.isValid() ? parsed.date() : null
+    }
+    return null
+  }
+
+  function hasDiaryEntryOnDate (date: unknown) : boolean {
+    const day = getDatePart(date)
+    return day !== null && markedDays.value.includes(day)
   }
 
   async function loadCalendar (diaryId: string) : Promise<Date> {
@@ -237,7 +289,8 @@
     } else {
       await diaryEntryAPI.updateDiaryEntry(editedItem.value)
     }
-    loadCalendar(diaryId)
+    await loadCalendar(diaryId)
+    await refreshMarkedDaysForVisibleMonth()
     if (editedItem.value.date.toDateString() === selectedDate.value?.toDateString()) {
       selectDate(selectedDate.value)
     }
@@ -279,7 +332,8 @@
   async function deleteItemConfirm () {
     if (editedItem.value.diaryEntryId !== undefined) {
       await diaryEntryAPI.deleteDiaryEntry(editedItem.value.diaryEntryId)
-      loadCalendar(diaryId)
+      await loadCalendar(diaryId)
+      await refreshMarkedDaysForVisibleMonth()
       if (editedItem.value.date.toDateString() === selectedDate.value?.toDateString()) {
         selectDate(selectedDate.value)
       }
@@ -291,15 +345,48 @@
     diaryEntries.value = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, date.getFullYear(), date.getMonth() + 1, date.getDate())
   }
 
-  function updateMonth (x: any | undefined) {
-    //console.info(x)
+  async function updateMonth (month: number | string | undefined) {
+    if (month === undefined) {
+      return
+    }
+    calendarMonth.value = Number(month)
   }
+
+  async function updateYear (year: number | string | undefined) {
+    if (year === undefined) {
+      return
+    }
+    calendarYear.value = Number(year)
+  }
+
+  watch([calendarYear, calendarMonth], async ([year, month]) => {
+    if (year === undefined || month === undefined) {
+      return
+    }
+    visibleYear.value = Number(year)
+    visibleMonth.value = normalizeMonth(Number(month))
+    await refreshMarkedDays(visibleYear.value, visibleMonth.value)
+  })
+
+  watch(selectedDate, async (newDate) => {
+    if (newDate === undefined) {
+      return
+    }
+    const nextMonth = dayjs(newDate).month()
+    const nextYear = dayjs(newDate).year()
+    if (nextMonth !== calendarMonth.value || nextYear !== calendarYear.value) {
+      calendarMonth.value = nextMonth
+      calendarYear.value = nextYear
+    }
+  })
 
   onMounted(() => {
     loadDiary(diaryId)
-    loadCalendar(diaryId).then(x => {
+    loadCalendar(diaryId).then(async x => {
       selectedDate.value = x
-      selectDate(selectedDate.value)
+      calendarMonth.value = dayjs(x).month()
+      calendarYear.value = dayjs(x).year()
+      await selectDate(selectedDate.value)
     })
     const stored = localStorage.getItem('id.datePickerExpanded')
     if (stored) {
@@ -315,5 +402,26 @@
   .author {
     font-size: 16px;
     font-style: italic;
+  }
+
+  :deep(.diary-day-content) {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  :deep(.diary-day-marker) {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 8px;
+    height: 8px;
+    background: white;
+    clip-path: polygon(100% 0, 100% 100%, 0 0);
+    pointer-events: none;
+    filter: drop-shadow(0 0 1px rgb(var(--v-theme-on-surface)));
   }
 </style>

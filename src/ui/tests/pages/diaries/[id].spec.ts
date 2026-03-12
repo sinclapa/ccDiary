@@ -49,6 +49,7 @@ describe('[id].vue', () => {
     vi.spyOn(diaryAPI, 'getDiary').mockResolvedValue(diary)
     vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(minDate)
     vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(maxDate)
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntry').mockResolvedValue([1, 5, 20])
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([diaryEntry])
     vi.spyOn(diaryEntryAPI, 'createDiaryEntry').mockResolvedValue(null)
     vi.spyOn(diaryEntryAPI, 'updateDiaryEntry').mockResolvedValue(null)
@@ -315,6 +316,43 @@ describe('[id].vue', () => {
     await picker.vm.$emit('update:model-value', testDate)
     // The effect: diaryEntries should be set
     expect((wrapper.vm as any).diaryEntries).not.toBeNull()
+  })
+
+  it('refreshes marked days when month and year are updated', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntry)
+
+    ;(wrapper.vm as any).calendarYear = 2024
+    await (wrapper.vm as any).updateMonth(0)
+    await flushPromises()
+    expect(searchSpy).toHaveBeenCalledWith(diaryId, 2024, 1)
+
+    ;(wrapper.vm as any).calendarMonth = 2
+    await (wrapper.vm as any).updateYear(2025)
+    await flushPromises()
+    expect(searchSpy).toHaveBeenCalledWith(diaryId, 2025, 3)
+  })
+
+  it('refreshes marked days after creating and deleting entries', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntry)
+    const baselineCalls = searchSpy.mock.calls.length
+
+    ;(wrapper.vm as any).visibleYear = 2024
+    ;(wrapper.vm as any).visibleMonth = 6
+    ;(wrapper.vm as any).selectedDate = new Date(2024, 5, 10)
+    ;(wrapper.vm as any).editedItem = new DiaryEntry(diaryId, new Date(2024, 5, 10), 'Loc', 'Entry')
+
+    await (wrapper.vm as any).onSubmitDiaryEntry({
+      date: new Date(2024, 5, 10),
+      location: 'Updated Location',
+      entry: 'Updated Entry'
+    })
+    expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls)
+
+    ;(wrapper.vm as any).editedItem = new DiaryEntry(diaryId, new Date(2024, 5, 10), 'Loc', 'Entry', 'existing-id')
+    await (wrapper.vm as any).deleteItemConfirm()
+    expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls + 1)
   })
 
   it('renders timeline items for diaryEntries', async () => {
