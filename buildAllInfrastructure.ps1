@@ -43,7 +43,7 @@ foreach ($env in $Environments) {
     
     try {
         # Call buildInfrastructure.ps1 with the environment parameter
-        & "$PSScriptRoot\buildInfrastructure.ps1" -Environment $env
+        & "$PSScriptRoot\buildInfrastructure.ps1" -EnvironmentParam $env
         
         if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
             throw "buildInfrastructure.ps1 returned exit code $LASTEXITCODE"

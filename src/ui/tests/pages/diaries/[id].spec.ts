@@ -49,6 +49,7 @@ describe('[id].vue', () => {
     vi.spyOn(diaryAPI, 'getDiary').mockResolvedValue(diary)
     vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(minDate)
     vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(maxDate)
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntry').mockResolvedValue([1, 5, 20])
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([diaryEntry])
     vi.spyOn(diaryEntryAPI, 'createDiaryEntry').mockResolvedValue(null)
     vi.spyOn(diaryEntryAPI, 'updateDiaryEntry').mockResolvedValue(null)
@@ -317,10 +318,133 @@ describe('[id].vue', () => {
     expect((wrapper.vm as any).diaryEntries).not.toBeNull()
   })
 
+  it('refreshes marked days when month and year are updated', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntry)
+
+    ;(wrapper.vm as any).calendarYear = 2024
+    await (wrapper.vm as any).updateMonth(0)
+    await flushPromises()
+    expect(searchSpy).toHaveBeenCalledWith(diaryId, 2024, 1)
+
+    ;(wrapper.vm as any).calendarMonth = 2
+    await (wrapper.vm as any).updateYear(2025)
+    await flushPromises()
+    expect(searchSpy).toHaveBeenCalledWith(diaryId, 2025, 3)
+  })
+
+  it('refreshes marked days after creating and deleting entries', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntry)
+    const baselineCalls = searchSpy.mock.calls.length
+
+    ;(wrapper.vm as any).visibleYear = 2024
+    ;(wrapper.vm as any).visibleMonth = 6
+    ;(wrapper.vm as any).selectedDate = new Date(2024, 5, 10)
+    ;(wrapper.vm as any).editedItem = new DiaryEntry(diaryId, new Date(2024, 5, 10), 'Loc', 'Entry')
+
+    await (wrapper.vm as any).onSubmitDiaryEntry({
+      date: new Date(2024, 5, 10),
+      location: 'Updated Location',
+      entry: 'Updated Entry'
+    })
+    expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls)
+
+    ;(wrapper.vm as any).editedItem = new DiaryEntry(diaryId, new Date(2024, 5, 10), 'Loc', 'Entry', 'existing-id')
+    await (wrapper.vm as any).deleteItemConfirm()
+    expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls + 1)
+  })
+
   it('renders timeline items for diaryEntries', async () => {
     await flushPromises()
     const items = wrapper.findAllComponents({ name: 'VTimelineItem' })
     expect(items.length).toBeGreaterThan(0)
+  })
+
+  it('moveForward skips dates without entries and stops at first date with entries', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 1, 2020
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: Jan 1 empty, Jan 2 empty, Jan 3 has entry
+    searchDaySpyOnDay.mockImplementation(async (id, year, month, day) => {
+      if (day === 3) {
+        return [new DiaryEntry(diaryId, new Date(year, month - 1, day), 'Loc', 'Entry')]
+      }
+      return []
+    })
+
+    await (wrapper.vm as any).moveForward()
+
+    // Should have skipped to Jan 3
+    expect((wrapper.vm as any).selectedDate.getDate()).toBe(3)
+  })
+
+  it('moveBackward skips dates without entries and stops at first date with entries', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 10, 2020
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 10)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: Jan 10 empty, Jan 9 empty, Jan 8 has entry
+    searchDaySpyOnDay.mockImplementation(async (id, year, month, day) => {
+      if (day === 8) {
+        return [new DiaryEntry(diaryId, new Date(year, month - 1, day), 'Loc', 'Entry')]
+      }
+      return []
+    })
+
+    await (wrapper.vm as any).moveBackward()
+
+    // Should have skipped back to Jan 8
+    expect((wrapper.vm as any).selectedDate.getDate()).toBe(8)
+  })
+
+  it('moveForward respects maxDate boundary when no entries found', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 8, stop at Jan 10 (maxDate)
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 8)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: all dates are empty
+    searchDaySpyOnDay.mockResolvedValue([])
+
+    await (wrapper.vm as any).moveForward()
+
+    // Should have reached maxDate
+    expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
+      dayjs(new Date(2020, 0, 10)).endOf('day').format('YYYY-MM-DD')
+    )
+  })
+
+  it('moveBackward respects minDate boundary when no entries found', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 3, stop at Jan 1 (minDate)
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 3)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: all dates are empty
+    searchDaySpyOnDay.mockResolvedValue([])
+
+    await (wrapper.vm as any).moveBackward()
+
+    // Should have reached minDate
+    expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
+      dayjs(new Date(2020, 0, 1)).startOf('day').format('YYYY-MM-DD')
+    )
   })
 
 })

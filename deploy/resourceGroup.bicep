@@ -4,6 +4,7 @@ param name string
 param environment string
 param adminUser string
 param adminUserSID string
+param externalDomainName string = ''
 param location string = resourceGroup().location
 param containerImageName string
 var appName string = '${name}-${environment}'
@@ -102,7 +103,13 @@ resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
     allowConfigFileUpdates: true
     provider: 'None'
     enterpriseGradeCdnStatus: 'Disabled'
-  }  
+  }
+}
+
+resource staticSiteCustomDomain 'Microsoft.Web/staticSites/customDomains@2024-11-01' = if (environment == 'prod' && !empty(externalDomainName)) {
+  parent: staticSite
+  name: externalDomainName
+  properties: {}
 }
 
 module containerAppModule 'containerApps.bicep' = {

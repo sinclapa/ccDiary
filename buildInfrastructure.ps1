@@ -118,6 +118,20 @@ if (-Not ($params.ContainsKey("DevApiContainerImage"))) {
 else {
     $devApiContainerImage = $params["DevApiContainerImage"]
 }
+
+if (-Not ($params.ContainsKey("ExternalDomainName"))) {
+    $externalDomainName = Read-Host -Prompt "Enter the external domain name for prod (leave empty to skip)"
+    $params.Add("ExternalDomainName", $externalDomainName)
+}
+else {
+    $externalDomainName = $params["ExternalDomainName"]
+}
+
+# Override to empty string if not prod environment
+if ($environment -ne "prod") {
+    $externalDomainName = ""
+}
+
 $params | ConvertTo-StringData | Set-Content $settingsFile
 
 <# --------------------------------------------------------------------------------- #>
@@ -161,7 +175,7 @@ Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor 
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file ".\deploy\main.bicep" `
-  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage `
+  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
   --output json | ConvertFrom-Json
 
 # Check if deployment succeeded
@@ -200,9 +214,17 @@ Write-Output "  staticSiteUrl = $staticSiteUrl"
 Write-Output "  appName = $appName"
 
 Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
+
+# Build SPA URIs array - add custom domain if configured for prod
+$spaUris = @("https://${staticSiteUrl}/", "https://${containerAppUrl}/swagger/oauth2-redirect.html")
+if (-not [string]::IsNullOrWhiteSpace($externalDomainName)) {
+    $spaUris += "https://${externalDomainName}/"
+    Write-Host "  Adding custom domain to SPA URIs: https://${externalDomainName}/" -ForegroundColor Gray
+}
+
 $entraOut = & ".\entraSetup.ps1" `
     -AppName $appName `
-    -spaUris @("https://${staticSiteUrl}/", "https://${containerAppUrl}/swagger/oauth2-redirect.html") `
+    -spaUris $spaUris `
     -webUris @("https://${containerAppUrl}/") `
     -resourceGroupId $resourceGroupId
 $entraClientId = $entraOut.EntraClientId
