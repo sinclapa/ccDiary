@@ -1,4 +1,9 @@
 # About
+
+[![Build and Test](https://github.com/sinclapa/ccDiary/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/sinclapa/ccDiary/actions/workflows/build-and-test.yml)
+[![API Coverage](.github/badges/api-coverage.svg)](https://github.com/sinclapa/ccDiary/actions/workflows/build-and-test.yml)
+[![UI Coverage](.github/badges/ui-coverage.svg)](https://github.com/sinclapa/ccDiary/actions/workflows/build-and-test.yml)
+
 CCDiary is a full-stack diary application that allows users to create, manage, and view diary entries. The application is built with a modern architecture featuring:
 
 ## Architecture & Technology Stack

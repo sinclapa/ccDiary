@@ -116,7 +116,28 @@ jobs:
           name: api-coverage
           path: ${{ github.workspace }}/Cobertura.xml
           retention-days: 5
-      
+
+      - name: Generate API Coverage Badge
+        run: |
+          pip install anybadge==1.16.0 --quiet
+          python3 << 'PYEOF'
+          import anybadge, xml.etree.ElementTree as ET, os
+          xml_path = os.path.join(os.environ['GITHUB_WORKSPACE'], 'Cobertura.xml')
+          tree = ET.parse(xml_path)
+          line_rate = float(tree.getroot().get('line-rate', 0)) * 100
+          badge = anybadge.Badge('api coverage', '{:.0f}%'.format(line_rate),
+              thresholds={50: 'red', 60: 'orange', 75: 'yellow', 90: 'brightgreen'})
+          badge.write_badge(os.path.join(os.environ['GITHUB_WORKSPACE'], 'api-coverage.svg'), overwrite=True)
+          print('API coverage: {:.0f}%'.format(line_rate))
+          PYEOF
+
+      - name: Upload API Coverage Badge
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-badge
+          path: ${{ github.workspace }}/api-coverage.svg
+          retention-days: 5
+
       - name: Publish Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
@@ -272,6 +293,27 @@ jobs:
         with:
           name: ui-coverage
           path: "${{ github.workspace }}/src/ui/coverage/cobertura-coverage.xml"
+          retention-days: 5
+
+      - name: Generate UI Coverage Badge
+        run: |
+          pip install anybadge==1.16.0 --quiet
+          python3 << 'PYEOF'
+          import anybadge, xml.etree.ElementTree as ET, os
+          xml_path = os.path.join(os.environ['GITHUB_WORKSPACE'], 'src', 'ui', 'coverage', 'cobertura-coverage.xml')
+          tree = ET.parse(xml_path)
+          line_rate = float(tree.getroot().get('line-rate', 0)) * 100
+          badge = anybadge.Badge('ui coverage', '{:.0f}%'.format(line_rate),
+              thresholds={50: 'red', 60: 'orange', 75: 'yellow', 90: 'brightgreen'})
+          badge.write_badge(os.path.join(os.environ['GITHUB_WORKSPACE'], 'ui-coverage.svg'), overwrite=True)
+          print('UI coverage: {:.0f}%'.format(line_rate))
+          PYEOF
+
+      - name: Upload UI Coverage Badge
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-coverage-badge
+          path: "${{ github.workspace }}/ui-coverage.svg"
           retention-days: 5
 
       - name: Publish Code Coverage Report
@@ -451,3 +493,45 @@ jobs:
           files: |
             ui-dist.zip
             api-image.txt
+
+  update-badges:
+    name: Update Coverage Badges
+
+    runs-on: ubuntu-latest
+
+    if: github.ref == 'refs/heads/main'
+
+    needs: [build-api, build-ui]
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download API Coverage Badge
+        uses: actions/download-artifact@v4
+        with:
+          name: api-coverage-badge
+          path: .github/badges/
+
+      - name: Download UI Coverage Badge
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-coverage-badge
+          path: .github/badges/
+
+      - name: Commit and push coverage badges
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/
+          if git diff --cached --quiet; then
+            echo "No badge changes to commit"
+          else
+            git commit -m "chore: update coverage badges [skip ci]"
+            git push
+          fi
