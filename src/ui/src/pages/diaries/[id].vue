@@ -302,14 +302,40 @@
     dialogDelete.value = true
   }
 
-  function moveForward () {
-    selectedDate.value = dayjs(selectedDate.value).endOf('day').add(1, 'day').toDate()
-    selectDate(selectedDate.value)
+  async function moveForward () {
+    while (true) {
+      selectedDate.value = dayjs(selectedDate.value).endOf('day').add(1, 'day').toDate()
+
+      if (dayjs(selectedDate.value).format('YYYY-MM-DD') >= dayjs(maxDate.value).format('YYYY-MM-DD')) {
+        selectedDate.value = dayjs(maxDate.value).endOf('day').toDate()
+        await selectDate(selectedDate.value)
+        break
+      }
+
+      await selectDate(selectedDate.value)
+
+      if (diaryEntries.value && diaryEntries.value.length > 0) {
+        break
+      }
+    }
   }
 
-  function moveBackward () {
-    selectedDate.value = dayjs(selectedDate.value).startOf('day').subtract(1, 'day').toDate()
-    selectDate(selectedDate.value)
+  async function moveBackward () {
+    while (true) {
+      selectedDate.value = dayjs(selectedDate.value).startOf('day').subtract(1, 'day').toDate()
+
+      if (dayjs(selectedDate.value).format('YYYY-MM-DD') <= dayjs(minDate.value).format('YYYY-MM-DD')) {
+        selectedDate.value = dayjs(minDate.value).startOf('day').toDate()
+        await selectDate(selectedDate.value)
+        break
+      }
+
+      await selectDate(selectedDate.value)
+
+      if (diaryEntries.value && diaryEntries.value.length > 0) {
+        break
+      }
+    }
   }
 
   function moveStart () {

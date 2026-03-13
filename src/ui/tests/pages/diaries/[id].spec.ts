@@ -361,6 +361,92 @@ describe('[id].vue', () => {
     expect(items.length).toBeGreaterThan(0)
   })
 
+  it('moveForward skips dates without entries and stops at first date with entries', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 1, 2020
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: Jan 1 empty, Jan 2 empty, Jan 3 has entry
+    searchDaySpyOnDay.mockImplementation(async (id, year, month, day) => {
+      if (day === 3) {
+        return [new DiaryEntry(diaryId, new Date(year, month - 1, day), 'Loc', 'Entry')]
+      }
+      return []
+    })
+
+    await (wrapper.vm as any).moveForward()
+
+    // Should have skipped to Jan 3
+    expect((wrapper.vm as any).selectedDate.getDate()).toBe(3)
+  })
+
+  it('moveBackward skips dates without entries and stops at first date with entries', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 10, 2020
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 10)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: Jan 10 empty, Jan 9 empty, Jan 8 has entry
+    searchDaySpyOnDay.mockImplementation(async (id, year, month, day) => {
+      if (day === 8) {
+        return [new DiaryEntry(diaryId, new Date(year, month - 1, day), 'Loc', 'Entry')]
+      }
+      return []
+    })
+
+    await (wrapper.vm as any).moveBackward()
+
+    // Should have skipped back to Jan 8
+    expect((wrapper.vm as any).selectedDate.getDate()).toBe(8)
+  })
+
+  it('moveForward respects maxDate boundary when no entries found', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 8, stop at Jan 10 (maxDate)
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 8)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: all dates are empty
+    searchDaySpyOnDay.mockResolvedValue([])
+
+    await (wrapper.vm as any).moveForward()
+
+    // Should have reached maxDate
+    expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
+      dayjs(new Date(2020, 0, 10)).endOf('day').format('YYYY-MM-DD')
+    )
+  })
+
+  it('moveBackward respects minDate boundary when no entries found', async () => {
+    await flushPromises()
+    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+
+    // Start on Jan 3, stop at Jan 1 (minDate)
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 3)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+
+    // Mock: all dates are empty
+    searchDaySpyOnDay.mockResolvedValue([])
+
+    await (wrapper.vm as any).moveBackward()
+
+    // Should have reached minDate
+    expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
+      dayjs(new Date(2020, 0, 1)).startOf('day').format('YYYY-MM-DD')
+    )
+  })
+
 })
 
 
