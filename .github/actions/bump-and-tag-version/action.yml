@@ -28,10 +28,10 @@ runs:
     - name: Calculate next semantic version
       id: bump
       shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
       run: |
         set -euo pipefail
-
-        COMMIT_MESSAGE="${{ inputs.commit-message }}"
 
         git fetch --tags --force
 
