@@ -1,50 +1,19 @@
 <template>
-  <header>
-    <h1>Weather App</h1>
-    <v-btn v-if="state.isAuthenticated" class="btn" @click="data">Fetch Weather Data</v-btn><br>
-    API: {{ api }}<br>
-    <v-table v-if="weather">
-      <thead>
-        <tr>
-          <th>
-            Date
-          </th>
-          <th>
-            Temp C
-          </th>
-          <th>
-            Temp F
-          </th>
-          <th>
-            Summary
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="item in weather"
-          :key="item.date"
-        >
-          <td>{{ item.date }}</td>
-          <td>{{ item.temperatureC }}</td>
-          <td>{{ item.temperatureF }}</td>
-          <td>{{ item.summary }}</td>
-        </tr>
-      </tbody>
-    </v-table>
+  <header class="text-center">
+    <v-img
+      :src="logo"
+      alt="Cooking Code Diary"
+      max-width="200"
+      class="mx-auto my-4"
+    />
+
+    <h1>Cooking Code Diary App</h1>
+
+    <p>Welcome to the Cooking Code Diary App! This is your personal space to document and share your adventures.</p>
+    <p>Get started by creating a new diary entry, where you can jot down your thoughts</p>
   </header>
 </template>
 
-<script setup lang="ts">
-  import { state } from '@/services/authentication/msalConfig'
-  import { getAppConfigField } from '@/utils/appConfig';
-
-  const api = new URL('v1/WeatherForecast/Get', getAppConfigField('VITE_API'))
-  const weather = ref()
-
-  async function data () {
-    weather.value = await fetch(api)
-      .then(response => response.json())
-  }
-
+<script lang="ts" setup>
+  import logo from '@/assets/logo.png'
 </script>

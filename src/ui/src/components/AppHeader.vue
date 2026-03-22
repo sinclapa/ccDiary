@@ -3,8 +3,8 @@
     <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
     <v-app-bar-title>Cooking Code Diary</v-app-bar-title>
     <v-spacer />
-    <div v-if="state.isAuthenticated" id="username">{{ state.user?.name }}</div>
-    <v-btn v-if="state.isAuthenticated" id="logout" icon @click="handleLogout">
+    <div v-if="state.isAuthenticated" id="username" class="text-no-wrap text-truncate mr-2 d-none d-sm-block">{{ state.user?.name }}</div>
+    <v-btn v-if="state.isAuthenticated" id="logout" v-tooltip="state.user?.name" icon @click="handleLogout">
       <v-icon>mdi-account-circle</v-icon>
     </v-btn>
     <v-btn v-else id="login" icon @click="handleLogin">

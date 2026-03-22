@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import { createPinia } from 'pinia'
 import Component from '@/layouts/default.vue'
+
+vi.mock('@/utils/appConfig', () => ({
+  getAppConfigField: () => 'https://api.example.com/',
+}))
 
 const vuetify = createVuetify({
   components,
@@ -16,7 +21,8 @@ describe('Default Layout', () => {
       shallow: false,
       propsData: {},
       global: {
-        plugins: [vuetify],
+        plugins: [vuetify, createPinia()],
+        stubs: { ApiStatusBanner: true },
       },
     })
 
