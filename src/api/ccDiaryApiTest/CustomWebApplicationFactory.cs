@@ -32,6 +32,7 @@ namespace ccDiaryApiTest
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
+            builder.UseSetting("RUN_MIGRATIONS", "true");
             builder.ConfigureServices(services =>
             {
                 var dbContextDescriptor = services.SingleOrDefault(

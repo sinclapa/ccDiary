@@ -18,6 +18,8 @@ namespace ccDiaryApi.Data.Context
 
         public DbSet<DiaryEntryDTO> DiaryEntries { get; set; }
 
+        public DbSet<AppInfoDTO> AppInfo { get; set; }
+
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             configurationBuilder
