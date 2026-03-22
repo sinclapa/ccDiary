@@ -69,17 +69,24 @@ jobs:
 
       - name: Wait for revision to be running
         run: |
+          APP_FQDN=$(az containerapp show \
+            --name ${{ vars.CONTAINER_APP_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+            --query 'properties.configuration.ingress.fqdn' -o tsv)
+          echo "Waking app at https://${APP_FQDN}..."
+          curl -s -o /dev/null "https://${APP_FQDN}/actuator/health" || true
           echo "Waiting for new revision to become active..."
           for i in $(seq 1 30); do
             STATUS=$(az containerapp revision list \
               --name ${{ vars.CONTAINER_APP_NAME }} \
               --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
               --query "[0].properties.runningState" -o tsv 2>/dev/null || echo "unknown")
-            if [ "$STATUS" = "Running" ]; then
-              echo "Revision is running."
+            if [ "$STATUS" = "Running" ] || [ "$STATUS" = "RunningAtMaxScale" ]; then
+              echo "Revision is running ($STATUS)."
               break
             fi
             echo "  Status: $STATUS (attempt $i/30)"
+            curl -s -o /dev/null "https://${APP_FQDN}/actuator/health" || true
             sleep 10
           done
 
