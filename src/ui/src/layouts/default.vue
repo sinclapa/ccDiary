@@ -4,6 +4,7 @@
       <AppHeader />
 
       <v-main>
+        <ApiStatusBanner />
         <router-view />
       </v-main>
 

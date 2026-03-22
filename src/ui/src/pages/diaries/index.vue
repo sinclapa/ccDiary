@@ -51,28 +51,30 @@
         </a>
       </template>
       <template #item.actions="{ item }">
-        <v-btn
-          v-if="state.isAuthenticated"
-          :id="item.diaryId + '_edit'"
-          icon
-          size="small"
-          @click="editItem(item)"
-        >
-          <v-icon>
-            mdi-pencil
-          </v-icon>
-        </v-btn>
-        <v-btn
-          v-if="state.isAuthenticated"
-          :id="item.diaryId + '_delete'"
-          icon
-          size="small"
-          @click="deleteItem(item)"
-        >
-          <v-icon>
-            mdi-delete
-          </v-icon>
-        </v-btn>
+        <div class="d-flex justify-end">
+          <v-btn
+            v-if="state.isAuthenticated"
+            :id="item.diaryId + '_edit'"
+            icon
+            size="small"
+            @click="editItem(item)"
+          >
+            <v-icon>
+              mdi-pencil
+            </v-icon>
+          </v-btn>
+          <v-btn
+            v-if="state.isAuthenticated"
+            :id="item.diaryId + '_delete'"
+            icon
+            size="small"
+            @click="deleteItem(item)"
+          >
+            <v-icon>
+              mdi-delete
+            </v-icon>
+          </v-btn>
+        </div>
       </template>
     </v-data-table>
   </div>
@@ -89,12 +91,17 @@
   const defaultItem = ref(new Diary('', '', '', undefined) as Diary)
   const editedItem = ref<Diary>(new Diary('', '', '', undefined) as Diary)
 
-  const headers = [
-    { title: 'Title', value: 'title' },
-    { title: 'Author', value: 'author' },
-    { title: 'Description', value: 'description' },
-    { title: 'Actions', key: 'actions' },
-  ]
+  const headers = computed(() => {
+    const cols = [
+      { title: 'Title', value: 'title' },
+      { title: 'Author', value: 'author' },
+      { title: 'Description', value: 'description' },
+    ]
+    if (state.isAuthenticated) {
+      cols.push({ title: 'Actions', key: 'actions', align: 'end' } as any)
+    }
+    return cols
+  })
 
   async function onAddDiary (payload : {title: string, author: string, description: string}) {
     editedItem.value.title = payload.title
