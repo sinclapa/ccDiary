@@ -445,7 +445,7 @@
     right: 1px;
     width: 8px;
     height: 8px;
-    background: white;
+    background: rgb(var(--v-theme-on-surface));
     clip-path: polygon(100% 0, 100% 100%, 0 0);
     pointer-events: none;
     filter: drop-shadow(0 0 1px rgb(var(--v-theme-on-surface)));

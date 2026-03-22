@@ -79,6 +79,8 @@ builder.Services.AddScoped<IDiaryEntryService, DiaryEntryService>();
 
 builder.Services.AddScoped<IDiaryArchiveService, DiaryArchiveService>();
 
+builder.Services.AddScoped<IAppInfoService, AppInfoService>();
+
 builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 
 builder.Services.AddControllers();
@@ -106,7 +108,14 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 
 var app = builder.Build();
 
-app.MigrateDatabase();
+if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
+{
+    app.MigrateDatabase();
+}
+else
+{
+    Log.Logger.Information("Skipping database migration (RUN_MIGRATIONS is not set)");
+}
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {

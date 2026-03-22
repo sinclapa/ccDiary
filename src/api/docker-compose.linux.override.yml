@@ -2,6 +2,7 @@ services:
   ccdiaryapi:
     environment:
       - DisableHttpsRedirection=true
+      - RUN_MIGRATIONS=true
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     ports:
       - "54628:8080"
