@@ -108,7 +108,7 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", false))
+if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
 {
     app.MigrateDatabase();
 }
