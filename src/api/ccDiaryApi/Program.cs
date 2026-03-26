@@ -7,6 +7,7 @@ using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
 using ccDiaryApi.Data.Migration;
+using ccDiaryApi.Endpoints;
 using ccDiaryApi.Extensions;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -134,11 +135,17 @@ if (!app.Configuration.GetValue<bool>("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
 }
 
+app.UseDefaultFiles();
+
+app.UseStaticFiles();
+
 app.UseCors("cors");
 
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.MapAssemblyInfo();
 
 app.MapControllers();
 
