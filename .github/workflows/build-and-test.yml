@@ -78,24 +78,24 @@ jobs:
       - name: Restore API dependencies
         run: dotnet restore ccDiary.sln
 
-      - name: Install SonarScanner and dotnet-coverage
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
-          dotnet tool install --global dotnet-coverage
+    #   - name: Install SonarScanner and dotnet-coverage
+    #     run: |
+    #       dotnet tool install --global dotnet-sonarscanner
+    #       dotnet tool install --global dotnet-coverage
+          
+    #   - name: SonarQube Begin
+    #     env:
+    #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #     run: |
+    #       dotnet sonarscanner begin \
+    #         /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+    #         /o:"${{ vars.SONAR_ORGANIZATION }}" \
+    #         /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+    #         /d:sonar.host.url="https://sonarcloud.io" \
+    #         /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml"
 
       - name: Build API
-        run: dotnet build ccDiary.sln --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
-
-      - name: SonarQube Begin
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet sonarscanner begin \
-            /k:"${{ vars.SONAR_PROJECT_KEY }}" \
-            /o:"${{ vars.SONAR_ORGANIZATION }}" \
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-            /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml"
+        run: dotnet build ccDiary.sln --no-incremental --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
 
       - name: Test API
         run: dotnet-coverage collect "dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx" -f xml -o coverage.xml
@@ -107,10 +107,10 @@ jobs:
           path: ${{ github.workspace }}/**/TestResults/**/*
           retention-days: 5
 
-      - name: SonarQube End
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+    #   - name: SonarQube End
+    #     env:
+    #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #     run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Convert coverage to Cobertura for PR report
         run: dotnet-coverage merge coverage.xml --output coverage.cobertura.xml --output-format cobertura
@@ -121,6 +121,9 @@ jobs:
         with:
           check_name: "API Tests"
           trx_files: "${{ github.workspace }}/src/api/**/*.trx"
+
+      - name: Move coverage file to expected location for PR report
+        run: mv ${{ github.workspace }}/src/api/coverage.cobertura.xml ${{ github.workspace }}/coverage.cobertura.xml
 
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
