@@ -122,8 +122,8 @@ jobs:
           check_name: "API Tests"
           trx_files: "${{ github.workspace }}/src/api/**/*.trx"
 
-    #   - name: Move coverage file to expected location for PR report
-    #     run: mv ${{ github.workspace }}/src/api/coverage.cobertura.xml ${{ github.workspace }}/coverage.cobertura.xml
+      - name: Move coverage file to expected location for PR report
+        run: cp ${{ github.workspace }}/src/api/coverage.cobertura.xml ${{ github.workspace }}/coverage.cobertura.xml
 
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
