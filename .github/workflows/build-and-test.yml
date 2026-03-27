@@ -83,16 +83,16 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
           dotnet tool install --global dotnet-coverage
           
-    #   - name: SonarQube Begin
-    #     env:
-    #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    #     run: |
-    #       dotnet sonarscanner begin \
-    #         /k:"${{ vars.SONAR_PROJECT_KEY }}" \
-    #         /o:"${{ vars.SONAR_ORGANIZATION }}" \
-    #         /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-    #         /d:sonar.host.url="https://sonarcloud.io" \
-    #         /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml"
+      - name: SonarQube Begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+            /o:"${{ vars.SONAR_ORGANIZATION }}" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml"
 
       - name: Build API
         run: dotnet build ccDiary.sln --no-incremental --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
@@ -107,10 +107,11 @@ jobs:
           path: ${{ github.workspace }}/**/TestResults/**/*
           retention-days: 5
 
-    #   - name: SonarQube End
-    #     env:
-    #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    #     run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+      - name: SonarQube End
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Convert coverage to Cobertura for PR report
         run: dotnet-coverage merge coverage.xml --output coverage.cobertura.xml --output-format cobertura
@@ -122,9 +123,6 @@ jobs:
           check_name: "API Tests"
           trx_files: "${{ github.workspace }}/src/api/**/*.trx"
 
-      - name: Move coverage file to expected location for PR report
-        run: cp ${{ github.workspace }}/src/api/coverage.cobertura.xml ${{ github.workspace }}/coverage.cobertura.xml
-
       - name: Upload Combined Coverage XML
         uses: actions/upload-artifact@v4
         with:
@@ -132,26 +130,26 @@ jobs:
           path: ${{ github.workspace }}/src/api/coverage.cobertura.xml
           retention-days: 5
 
-    #   - name: Publish Code Coverage Report
-    #     uses: irongut/CodeCoverageSummary@v1.3.0
-    #     with:
-    #       filename: "${{ github.workspace }}/src/api/coverage.cobertura.xml"
-    #       badge: true
-    #       fail_below_min: true
-    #       format: markdown
-    #       hide_branch_rate: false
-    #       hide_complexity: false
-    #       indicators: true
-    #       output: both
-    #       thresholds: "80 90"
+      - name: Publish Code Coverage Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: "src/api/coverage.cobertura.xml"
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: false
+          indicators: true
+          output: both
+          thresholds: "80 90"
   
-    #   - name: Add Coverage PR Comment
-    #     uses: marocchino/sticky-pull-request-comment@v2
-    #     if: github.event_name == 'pull_request'
-    #     with:
-    #       header: "API Code Coverage Report"
-    #       recreate: true
-    #       path: code-coverage-results.md
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          header: "API Code Coverage Report"
+          recreate: true
+          path: code-coverage-results.md
   
       - name: Publish api
         run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish
