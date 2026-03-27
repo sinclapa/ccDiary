@@ -121,28 +121,28 @@
   function close () {
     dialog.value = false
     nextTick(() => {
-      editedItem.value = Object.assign({}, defaultItem.value)
+      editedItem.value = { ...defaultItem.value }
     })
   }
 
   async function editItem (item?: Diary) {
     if (item === undefined) {
-      editedItem.value = Object.assign({}, defaultItem.value)
+      editedItem.value = { ...defaultItem.value }
     } else {
-      editedItem.value = Object.assign({}, item)
+      editedItem.value = { ...item }
     }
     dialog.value = true
   }
 
   async function deleteItem (item: Diary) {
-    editedItem.value = Object.assign({}, item)
+    editedItem.value = { ...item }
     dialogDelete.value = true
   }
 
   function closeDelete () {
     dialogDelete.value = false
     nextTick(() => {
-      editedItem.value = Object.assign({}, defaultItem.value)
+      editedItem.value = { ...defaultItem.value }
     })
   }
 

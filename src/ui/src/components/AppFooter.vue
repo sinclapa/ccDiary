@@ -30,7 +30,7 @@
 <script setup lang="ts">
   const version =
     (globalThis as any).__APP_VERSION__
-    ?? (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0')
+    ?? (typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__)
   const items = [
     {
       title: 'Vuetify Documentation',

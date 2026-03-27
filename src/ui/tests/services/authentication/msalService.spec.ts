@@ -6,26 +6,26 @@ const mockEnv = {
   VITE_APPLICATION_ID_URI: 'appIdUri',
   VITE_API: 'api',
 }
-Object.defineProperty(global, 'import.meta', {
+Object.defineProperty(globalThis, 'import.meta', {
   value: { env: mockEnv },
 })
 
 describe('msalService', () => {
   let service: ReturnType<typeof msalService>
-  let originalFetch: typeof window.fetch
+  let originalFetch: typeof globalThis.fetch
 
   beforeEach(() => {
     // Reset only the methods, not the whole object
     vi.restoreAllMocks()
     service = msalService()
-    originalFetch = window.fetch
-    window.fetch = vi.fn(() => Promise.resolve(new Response('ok')))
+    originalFetch = globalThis.fetch
+    globalThis.fetch = vi.fn(() => Promise.resolve(new Response('ok')))
     state.isAuthenticated = false
     state.user = null
   })
 
   afterEach(() => {
-    window.fetch = originalFetch
+    globalThis.fetch = originalFetch
     vi.clearAllMocks()
   })
 
@@ -143,10 +143,10 @@ describe('msalService', () => {
     vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([{ id: 1 }] as any)
     vi.spyOn(msalInstance, 'acquireTokenSilent').mockResolvedValue({ accessToken: 'token' } as any)
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
-    window.fetch = fetchMock
+    globalThis.fetch = fetchMock
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api/resource'
-    await window.fetch(resource, { headers: { 'X-Test': '1' } })
+    await globalThis.fetch(resource, { headers: { 'X-Test': '1' } })
     //const lastCall = fetchMock.mock.calls[0]
     //const headers = lastCall[1].headers
     //expect(headers.get('Authorization')).toBe('Bearer token')
@@ -155,10 +155,10 @@ describe('msalService', () => {
 
   it('registerAuthorizationHeaderInterceptor: does not inject header for non-API', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
-    window.fetch = fetchMock
+    globalThis.fetch = fetchMock
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://other/resource'
-    await window.fetch(resource, { headers: { 'X-Test': '1' } })
+    await globalThis.fetch(resource, { headers: { 'X-Test': '1' } })
     //const lastCall = fetchMock.mock.calls[0]
     //expect(lastCall[1].headers.get('Authorization')).toBeUndefined()
   })
@@ -167,10 +167,10 @@ describe('msalService', () => {
     vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([{ id: 1 }] as any)
     vi.spyOn(msalInstance, 'acquireTokenSilent').mockResolvedValue({ accessToken: 'token' } as any)
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
-    window.fetch = fetchMock
+    globalThis.fetch = fetchMock
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api/resource'
-    await window.fetch(resource)
+    await globalThis.fetch(resource)
     //const lastCall = fetchMock.mock.calls[0]
     //expect(lastCall[1].headers.get('Authorization')).toBe('Bearer token')
   })
