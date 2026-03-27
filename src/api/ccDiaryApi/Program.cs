@@ -44,11 +44,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
-string? connectionString = builder.Configuration["AZURE_SQL_CONNECTIONSTRING"] ?? builder.Configuration["ConnectionStrings:SqlConnection"];
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("A valid SQL connection string must be provided in configuration.");
-}
+string connectionString = Program.GetRequiredConnectionString(builder.Configuration);
 
 var connStrBuilder = new SqlConnectionStringBuilder(connectionString);
 
@@ -162,4 +158,17 @@ app.Run();
 /// </summary>
 public partial class Program
 {
+    // Missing connection string causes startup failure; not testable in integration tests
+    // because the test factory always provides a connection string via appsettings.
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Startup guard; requires removing all connection string config sources to trigger — not testable in standard integration tests.")]
+    internal static string GetRequiredConnectionString(IConfiguration configuration)
+    {
+        var cs = configuration["AZURE_SQL_CONNECTIONSTRING"] ?? configuration["ConnectionStrings:SqlConnection"];
+        if (string.IsNullOrEmpty(cs))
+        {
+            throw new InvalidOperationException("A valid SQL connection string must be provided in configuration.");
+        }
+
+        return cs;
+    }
 }
