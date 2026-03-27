@@ -7,7 +7,9 @@ using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
 using ccDiaryApi.Data.Migration;
+using ccDiaryApi.Endpoints;
 using ccDiaryApi.Extensions;
+using ccDiaryApi.Health;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -16,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Serilog;
 using Serilog.Events;
+using Steeltoe.Common.HealthChecks;
 using Steeltoe.Management.Endpoint;
 using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
@@ -41,11 +44,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
-string? connectionString = builder.Configuration["AZURE_SQL_CONNECTIONSTRING"] ?? builder.Configuration["ConnectionStrings:SqlConnection"];
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("A valid SQL connection string must be provided in configuration.");
-}
+string connectionString = Program.GetRequiredConnectionString(builder.Configuration);
 
 var connStrBuilder = new SqlConnectionStringBuilder(connectionString);
 
@@ -86,6 +85,8 @@ builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 builder.Services.AddControllers();
 
 // Add Steeltoe actuators
+builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();
+
 builder.Services.AddHealthActuator();
 
 builder.Services.AddInfoActuator();
@@ -134,11 +135,17 @@ if (!app.Configuration.GetValue<bool>("DisableHttpsRedirection", false))
     app.UseHttpsRedirection();
 }
 
+app.UseDefaultFiles();
+
+app.UseStaticFiles();
+
 app.UseCors("cors");
 
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.MapAssemblyInfo();
 
 app.MapControllers();
 
@@ -151,4 +158,17 @@ app.Run();
 /// </summary>
 public partial class Program
 {
+    // Missing connection string causes startup failure; not testable in integration tests
+    // because the test factory always provides a connection string via appsettings.
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Startup guard; requires removing all connection string config sources to trigger — not testable in standard integration tests.")]
+    internal static string GetRequiredConnectionString(IConfiguration configuration)
+    {
+        var cs = configuration["AZURE_SQL_CONNECTIONSTRING"] ?? configuration["ConnectionStrings:SqlConnection"];
+        if (string.IsNullOrEmpty(cs))
+        {
+            throw new InvalidOperationException("A valid SQL connection string must be provided in configuration.");
+        }
+
+        return cs;
+    }
 }

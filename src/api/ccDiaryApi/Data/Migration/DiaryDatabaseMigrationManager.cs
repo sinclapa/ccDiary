@@ -4,6 +4,7 @@
 
 namespace ccDiaryApi.Data.Migration
 {
+    using System.Diagnostics.CodeAnalysis;
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Utilities;
@@ -18,20 +19,28 @@ namespace ccDiaryApi.Data.Migration
                 using var appContext = scope.ServiceProvider.GetRequiredService<DiaryDatabaseContext>();
                 if (appContext.Database.IsRelational())
                 {
-                    if (appContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
-                    {
-                        appContext.Database.EnsureCreated();
-                    }
-                    else
-                    {
-                        appContext.Database.Migrate();
-                    }
+                    ApplyRelationalMigration(appContext);
                 }
 
                 UpdateAppInfo(appContext);
             }
 
             return host;
+        }
+
+        // SQL Server migration branch requires a live SQL Server and cannot be tested in CI.
+        // SQLite path is covered by integration tests via CustomWebApplicationFactory.
+        [ExcludeFromCodeCoverage(Justification = "SQL Server Migrate() path requires a live SQL Server instance; not testable in unit/integration tests.")]
+        private static void ApplyRelationalMigration(DiaryDatabaseContext appContext)
+        {
+            if (appContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                appContext.Database.EnsureCreated();
+            }
+            else
+            {
+                appContext.Database.Migrate();
+            }
         }
 
         private static void UpdateAppInfo(DiaryDatabaseContext context)

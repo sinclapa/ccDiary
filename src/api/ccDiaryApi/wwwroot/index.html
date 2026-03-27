@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ccDiary API</title>
+</head>
+<body>
+    <h1>ccDiary API</h1>
+    <p><strong>Assembly:</strong> <span id="assembly-name">Loading...</span></p>
+    <p><strong>Version:</strong> <span id="assembly-version">Loading...</span></p>
+
+    <h2>Links</h2>
+    <ul>
+        <li><a href="/swagger">Swagger UI</a></li>
+        <li><a href="/actuator/info">Actuator Info</a></li>
+        <li><a href="/actuator/health">Actuator Health</a></li>
+        <li><a href="/actuator/metrics">Actuator Metrics</a></li>
+        <li><a href="/api/v1/AppInfo/Get">App Info API</a></li>
+    </ul>
+
+    <script>
+        (async () => {
+            try {
+                const response = await fetch('/api/assembly-info');
+                if (!response.ok) {
+                    throw new Error('Unable to load assembly info.');
+                }
+
+                const data = await response.json();
+                document.getElementById('assembly-name').textContent = data.assemblyName ?? 'Unknown';
+                document.getElementById('assembly-version').textContent = data.assemblyVersion ?? 'Unknown';
+            } catch {
+                document.getElementById('assembly-name').textContent = 'Unavailable';
+                document.getElementById('assembly-version').textContent = 'Unavailable';
+            }
+        })();
+    </script>
+</body>
+</html>

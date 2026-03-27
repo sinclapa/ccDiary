@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -18,12 +18,14 @@ global.ResizeObserver = require('resize-observer-polyfill')
 describe('ApiStatusBanner', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.useFakeTimers()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
   })
 
   afterEach(() => {
     const store = useApiStatusStore()
     store.stopPolling()
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -54,11 +56,31 @@ describe('ApiStatusBanner', () => {
       },
     })
 
-    // Wait for onMounted checkHealth to complete
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await flushPromises()
     await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('ingredients')
+  })
+
+  it('shows elapsed seconds counter when API is unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const wrapper = mount({
+      template: '<v-layout><api-status-banner /></v-layout>',
+    }, {
+      global: {
+        components: { ApiStatusBanner },
+        plugins: [vuetify],
+      },
+    })
+
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('(0s)')
+
+    await vi.advanceTimersByTimeAsync(3000)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('(3s)')
   })
 
   it('calls checkHealth on mount', async () => {

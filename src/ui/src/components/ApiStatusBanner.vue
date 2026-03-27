@@ -15,7 +15,7 @@
           :style="{ animationDelay: `${i * 0.06}s` }"
         >{{ char === ' ' ? '\u00A0' : char }}</span>
       </span>
-      <v-icon class="ml-2 spin-icon" size="18">mdi-loading</v-icon>
+      <span class="ml-2 wait-counter">({{ elapsedSeconds }}s)</span>
     </v-banner-text>
   </v-banner>
 </template>
@@ -27,9 +27,36 @@
   const message = 'The ingredients are being prepared, please wait...'
   const messageChars = message.split('')
 
+  const elapsedSeconds = ref(0)
+  let ticker: ReturnType<typeof setInterval> | null = null
+
+  function startCounter () {
+    elapsedSeconds.value = 0
+    ticker = setInterval(() => { elapsedSeconds.value++ }, 1000)
+  }
+
+  function stopCounter () {
+    if (ticker) {
+      clearInterval(ticker)
+      ticker = null
+    }
+  }
+
+  watch(() => apiStatus.available, (isAvailable) => {
+    if (!isAvailable) {
+      startCounter()
+    } else {
+      stopCounter()
+    }
+  })
+
   onMounted(() => {
     apiStatus.registerFetchInterceptor()
     apiStatus.checkHealth()
+  })
+
+  onUnmounted(() => {
+    stopCounter()
   })
 </script>
 
@@ -46,15 +73,11 @@
 
   @keyframes spotlight {
     0%, 100% { opacity: 0.4; text-shadow: none; }
-    20%, 30% { opacity: 1; text-shadow: 0 0 8px currentColor; }
+    20%, 30% { opacity: 1; text-shadow: none; }
   }
 
-  .spin-icon {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  .wait-counter {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.8;
   }
 </style>

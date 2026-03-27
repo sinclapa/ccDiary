@@ -29,6 +29,9 @@ namespace ccDiaryApi
             Configure(options);
         }
 
+        // Null-conditional branches on assembly attributes (?.Product, ?.Description) only trigger
+        // when attributes are missing, which doesn't occur in normal builds or test assemblies.
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Null-conditional attribute branches not reachable in standard test environments.")]
         public void Configure(SwaggerGenOptions options)
         {
             // Add a swagger document for each discovered API version

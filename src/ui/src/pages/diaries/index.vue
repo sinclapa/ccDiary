@@ -84,7 +84,9 @@
   import { diaryAPI } from '@/services/modules/diaryService'
   import Diary from '@/services/models/diary'
   import { state } from '@/services/authentication/msalConfig'
+  import { useApiStatusStore } from '@/stores/apiStatus'
 
+  const apiStatus = useApiStatusStore()
   const dialogDelete = ref(false)
   const dialog = ref(false)
   const diaries = ref([] as Diary[])
@@ -155,6 +157,10 @@
   async function data () {
     diaries.value = await diaryAPI.getDiaries()
   }
+
+  watch(() => apiStatus.recoveryCount, (count) => {
+    if (count > 0) data()
+  })
 
   onMounted(async () => {
     await data()
