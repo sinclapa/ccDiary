@@ -113,8 +113,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
-      - name: Convert coverage to Cobertura for PR report
-        run: dotnet-coverage merge coverage.xml --output coverage.cobertura.xml --output-format cobertura
+      - name: Convert coverage to Cobertura for report
+        run: dotnet-coverage convert coverage.xml --output coverage.cobertura.xml --output-format cobertura
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.16.1
@@ -129,7 +129,7 @@ jobs:
           name: api-coverage
           path: ${{ github.workspace }}/src/api/coverage.cobertura.xml
           retention-days: 5
-          
+
       - name: Publish Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0        
         with:
