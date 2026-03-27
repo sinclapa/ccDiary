@@ -9,7 +9,12 @@
             <ExcludeByFile>**/*Migrations/*.cs</ExcludeByFile>
           </ExcludeByFile>
           <Exclude>
-            <ModulePath>.*ccDiaryApiTest\.dll</ModulePath>
+            <ModulePath>.*ccDiaryApiTest.*</ModulePath>
+            <ModulePath>.*coverlet\..*</ModulePath>
+            <ModulePath>.*[Ss]erilog.*</ModulePath>
+            <ModulePath>.*Microsoft\..*</ModulePath>
+            <ModulePath>.*System\..*</ModulePath>
+            <ModulePath>.*testhost.*</ModulePath>
           </Exclude>
         </Configuration>
       </DataCollector>
