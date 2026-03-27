@@ -83,6 +83,9 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
           dotnet tool install --global dotnet-coverage
 
+      - name: Build API
+        run: dotnet build ccDiary.sln --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
+
       - name: SonarQube Begin
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -93,9 +96,6 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml"
-
-      - name: Build API
-        run: dotnet build ccDiary.sln --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
 
       - name: Test API
         run: dotnet-coverage collect "dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx" -f xml -o coverage.xml
