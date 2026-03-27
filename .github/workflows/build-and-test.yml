@@ -99,7 +99,7 @@ jobs:
         run: dotnet build ccDiary.sln --no-incremental --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
 
       - name: Test API
-        run: dotnet-coverage collect "dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx --settings ccDiary.runsettings" -f xml -o coverage.xml
+        run: dotnet-coverage collect "dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx" -f xml -o coverage.xml -s coverage.config.xml
 
       - name: SonarQube End
         if: always()
