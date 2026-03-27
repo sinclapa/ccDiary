@@ -90,7 +90,7 @@ export default defineConfig({
       },
     },
     coverage: {
-      reporter: ['cobertura', 'text', 'html'],
+      reporter: ['lcov', 'cobertura', 'text', 'html'],
       provider: 'v8',
       exclude: [
         'src/plugins/index.ts',
