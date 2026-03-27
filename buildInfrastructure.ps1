@@ -140,6 +140,14 @@ else {
     $sonarProjectKey = $params["SonarProjectKey"]
 }
 
+if (-Not ($params.ContainsKey("SonarOrganization"))) {
+    $sonarOrganization = Read-Host -Prompt "Enter the SonarQube organization (e.g. name)"
+    $params.Add("SonarOrganization", $sonarOrganization)
+}
+else {
+    $sonarOrganization = $params["SonarOrganization"]
+}
+
 if (-Not ($params.ContainsKey("SonarToken"))) {
     $sonarToken = Read-Host -Prompt "Enter the SonarQube access token" -AsSecureString
     $sonarToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sonarToken))
@@ -319,6 +327,7 @@ gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $g
 
 Write-Host "Configure SonarQube GitHub Secrets..." -ForegroundColor Cyan
 gh variable set "SONAR_PROJECT_KEY" --body "$sonarProjectKey" --repo $gitHubRepo
+gh variable set "SONAR_ORGANIZATION" --body "$sonarOrganization" --repo $gitHubRepo
 gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
