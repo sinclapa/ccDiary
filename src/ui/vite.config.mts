@@ -10,8 +10,7 @@ import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // Utilities
 import { defineConfig } from 'vite'
-import { fileURLToPath, URL } from 'node:url'
-import path from 'path'
+import path from 'node:path'
 import pkg from './package.json'
 
 
@@ -90,7 +89,7 @@ export default defineConfig({
       },
     },
     coverage: {
-      reporter: ['cobertura', 'text', 'html'],
+      reporter: ['lcov', 'cobertura', 'text', 'html'],
       provider: 'v8',
       exclude: [
         'src/plugins/index.ts',

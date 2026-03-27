@@ -1,5 +1,32 @@
-# About
-CCDiary is a full-stack diary application that allows users to create, manage, and view diary entries. The application is built with a modern architecture featuring:
+# ccDiary
+
+<div align="center">
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=coverage)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=bugs)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+&nbsp;
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
+
+</div>
+
+ccDiary is a full-stack diary application that allows users to create, manage, and view diary entries. The application is built with a modern architecture featuring:
 
 ## Architecture & Technology Stack
 - **Backend API**: .NET 8 REST API (ASP.NET Core) with Entity Framework Core for data access
