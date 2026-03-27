@@ -78,10 +78,10 @@ jobs:
       - name: Restore API dependencies
         run: dotnet restore ccDiary.sln
 
-    #   - name: Install SonarScanner and dotnet-coverage
-    #     run: |
-    #       dotnet tool install --global dotnet-sonarscanner
-    #       dotnet tool install --global dotnet-coverage
+      - name: Install SonarScanner and dotnet-coverage
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet tool install --global dotnet-coverage
           
     #   - name: SonarQube Begin
     #     env:
