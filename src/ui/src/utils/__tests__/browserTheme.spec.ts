@@ -19,7 +19,7 @@ describe('getSystemTheme', () => {
   })
 
   it('returns dark when prefers-color-scheme is dark', () => {
-    vi.spyOn(window, 'matchMedia').mockImplementation((query) =>
+    vi.spyOn(globalThis, 'matchMedia').mockImplementation((query) =>
       createMediaQueryList(query, query === '(prefers-color-scheme: dark)'),
     )
 
@@ -28,7 +28,7 @@ describe('getSystemTheme', () => {
   })
 
   it('returns light when prefers-color-scheme is light', () => {
-    vi.spyOn(window, 'matchMedia').mockImplementation((query) =>
+    vi.spyOn(globalThis, 'matchMedia').mockImplementation((query) =>
       createMediaQueryList(query, false),
     )
 
@@ -37,7 +37,7 @@ describe('getSystemTheme', () => {
   })
 
   it('returns light when matchMedia is not available', () => {
-    vi.spyOn(window, 'matchMedia').mockImplementation((_query: string) => {
+    vi.spyOn(globalThis, 'matchMedia').mockImplementation((_query: string) => {
       throw new Error('matchMedia not supported')
     })
 

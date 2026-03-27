@@ -264,7 +264,7 @@
   function close () {
     dialog.value = false
     nextTick(() => {
-      editedItem.value = Object.assign({}, defaultItem.value)
+      editedItem.value = { ...defaultItem.value }
     })
   }
 
@@ -278,7 +278,7 @@
       }
       editedItem.value = new DiaryEntry(diaryId, date, location, '')
     } else {
-      editedItem.value = Object.assign({}, item)
+      editedItem.value = { ...item }
     }
     dialog.value = true
   }
@@ -301,7 +301,7 @@
   }
 
   async function deleteItem (item: DiaryEntry) {
-    editedItem.value = Object.assign({}, item)
+    editedItem.value = { ...item }
     dialogDelete.value = true
   }
 
@@ -354,7 +354,7 @@
   function closeDelete () {
     dialogDelete.value = false
     nextTick(() => {
-      editedItem.value = Object.assign({}, defaultItem.value)
+      editedItem.value = { ...defaultItem.value }
     })
   }
 

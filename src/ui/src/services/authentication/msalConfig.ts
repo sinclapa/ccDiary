@@ -6,8 +6,8 @@ export const msalConfig = {
   auth: {
     clientId: getAppConfigField('VITE_CLIENT_ID'),
     authority: 'https://login.microsoftonline.com/' + getAppConfigField('VITE_TENANT_ID'),
-    redirectUri: window.location.origin,
-    postLogoutRedirectUri: window.location.origin,
+    redirectUri: globalThis.location.origin,
+    postLogoutRedirectUri: globalThis.location.origin,
   },
   cache: {
     cacheLocation: 'sessionStorage',

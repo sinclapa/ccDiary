@@ -15,7 +15,7 @@ export default class DiaryAPIService {
     let output : Diary | null = null
     await fetch(api, request)
       .then(response => response.json())
-      .then(data => output = data as Diary)
+      .then(data => { output = data as Diary })
     return output
   }
 
@@ -32,7 +32,7 @@ export default class DiaryAPIService {
     let output : Diary | null = null
     await fetch(api, request)
       .then(response => response.json())
-      .then(data => output = data as Diary)
+      .then(data => { output = data as Diary })
     return output
   }
 
@@ -43,7 +43,7 @@ export default class DiaryAPIService {
     }
     let output : boolean = false
     await fetch(api, request)
-      .then(response => response.ok ? output = true : output = false)
+      .then(response => { output = response.ok })
     return output
   }
 

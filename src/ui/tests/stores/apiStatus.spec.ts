@@ -113,7 +113,7 @@ describe('useApiStatusStore', () => {
       store.registerFetchInterceptor()
 
       await expect(
-        window.fetch('https://api.example.com/v1/Diary/Get')
+        globalThis.fetch('https://api.example.com/v1/Diary/Get')
       ).rejects.toThrow()
 
       expect(store.available).toBe(false)
@@ -126,7 +126,7 @@ describe('useApiStatusStore', () => {
       store.available = false
       store.registerFetchInterceptor()
 
-      await window.fetch('https://api.example.com/v1/Diary/Get')
+      await globalThis.fetch('https://api.example.com/v1/Diary/Get')
 
       expect(store.available).toBe(false)
     })
@@ -138,7 +138,7 @@ describe('useApiStatusStore', () => {
       store.registerFetchInterceptor()
 
       await expect(
-        window.fetch('https://other.example.com/data')
+        globalThis.fetch('https://other.example.com/data')
       ).rejects.toThrow()
 
       expect(store.available).toBe(true)
@@ -147,10 +147,10 @@ describe('useApiStatusStore', () => {
     it('only registers interceptor once', () => {
       vi.stubGlobal('fetch', vi.fn())
       store.registerFetchInterceptor()
-      const fetchAfterFirst = window.fetch
+      const fetchAfterFirst = globalThis.fetch
 
       store.registerFetchInterceptor()
-      expect(window.fetch).toBe(fetchAfterFirst)
+      expect(globalThis.fetch).toBe(fetchAfterFirst)
     })
   })
 })

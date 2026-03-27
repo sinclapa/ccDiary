@@ -1,4 +1,4 @@
-window.APP_CONFIG = {
+globalThis.APP_CONFIG = {
   VITE_API: "__PLACEHOLDER__",
   VITE_CLIENT_ID: "__PLACEHOLDER__",
   VITE_TENANT_ID: "__PLACEHOLDER__",

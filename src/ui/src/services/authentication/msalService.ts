@@ -4,7 +4,7 @@ import { getAppConfigField } from '@/utils/appConfig'
 export function msalService(
   msalInstance = defaultMsalInstance,
   state = defaultState,
-  win: Window & typeof globalThis = window
+    win: Window & typeof globalThis = globalThis as Window & typeof globalThis
 ) {
   const initializeInstance = async () => {
     try {
@@ -80,11 +80,10 @@ export function msalService(
     const originalFetch = win.fetch // capture at call time, not module load time
     win.fetch = async (...args) => {
       let [resource, options] = args
-      if (resource.toString().includes(getAppConfigField('VITE_API'))) {
+      const resourceUrl = resource instanceof Request ? resource.url : resource.toString()
+      if (resourceUrl.includes(getAppConfigField('VITE_API'))) {
         const accessToken = await getToken()
-        if (options === undefined) {
-          options = { headers: {} }
-        }
+        options ??= { headers: {} }
         const headers = new Headers(options.headers)
         if (headers.has('Authorization')) {
           headers.set('Authorization', `Bearer ${accessToken}`)

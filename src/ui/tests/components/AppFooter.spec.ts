@@ -10,7 +10,7 @@ const vuetify = createVuetify({
   directives,
 })
 
-global.ResizeObserver = require('resize-observer-polyfill')
+globalThis.ResizeObserver = require('resize-observer-polyfill')
 
 test('Display AppFooter', () => {
   const originalGlobalVersion = (globalThis as any).__APP_VERSION__

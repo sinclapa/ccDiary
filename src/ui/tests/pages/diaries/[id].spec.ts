@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 // Mock BEFORE importing the component!
 vi.mock('vue-router', () => ({
@@ -8,7 +8,6 @@ vi.mock('vue-router', () => ({
 }))
 
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
@@ -21,7 +20,7 @@ import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
 
-global.ResizeObserver = require('resize-observer-polyfill')
+globalThis.ResizeObserver = require('resize-observer-polyfill')
 
 describe('[id].vue', () => {
   const diaryId = 'test-diary-id'
@@ -41,7 +40,7 @@ describe('[id].vue', () => {
       clear: vi.fn(),
       removeItem: vi.fn()
     }
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(globalThis, 'localStorage', {
       value: localStorageMock,
       writable: true
     })
@@ -115,7 +114,7 @@ describe('[id].vue', () => {
   // correct text of button displayed when isDatePickerExpanded is true vs false
   it('shows correct toggle button text based on isDatePickerExpanded state', async () => {
     // Set initial state to false
-    ((wrapper.vm as any).isDatePickerExpanded as any) = false;
+    (wrapper.vm as any).isDatePickerExpanded = false;
 
     await flushPromises()
 
@@ -157,7 +156,7 @@ describe('[id].vue', () => {
 
   it('should toggle isDatePickerExpanded from false to true', async () => {
     // Set initial state to false
-    ((wrapper.vm as any).isDatePickerExpanded as any) = false;
+    (wrapper.vm as any).isDatePickerExpanded = false;
 
     // Call toggle function
     (wrapper.vm as any).toggleDatePickerHeight();

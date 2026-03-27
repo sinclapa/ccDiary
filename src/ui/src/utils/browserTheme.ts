@@ -10,7 +10,7 @@
  */
 export function getSystemTheme(): 'dark' | 'light' {
   try {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   } catch {
     return 'light'
   }

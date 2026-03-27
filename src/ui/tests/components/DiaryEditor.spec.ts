@@ -10,7 +10,7 @@ const vuetify = createVuetify({
   directives,
 })
 
-global.ResizeObserver = require('resize-observer-polyfill')
+globalThis.ResizeObserver = require('resize-observer-polyfill')
 describe('DiaryEditor', () => {
   test('Pass Props', async () => {
     const wrapper = mount(DiaryEditor, {

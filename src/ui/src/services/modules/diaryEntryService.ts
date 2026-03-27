@@ -92,7 +92,7 @@ export default class DiaryEntryAPIService {
     }
     let output : boolean = false
     await fetch(api, request)
-      .then(response => response.ok ? output = true : output = false)
+      .then(response => { output = response.ok })
     return output
   }
 }

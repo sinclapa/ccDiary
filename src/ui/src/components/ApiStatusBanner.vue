@@ -43,10 +43,10 @@
   }
 
   watch(() => apiStatus.available, (isAvailable) => {
-    if (!isAvailable) {
-      startCounter()
-    } else {
+    if (isAvailable) {
       stopCounter()
+    } else {
+      startCounter()
     }
   })
 

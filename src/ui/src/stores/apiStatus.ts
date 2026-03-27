@@ -28,13 +28,13 @@ export const useApiStatusStore = defineStore('apiStatus', {
     setAvailable (value: boolean) {
       const wasUnavailable = !this.available
       this.available = value
-      if (!value) {
-        this.startPolling()
-      } else {
+      if (value) {
         this.stopPolling()
         if (wasUnavailable) {
           this.recoveryCount++
         }
+      } else {
+        this.startPolling()
       }
     },
 
@@ -54,15 +54,15 @@ export const useApiStatusStore = defineStore('apiStatus', {
       if (this.interceptorRegistered) return
       this.interceptorRegistered = true
 
-      const originalFetch = window.fetch
-      const store = this
-      window.fetch = async (...args) => {
+      const originalFetch = globalThis.fetch
+      globalThis.fetch = async (...args) => {
         try {
           return await originalFetch(...args)
         } catch (error) {
           const [resource] = args
-          if (resource.toString().includes(getAppConfigField('VITE_API'))) {
-            store.setAvailable(false)
+          const resourceUrl = resource instanceof Request ? resource.url : resource.toString()
+          if (resourceUrl.includes(getAppConfigField('VITE_API'))) {
+            this.setAvailable(false)
           }
           throw error
         }

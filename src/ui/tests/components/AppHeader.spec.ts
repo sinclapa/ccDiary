@@ -21,7 +21,7 @@ vi.mock('@/services/authentication/msalService', () => {
   }
 })
 
-global.ResizeObserver = require('resize-observer-polyfill')
+globalThis.ResizeObserver = require('resize-observer-polyfill')
 describe('AppHeader', () => {
   afterEach(() => {
     vi.resetAllMocks()

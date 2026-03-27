@@ -13,7 +13,7 @@ vi.mock('@/utils/appConfig', () => ({
 
 const vuetify = createVuetify({ components, directives })
 
-global.ResizeObserver = require('resize-observer-polyfill')
+globalThis.ResizeObserver = require('resize-observer-polyfill')
 
 describe('ApiStatusBanner', () => {
   beforeEach(() => {

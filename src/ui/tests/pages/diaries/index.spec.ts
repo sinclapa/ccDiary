@@ -6,7 +6,7 @@ import { state } from '@/services/authentication/msalConfig'
 import Index from '@/pages/diaries/index.vue'
 import { diaryAPI } from '@/services/modules/diaryService'
 
-global.ResizeObserver = require('resize-observer-polyfill')
+globalThis.ResizeObserver = require('resize-observer-polyfill')
 
 vi.mock('@/services/modules/diaryService', () => ({
   diaryAPI: {
