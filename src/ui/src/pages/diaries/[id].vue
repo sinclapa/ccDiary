@@ -176,6 +176,9 @@
   import DiaryEntry from '@/services/models/diaryEntry'
   import { state } from '@/services/authentication/msalConfig'
   import dayjs from 'dayjs'
+  import { useApiStatusStore } from '@/stores/apiStatus'
+
+  const apiStatus = useApiStatusStore()
 
   // Detect if the device is mobile
   const dialog = ref(false)
@@ -406,7 +409,7 @@
     }
   })
 
-  onMounted(() => {
+  function loadDiaryData () {
     loadDiary(diaryId)
     loadCalendar(diaryId).then(async x => {
       selectedDate.value = x
@@ -414,6 +417,14 @@
       calendarYear.value = dayjs(x).year()
       await selectDate(selectedDate.value)
     })
+  }
+
+  watch(() => apiStatus.recoveryCount, (count) => {
+    if (count > 0) loadDiaryData()
+  })
+
+  onMounted(() => {
+    loadDiaryData()
     const stored = localStorage.getItem('id.datePickerExpanded')
     if (stored) {
       isDatePickerExpanded.value = stored === 'true'

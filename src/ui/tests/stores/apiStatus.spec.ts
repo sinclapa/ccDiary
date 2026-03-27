@@ -9,30 +9,23 @@ vi.mock('@/utils/appConfig', () => ({
 describe('useApiStatusStore', () => {
   let store: ReturnType<typeof useApiStatusStore>
 
-  const reloadMock = vi.fn()
-
   beforeEach(() => {
     setActivePinia(createPinia())
     store = useApiStatusStore()
     vi.useFakeTimers()
-    Object.defineProperty(window, 'location', {
-      value: { reload: reloadMock },
-      writable: true,
-      configurable: true,
-    })
   })
 
   afterEach(() => {
     store.stopPolling()
     vi.useRealTimers()
     vi.restoreAllMocks()
-    reloadMock.mockReset()
   })
 
   it('has correct default state', () => {
     expect(store.available).toBe(true)
     expect(store.checking).toBe(false)
     expect(store.pollTimer).toBeNull()
+    expect(store.recoveryCount).toBe(0)
   })
 
   it('sets available to true on successful health check', async () => {
@@ -75,17 +68,17 @@ describe('useApiStatusStore', () => {
     expect(store.pollTimer).toBeNull()
   })
 
-  it('reloads page when API recovers from unavailable', () => {
+  it('increments recoveryCount when API recovers from unavailable', () => {
     store.setAvailable(false)
     store.setAvailable(true)
 
-    expect(reloadMock).toHaveBeenCalledOnce()
+    expect(store.recoveryCount).toBe(1)
   })
 
-  it('does not reload when API was already available', () => {
+  it('does not increment recoveryCount when API was already available', () => {
     store.setAvailable(true)
 
-    expect(reloadMock).not.toHaveBeenCalled()
+    expect(store.recoveryCount).toBe(0)
   })
 
   it('does not create duplicate poll timers', () => {
@@ -126,7 +119,7 @@ describe('useApiStatusStore', () => {
       expect(store.available).toBe(false)
     })
 
-    it('sets available to true when API fetch succeeds', async () => {
+    it('does not change availability when API fetch succeeds', async () => {
       const originalFetch = vi.fn().mockResolvedValue({ ok: true })
       vi.stubGlobal('fetch', originalFetch)
 
@@ -135,7 +128,7 @@ describe('useApiStatusStore', () => {
 
       await window.fetch('https://api.example.com/v1/Diary/Get')
 
-      expect(store.available).toBe(true)
+      expect(store.available).toBe(false)
     })
 
     it('does not affect non-API fetches', async () => {

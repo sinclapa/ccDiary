@@ -7,6 +7,7 @@ export const useApiStatusStore = defineStore('apiStatus', {
     checking: false,
     pollTimer: null as ReturnType<typeof setInterval> | null,
     interceptorRegistered: false,
+    recoveryCount: 0,
   }),
 
   actions: {
@@ -32,7 +33,7 @@ export const useApiStatusStore = defineStore('apiStatus', {
       } else {
         this.stopPolling()
         if (wasUnavailable) {
-          window.location.reload()
+          this.recoveryCount++
         }
       }
     },
@@ -57,12 +58,7 @@ export const useApiStatusStore = defineStore('apiStatus', {
       const store = this
       window.fetch = async (...args) => {
         try {
-          const response = await originalFetch(...args)
-          const [resource] = args
-          if (resource.toString().includes(getAppConfigField('VITE_API'))) {
-            store.setAvailable(true)
-          }
-          return response
+          return await originalFetch(...args)
         } catch (error) {
           const [resource] = args
           if (resource.toString().includes(getAppConfigField('VITE_API'))) {

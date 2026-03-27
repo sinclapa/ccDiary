@@ -9,6 +9,7 @@ vi.mock('vue-router', () => ({
 
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
 //import { useRoute } from 'vue-router'
@@ -32,6 +33,7 @@ describe('[id].vue', () => {
   let wrapper: VueWrapper
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     // Mock localStorage
     const localStorageMock = {
       getItem: vi.fn(),

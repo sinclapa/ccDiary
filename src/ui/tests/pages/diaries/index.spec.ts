@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { state } from '@/services/authentication/msalConfig'
 import Index from '@/pages/diaries/index.vue'
@@ -27,10 +28,11 @@ vi.mock('@/services/authentication/msalConfig', () => ({
 describe('pages/diaries/index.vue', () => {
   let wrapper: any
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     wrapper = mount(Index, {
       global: {
-        plugins: [vuetify], // Register Vuetify plugin here
+        plugins: [vuetify],
       },
     })
   })

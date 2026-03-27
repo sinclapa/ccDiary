@@ -9,6 +9,7 @@ using ccDiaryApi.Data.Context;
 using ccDiaryApi.Data.Migration;
 using ccDiaryApi.Endpoints;
 using ccDiaryApi.Extensions;
+using ccDiaryApi.Health;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -17,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Serilog;
 using Serilog.Events;
+using Steeltoe.Common.HealthChecks;
 using Steeltoe.Management.Endpoint;
 using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
@@ -87,6 +89,8 @@ builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 builder.Services.AddControllers();
 
 // Add Steeltoe actuators
+builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();
+
 builder.Services.AddHealthActuator();
 
 builder.Services.AddInfoActuator();
