@@ -10,8 +10,7 @@ import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // Utilities
 import { defineConfig } from 'vite'
-import { fileURLToPath, URL } from 'node:url'
-import path from 'path'
+import path from 'node:path'
 import pkg from './package.json'
 
 
