@@ -128,15 +128,15 @@ jobs:
           path: ${{ github.workspace }}/src/api/coverage.xml
           retention-days: 5
 
-      - name: Convert API coverage to Cobertura
-        run: reportgenerator -reports:coverage.xml -targetdir:coverage-cobertura -reporttypes:Cobertura "-assemblyfilters:+ccDiaryApi.dll" "-filefilters:-*Migrations*"
+      - name: Generate API Coverage Report
+        run: reportgenerator -reports:coverage.xml -targetdir:coverage-out -reporttypes:"Cobertura;MarkdownSummaryGithub" "-assemblyfilters:+ccDiaryApi.dll" "-filefilters:-*Migrations*" "-title:API Code Coverage"
 
-      - name: API Coverage Summary
+      - name: API Coverage Badge
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          filename: src/api/coverage-cobertura/Cobertura.xml
+          filename: src/api/coverage-out/Cobertura.xml
           badge: true
-          fail_below_min: false
+          fail_below_min: true
           format: markdown
           hide_branch_rate: false
           hide_complexity: true
@@ -144,10 +144,9 @@ jobs:
           output: file
           thresholds: '80 90'
 
-      - name: Add API heading to coverage report
+      - name: Combine API coverage badge and detail
         run: |
-          { echo "## API Code Coverage"; echo ""; cat "$GITHUB_WORKSPACE/code-coverage-results.md"; } > /tmp/coverage-tmp.md
-          mv /tmp/coverage-tmp.md "$GITHUB_WORKSPACE/code-coverage-results.md"
+          { echo "## API Code Coverage"; echo ""; cat "$GITHUB_WORKSPACE/code-coverage-results.md"; echo ""; cat "$GITHUB_WORKSPACE/src/api/coverage-out/SummaryGithub.md"; } > /tmp/api-coverage.md
 
       - name: Post API Coverage Comment
         uses: marocchino/sticky-pull-request-comment@v2
@@ -155,7 +154,7 @@ jobs:
         with:
           recreate: true
           header: api-coverage
-          path: code-coverage-results.md
+          path: /tmp/api-coverage.md
 
       - name: Publish api
         run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish
