@@ -132,6 +132,23 @@ if ($environment -ne "prod") {
     $externalDomainName = ""
 }
 
+if (-Not ($params.ContainsKey("SonarProjectKey"))) {
+    $sonarProjectKey = Read-Host -Prompt "Enter the SonarQube project key (e.g. name_project)"
+    $params.Add("SonarProjectKey", $sonarProjectKey)
+}
+else {
+    $sonarProjectKey = $params["SonarProjectKey"]
+}
+
+if (-Not ($params.ContainsKey("SonarToken"))) {
+    $sonarToken = Read-Host -Prompt "Enter the SonarQube access token" -AsSecureString
+    $sonarToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sonarToken))
+    $params.Add("SonarToken", $sonarToken)
+}
+else {
+    $sonarToken = $params["SonarToken"]
+}
+
 $params | ConvertTo-StringData | Set-Content $settingsFile
 
 <# --------------------------------------------------------------------------------- #>
@@ -299,6 +316,10 @@ gh secret set "ENTRA_CLIENT_SECRET".ToUpper() --body "${entraClientCredentialsPa
 gh secret set "ENTRA_APPLICATION_ID_URI".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
 gh secret set "TENANT_ID".ToUpper() --body "$tenantId" --repo $gitHubRepo --env "${environment}"
 gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
+
+Write-Host "Configure SonarQube GitHub Secrets..." -ForegroundColor Cyan
+gh variable set "SONAR_PROJECT_KEY" --body "$sonarProjectKey" --repo $gitHubRepo
+gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished ${name} ${environment}" -ForegroundColor Green
