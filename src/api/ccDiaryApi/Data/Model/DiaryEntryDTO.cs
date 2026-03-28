@@ -13,10 +13,10 @@ namespace ccDiaryApi.Data.Model
     {
         [Key]
         [Required]
-        required public Guid DiaryEntryId { get; set; }
+        public Guid DiaryEntryId { get; set; }
 
         [Required]
-        required public DateTime Date { get; set; }
+        public DateTime Date { get; set; }
 
         [Required]
         public string? Location { get; set; }
