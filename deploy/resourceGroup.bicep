@@ -98,6 +98,9 @@ resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
   sku: {
     name: 'free'
   }
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     stagingEnvironmentPolicy: 'Enabled'
     allowConfigFileUpdates: true

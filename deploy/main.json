@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "16568833449700222395"
+      "templateHash": "17817673778725503217"
     }
   },
   "parameters": {
@@ -84,7 +84,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "10240762893148860764"
+              "templateHash": "15495469140407541602"
             }
           },
           "parameters": {
@@ -215,6 +215,9 @@
               "location": "[parameters('location')]",
               "sku": {
                 "name": "free"
+              },
+              "identity": {
+                "type": "SystemAssigned"
               },
               "properties": {
                 "stagingEnvironmentPolicy": "Enabled",

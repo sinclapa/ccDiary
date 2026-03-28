@@ -16,6 +16,18 @@ namespace ccDiaryApi.Services
             _context = context;
         }
 
+        public DiaryArchiveDTO? Export(Guid diaryId)
+        {
+            var diary = _context.Diaries.Where(x => x.DiaryId == diaryId).FirstOrDefault();
+            if (diary == null)
+            {
+                return null;
+            }
+
+            var diaryEntries = _context.DiaryEntries.Where(x => x.DiaryId == diaryId).OrderBy(x => x.Date).ToList();
+            return new DiaryArchiveDTO { Diary = diary, DiaryEntries = diaryEntries };
+        }
+
         public DiaryDTO Import(DiaryArchiveDTO diaryArchive)
         {
             var diary = _context.Diaries.Where(x => x.DiaryId == diaryArchive.Diary.DiaryId).FirstOrDefault();

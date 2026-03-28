@@ -47,20 +47,20 @@ namespace ccDiaryApiTest.Integration
             return result;
         }
 
-        public async Task<DiaryEntryDTO> CreateDiaryEntry(Guid diaryId, DateTime date)
+        public async Task<DiaryEntryDTO> CreateDiaryEntry(Guid? diaryId, DateTime date)
         {
             // Act
             var diaryEntry = new DiaryEntryDTO
             {
                 Date = date,
-                DiaryId = diaryId,
+                DiaryId = diaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
             return await CreateDiaryEntry(diaryEntry);
         }
 
-        public async Task<DiaryEntryDTO> CreateDiaryEntry(Guid diaryId)
+        public async Task<DiaryEntryDTO> CreateDiaryEntry(Guid? diaryId)
         {
             return await CreateDiaryEntry(diaryId, DateTime.UtcNow);
         }
@@ -117,7 +117,7 @@ namespace ccDiaryApiTest.Integration
             var diaryEntry = new DiaryEntryDTO
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
@@ -160,7 +160,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             var diaryEntry = new DiaryEntryDTO
             {
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
@@ -181,7 +181,7 @@ namespace ccDiaryApiTest.Integration
             var diaryEntry = new DiaryEntryDTO
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
 
@@ -201,7 +201,7 @@ namespace ccDiaryApiTest.Integration
             var diaryEntry = new DiaryEntryDTO
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0),
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
             };
 
@@ -392,7 +392,7 @@ namespace ccDiaryApiTest.Integration
             {
                 DiaryEntryId = diaryEntry.DiaryEntryId,
                 Date = new DateTime(2021, 5, 16, 13, 0, 0),
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
                 Location = $"UpdatedLocation{DateTime.UtcNow.Ticks}",
                 Entry = $"UpdatedNotes{DateTime.UtcNow.Ticks}",
             };

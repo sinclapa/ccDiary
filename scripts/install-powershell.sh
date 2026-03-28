@@ -12,7 +12,7 @@ fix_yarn_gpg_key() {
 
   echo "Detected Yarn apt source. Repairing Yarn repository key..."
   sudo mkdir -p "${keyring_dir}"
-  curl -fsSL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee "${keyring_file}" >/dev/null
+  curl --proto '=https' -fsSL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee "${keyring_file}" >/dev/null
   echo "deb [signed-by=${keyring_file}] https://dl.yarnpkg.com/debian/ stable main" | sudo tee "${yarn_list_file}" >/dev/null
 }
 

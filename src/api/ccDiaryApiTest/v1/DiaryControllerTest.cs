@@ -115,7 +115,7 @@ namespace ccDiaryApiTest.v1
             controller.Create(new DiaryDTO { Author = "Paul3", Title = "Paul's 3rd Diary", Description = "Description of Paul's 3rd Diary" });
             var createResult = createResponse.GetObjectResult();
             Assert.IsNotNull(createResult);
-            var response = controller.Get(createResult.DiaryId);
+            var response = controller.Get(createResult.DiaryId!.Value);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -146,7 +146,7 @@ namespace ccDiaryApiTest.v1
             Assert.AreEqual(3, preGetResult.Count());
 
             // Act
-            var response = controller.Delete(createResult.DiaryId);
+            var response = controller.Delete(createResult.DiaryId!.Value);
 
             // Assert
             Assert.IsInstanceOfType(response, typeof(OkResult));

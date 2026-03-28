@@ -8,6 +8,8 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryArchiveService
     {
+        DiaryArchiveDTO? Export(Guid diaryId);
+
         DiaryDTO Import(DiaryArchiveDTO diaryArchive);
     }
 }

@@ -157,7 +157,8 @@ await app.RunAsync();
 public partial class Program
 {
     /// <summary>
-    /// Protected constructor to satisfy static analysis (S1118).
+    /// Initializes a new instance of the <see cref="Program"/> class.
+    /// Required to satisfy static analysis (S1118); not intended for direct instantiation.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Utility constructor required by S1118; never instantiated directly.")]
     protected Program()
