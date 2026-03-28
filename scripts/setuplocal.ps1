@@ -74,7 +74,7 @@ else {
     $baseUrl8080 = "http://localhost:8080"
 }
 
-$entraOut = & "./entraSetup.ps1" `
+$entraOut = & "$PSScriptRoot/entraSetup.ps1" `
     -AppName "ccdiary-local-$machineName" `
     -spaUris @("$baseUrlApi/swagger/oauth2-redirect.html", "$baseUrl8080/") `
     -webUris @("$baseUrlApi/") `
@@ -86,7 +86,7 @@ $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 <# Update Local Build Environment #>
 
 Write-Host "Updating Local API Build" -ForegroundColor Cyan
-$envPath = "./src/api/.env"
+$envPath = "$PSScriptRoot/../src/api/.env"
 $apiEnv = @{}
 if (Test-Path $envPath) {
     $envLines = Get-Content -Path $envPath
@@ -136,7 +136,7 @@ if ($onWindows) {
 else {
     $userSecretsPath = Join-Path $HOME ".microsoft/usersecrets"
     # For Linux/Codespaces, use local .certs directory
-    $httpsCertsPath = Join-Path $PSScriptRoot ".certs/https"
+    $httpsCertsPath = Join-Path $PSScriptRoot "../.certs/https"
     $composeFiles = "docker-compose.yml:docker-compose.override.yml:docker-compose.linux.override.yml"
     Write-Host "Detected Linux environment" -ForegroundColor Gray
 }
@@ -262,11 +262,11 @@ Write-Host "  HTTPS_CERT_FILE set to: $httpsCertFile" -ForegroundColor Gray
 Write-Host "  HTTPS_CERT_PASSWORD set to: $httpsCertPassword" -ForegroundColor Gray
 Write-Host "  COMPOSE_FILE set to: $composeFiles" -ForegroundColor Gray
 
-dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj init
-dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "SA_PASSWORD" "$localDBPassword"
-dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:TenantId" "$tenantId"
-dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:ClientId" "$entraClientId"
-dotnet user-secrets -p ./src/api/ccDiaryApi/ccDiaryApi.csproj set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" init
+dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "SA_PASSWORD" "$localDBPassword"
+dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:TenantId" "$tenantId"
+dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ClientId" "$entraClientId"
+dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
 
 Write-Host "Updating Local UI Build" -ForegroundColor Cyan
 function SetValueInHashTable {
@@ -286,7 +286,7 @@ function SetValueInHashTable {
     }
 }
 
-$vuePath = "./src/ui/.env.dev.local"
+$vuePath = "$PSScriptRoot/../src/ui/.env.dev.local"
 if (Test-Path $vuePath) {
     $content = Get-Content -Raw $vuePath | ConvertFrom-StringData
 }

@@ -8,6 +8,9 @@ var location string = resourceGroup().location
 resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
   name: toLower('ca-${appName}')
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     managedEnvironmentId: containerAppsEnvironmentId
     configuration: {
@@ -17,15 +20,15 @@ resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false
+        clientCertificateMode: 'Ignore'
         traffic: [
           {
             latestRevision: true
             weight: 100
           }
         ]
-      } 
-    }    
-          
+      }
+    }
     template: {
       containers: [
         {
@@ -42,9 +45,6 @@ resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
         maxReplicas: 1
       }
     }
-  }
-  identity: {
-    type: 'SystemAssigned'
   }
 }
 

@@ -4,10 +4,11 @@ param name string
 param environment string
 param adminUser string
 param adminUserSID string
-param externalDomainName string = ''
+param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
 var appName string = '${name}-${environment}'
+var sqlServerName string = 'sql-${appName}'
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'logs-${appName}'
@@ -38,7 +39,7 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' 
 }
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
-  name: 'sql-${appName}'
+  name: sqlServerName
   location: location
   identity: {
     type: 'SystemAssigned'    
@@ -57,38 +58,37 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
 }
 
 resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  name: 'sql-fw-${appName}-allow-azure-services'
   parent: sqlServer
+  name: 'sql-fw-${appName}-allow-azure-services'
   properties: {
     startIpAddress: '0.0.0.0'
     endIpAddress: '0.0.0.0'
   }
-
 }
 
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  parent: sqlServer
   name: 'sqldb-${appName}'
   location: location
-  parent: sqlServer
+  sku: {
+    name: 'GP_S_Gen5_1'
+    tier: 'GeneralPurpose'
+  }
   properties: {
-    createMode: 'Default'      
+    createMode: 'Default'
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 34359738368 // 32 GB
-    zoneRedundant: false      
+    zoneRedundant: false
     availabilityZone: 'NoPreference'
     autoPauseDelay: 60
-    readScale: 'Disabled' 
-    minCapacity: json('0.5')     
+    readScale: 'Disabled'
+    minCapacity: json('0.5')
     requestedBackupStorageRedundancy: 'Local'
     catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
     isLedgerOn: false
     useFreeLimit: true
     freeLimitExhaustionBehavior: 'AutoPause'
     maintenanceConfigurationId: subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')
-  }
-  sku: {
-    name: 'GP_S_Gen5_1'
-    tier: 'GeneralPurpose'
   }
 }
 
@@ -106,9 +106,9 @@ resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
   }
 }
 
-resource staticSiteCustomDomain 'Microsoft.Web/staticSites/customDomains@2024-11-01' = if (environment == 'prod' && !empty(externalDomainName)) {
+resource staticSiteCustomDomain 'Microsoft.Web/staticSites/customDomains@2024-11-01' = if (environment == 'prod' && !empty(externalDomainName ?? '')) {
   parent: staticSite
-  name: externalDomainName
+  name: externalDomainName!
   properties: {}
 }
 

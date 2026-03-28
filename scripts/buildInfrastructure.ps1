@@ -63,7 +63,7 @@ function New-GuidFromString {
 
 <# --------------------------------------------------------------------------------- #>
 <# Capture inputs #>
-$settingsFile = "buildInfrastructure.settings"
+$settingsFile = Join-Path $PSScriptRoot "buildInfrastructure.settings"
 
 if (Test-Path $settingsFile) {
     $params = Get-Content -Raw $settingsFile | ConvertFrom-StringData
@@ -215,7 +215,7 @@ Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor 
 # Deploy using Azure CLI
 $deploymentResult = az deployment sub create `
   --location $location `
-  --template-file ".\deploy\main.bicep" `
+  --template-file "$PSScriptRoot\..\deploy\main.bicep" `
   --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
   --output json | ConvertFrom-Json
 
@@ -263,7 +263,7 @@ if (-not [string]::IsNullOrWhiteSpace($externalDomainName)) {
     Write-Host "  Adding custom domain to SPA URIs: https://${externalDomainName}/" -ForegroundColor Gray
 }
 
-$entraOut = & ".\entraSetup.ps1" `
+$entraOut = & "$PSScriptRoot\entraSetup.ps1" `
     -AppName $appName `
     -spaUris $spaUris `
     -webUris @("https://${containerAppUrl}/") `
