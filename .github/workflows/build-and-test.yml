@@ -378,6 +378,29 @@ jobs:
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.qualitygate.wait=true
 
+  scan-infra:
+    runs-on: ubuntu-latest
+    environment: none
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: SonarCloud Scan (Infra)
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dproject.settings=sonar-project-infra.properties
+            -Dsonar.projectKey=${{ vars.SONAR_INFRA_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.qualitygate.wait=true
+
   deploy-ui:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
     

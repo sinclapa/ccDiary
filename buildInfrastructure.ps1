@@ -148,6 +148,14 @@ else {
     $sonarUiProjectKey = $params["SonarUiProjectKey"]
 }
 
+if (-Not ($params.ContainsKey("SonarInfraProjectKey"))) {
+    $sonarInfraProjectKey = Read-Host -Prompt "Enter the SonarCloud Infra project key (e.g. cookingcode_ccDiary_infra)"
+    $params.Add("SonarInfraProjectKey", $sonarInfraProjectKey)
+}
+else {
+    $sonarInfraProjectKey = $params["SonarInfraProjectKey"]
+}
+
 if (-Not ($params.ContainsKey("SonarOrganization"))) {
     $sonarOrganization = Read-Host -Prompt "Enter the SonarQube organization (e.g. name)"
     $params.Add("SonarOrganization", $sonarOrganization)
@@ -336,6 +344,7 @@ gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $g
 Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan
 gh variable set "SONAR_API_PROJECT_KEY" --body "$sonarApiProjectKey" --repo $gitHubRepo
 gh variable set "SONAR_UI_PROJECT_KEY" --body "$sonarUiProjectKey" --repo $gitHubRepo
+gh variable set "SONAR_INFRA_PROJECT_KEY" --body "$sonarInfraProjectKey" --repo $gitHubRepo
 gh variable set "SONAR_ORGANIZATION" --body "$sonarOrganization" --repo $gitHubRepo
 gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
 <# --------------------------------------------------------------------------------- #>
