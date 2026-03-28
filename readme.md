@@ -1,30 +1,10 @@
 # ccDiary
 
-<div align="center">
-
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=coverage)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=bugs)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-&nbsp;
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=sinclapa_ccDiary&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=sinclapa_ccDiary)
-
-</div>
+| | API | UI |
+|---|:---:|:---:|
+| **Quality** | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=coverage)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=coverage)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) |
+| **Issues** | [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=bugs)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) | [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=bugs)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) |
+| **Ratings** | [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_api&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_api) | [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=cookingcode_ccDiary_ui&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=cookingcode_ccDiary_ui) |
 
 ccDiary is a full-stack diary application that allows users to create, manage, and view diary entries. The application is built with a modern architecture featuring:
 
