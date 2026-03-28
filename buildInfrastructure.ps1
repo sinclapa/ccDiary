@@ -132,12 +132,20 @@ if ($environment -ne "prod") {
     $externalDomainName = ""
 }
 
-if (-Not ($params.ContainsKey("SonarProjectKey"))) {
-    $sonarProjectKey = Read-Host -Prompt "Enter the SonarQube project key (e.g. name_project)"
-    $params.Add("SonarProjectKey", $sonarProjectKey)
+if (-Not ($params.ContainsKey("SonarApiProjectKey"))) {
+    $sonarApiProjectKey = Read-Host -Prompt "Enter the SonarCloud API project key (e.g. cookingcode_ccDiary_api)"
+    $params.Add("SonarApiProjectKey", $sonarApiProjectKey)
 }
 else {
-    $sonarProjectKey = $params["SonarProjectKey"]
+    $sonarApiProjectKey = $params["SonarApiProjectKey"]
+}
+
+if (-Not ($params.ContainsKey("SonarUiProjectKey"))) {
+    $sonarUiProjectKey = Read-Host -Prompt "Enter the SonarCloud UI project key (e.g. cookingcode_ccDiary_ui)"
+    $params.Add("SonarUiProjectKey", $sonarUiProjectKey)
+}
+else {
+    $sonarUiProjectKey = $params["SonarUiProjectKey"]
 }
 
 if (-Not ($params.ContainsKey("SonarOrganization"))) {
@@ -325,8 +333,9 @@ gh secret set "ENTRA_APPLICATION_ID_URI".ToUpper() --body "$entraApplicationIdUR
 gh secret set "TENANT_ID".ToUpper() --body "$tenantId" --repo $gitHubRepo --env "${environment}"
 gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
 
-Write-Host "Configure SonarQube GitHub Secrets..." -ForegroundColor Cyan
-gh variable set "SONAR_PROJECT_KEY" --body "$sonarProjectKey" --repo $gitHubRepo
+Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan
+gh variable set "SONAR_API_PROJECT_KEY" --body "$sonarApiProjectKey" --repo $gitHubRepo
+gh variable set "SONAR_UI_PROJECT_KEY" --body "$sonarUiProjectKey" --repo $gitHubRepo
 gh variable set "SONAR_ORGANIZATION" --body "$sonarOrganization" --repo $gitHubRepo
 gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
 <# --------------------------------------------------------------------------------- #>
