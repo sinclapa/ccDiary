@@ -16,14 +16,10 @@ namespace ccDiaryApi.Controllers.v1
     [Authorize]
     public class DiaryArchiveController : ControllerBase
     {
-        private readonly IDiaryService _diaryService;
-        private readonly IDiaryEntryService _diaryEntryService;
         private readonly IDiaryArchiveService _diaryArchiveService;
 
-        public DiaryArchiveController(IDiaryService diaryService, IDiaryEntryService diaryEntryService, IDiaryArchiveService diaryArchiveService)
+        public DiaryArchiveController(IDiaryArchiveService diaryArchiveService)
         {
-            _diaryService = diaryService;
-            _diaryEntryService = diaryEntryService;
             _diaryArchiveService = diaryArchiveService;
         }
 
@@ -31,14 +27,12 @@ namespace ccDiaryApi.Controllers.v1
         [HttpGet]
         public ActionResult<DiaryArchiveDTO> Export(Guid diaryId)
         {
-            var diary = _diaryService.GetDiary(diaryId);
-            if (diary == null)
+            var export = _diaryArchiveService.Export(diaryId);
+            if (export == null)
             {
                 return NotFound();
             }
 
-            var diaryEntries = _diaryEntryService.GetDiaryEntries(diaryId);
-            DiaryArchiveDTO export = new () { Diary = diary, DiaryEntries = diaryEntries };
             return Ok(export);
         }
 

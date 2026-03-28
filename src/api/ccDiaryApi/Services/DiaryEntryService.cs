@@ -18,7 +18,7 @@ namespace ccDiaryApi.Services
 
         public DiaryEntryDTO CreateDiaryEntry(DiaryEntryDTO diaryEntry)
         {
-            if (diaryEntry.Date == DateTime.MinValue)
+            if (diaryEntry.Date == null || diaryEntry.Date == DateTime.MinValue)
             {
                 throw new ArgumentException($"Date has to be not null and greater than {DateTime.MinValue}.");
             }
@@ -40,13 +40,13 @@ namespace ccDiaryApi.Services
                 .Where(d => d.DiaryId == diaryId)
                 .OrderByDescending(d => d.Date)
                 .Select(d => d.Date).AsEnumerable()
-                .FirstOrDefault(DateTime.MaxValue);
+                .FirstOrDefault() ?? DateTime.MaxValue;
 
             var minDate = _context.DiaryEntries
                 .Where(d => d.DiaryId == diaryId)
                 .OrderBy(d => d.Date)
                 .Select(d => d.Date).AsEnumerable()
-                .FirstOrDefault(DateTime.MinValue);
+                .FirstOrDefault() ?? DateTime.MinValue;
 
             return new DiaryDateRange { MaxDateTime = maxDate, MinDateTime = minDate };
         }
@@ -57,13 +57,13 @@ namespace ccDiaryApi.Services
             switch (searchType)
             {
                 case SearchType.Year:
-                    func = new Func<DiaryEntryDTO, int>(x => x.Date.Year);
+                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().Year);
                     break;
                 case SearchType.Month:
-                    func = new Func<DiaryEntryDTO, int>(x => x.Date.Month);
+                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().Month);
                     break;
                 case SearchType.Day:
-                    func = new Func<DiaryEntryDTO, int>(x => x.Date.Day);
+                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().Day);
                     break;
                 default:
                     throw new ArgumentException($"Unhandled SearchType [{searchType}]");
@@ -114,7 +114,7 @@ namespace ccDiaryApi.Services
 
             return _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
-                .Min(x => x.Date);
+                .Min(x => x.Date) ?? DateTime.MinValue;
         }
 
         public DateTime MaxDiaryEntryDate(Guid diaryId)
@@ -126,7 +126,7 @@ namespace ccDiaryApi.Services
 
             return _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
-                .Max(x => x.Date);
+                .Max(x => x.Date) ?? DateTime.MaxValue;
         }
     }
 }

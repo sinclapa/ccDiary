@@ -42,7 +42,7 @@ namespace ccDiaryApiTest.v1
             var diaryService = new DiaryService(db);
             var diaryEntryService = new DiaryEntryService(db);
             var diaryArchiveService = new DiaryArchiveService(db);
-            var controller = new DiaryArchiveController(diaryService, diaryEntryService, diaryArchiveService);
+            var controller = new DiaryArchiveController(diaryArchiveService);
 
             var diary = diaryService.Create(new DiaryDTO()
             {
@@ -56,7 +56,7 @@ namespace ccDiaryApiTest.v1
                 Entry = "TestEntryA",
                 Date = DateTime.Now,
                 Location = "TestLocationA",
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
             });
 
             diaryEntryService.CreateDiaryEntry(new DiaryEntryDTO()
@@ -64,11 +64,11 @@ namespace ccDiaryApiTest.v1
                 Entry = "TestEntryB",
                 Date = DateTime.Now,
                 Location = "TestLocationB",
-                DiaryId = diary.DiaryId,
+                DiaryId = diary.DiaryId!.Value,
             });
 
             // Act
-            var response = controller.Export(diary.DiaryId);
+            var response = controller.Export(diary.DiaryId!.Value);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -83,10 +83,8 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var diaryEntryService = new DiaryEntryService(db);
             var diaryArchiveService = new DiaryArchiveService(db);
-            var controller = new DiaryArchiveController(diaryService, diaryEntryService, diaryArchiveService);
+            var controller = new DiaryArchiveController(diaryArchiveService);
 
             // Act
             var response = controller.Export(Guid.NewGuid());

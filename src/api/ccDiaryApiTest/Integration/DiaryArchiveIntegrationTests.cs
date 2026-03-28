@@ -89,9 +89,9 @@ namespace ccDiaryApiTest.Integration
             var diary = new DiaryDTO { Author = "Paul John", Title = "History of computers", Description = "Computers from ancient time to digital era", DiaryId = Guid.NewGuid() };
             var diaryEntries = new List<DiaryEntryDTO>
             {
-                new DiaryEntryDTO { Date = new DateTime(2024, 11, 19, 10, 15, 0, DateTimeKind.Utc), DiaryId = diary.DiaryId, Entry = "Spectrum", Location = "Glasgow", DiaryEntryId = Guid.NewGuid() },
-                new DiaryEntryDTO { Date = new DateTime(2024, 11, 19, 14, 25, 0, DateTimeKind.Utc), DiaryId = diary.DiaryId, Entry = "IBM", Location = "New York", DiaryEntryId = Guid.NewGuid() },
-                new DiaryEntryDTO { Date = new DateTime(2024, 11, 20, 8, 18, 0, DateTimeKind.Utc), DiaryId = diary.DiaryId, Entry = "Acorn", Location = "Manchester", DiaryEntryId = Guid.NewGuid() },
+                new DiaryEntryDTO { Date = new DateTime(2024, 11, 19, 10, 15, 0, DateTimeKind.Utc), DiaryId = diary.DiaryId!.Value, Entry = "Spectrum", Location = "Glasgow", DiaryEntryId = Guid.NewGuid() },
+                new DiaryEntryDTO { Date = new DateTime(2024, 11, 19, 14, 25, 0, DateTimeKind.Utc), DiaryId = diary.DiaryId!.Value, Entry = "IBM", Location = "New York", DiaryEntryId = Guid.NewGuid() },
+                new DiaryEntryDTO { Date = new DateTime(2024, 11, 20, 8, 18, 0, DateTimeKind.Utc), DiaryId = diary.DiaryId!.Value, Entry = "Acorn", Location = "Manchester", DiaryEntryId = Guid.NewGuid() },
             };
             var archiveDiary = new DiaryArchiveDTO { Diary = diary, DiaryEntries = diaryEntries };
             return archiveDiary;

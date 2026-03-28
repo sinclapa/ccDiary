@@ -12,11 +12,9 @@ namespace ccDiaryApi.Data.Model
     public class DiaryEntryDTO
     {
         [Key]
-        [Required]
-        public Guid DiaryEntryId { get; set; }
+        public Guid? DiaryEntryId { get; set; }
 
-        [Required]
-        public DateTime Date { get; set; }
+        public DateTime? Date { get; set; }
 
         [Required]
         public string? Location { get; set; }
