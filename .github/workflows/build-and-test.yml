@@ -75,19 +75,45 @@ jobs:
           cache: true
           cache-dependency-path: "**/packages.lock.json"
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Restore API dependencies
         run: dotnet restore ccDiary.sln
 
-      - name: Install dotnet-coverage and reportgenerator
+      - name: Install dotnet-coverage, reportgenerator and sonarscanner
         run: |
           dotnet tool install --global dotnet-coverage
           dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global dotnet-sonarscanner
+
+      - name: SonarCloud - Begin API scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet sonarscanner begin
+          /k:"${{ vars.SONAR_API_PROJECT_KEY }}"
+          /o:"${{ vars.SONAR_ORGANIZATION }}"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml"
+          /d:sonar.exclusions="**/Migrations/**"
+          /d:sonar.coverage.exclusions="**/Migrations/**"
+          /d:sonar.qualitygate.wait=true
 
       - name: Build API
         run: dotnet build ccDiary.sln --no-incremental --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
 
       - name: Test API
         run: dotnet-coverage collect "dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx" -f xml -o coverage.xml
+
+      - name: SonarCloud - End API scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.16.1
@@ -169,42 +195,6 @@ jobs:
     outputs:
       image_tag: ${{ steps.image_tag.outputs.value }}
     
-  sonar-scan:
-    needs: [build-api, build-ui]
-    runs-on: ubuntu-latest
-    environment: none
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Download API coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: api-coverage
-          path: src/api
-
-      - name: Download UI coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: ui-coverage
-          path: src/ui/coverage
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-
   deploy-api:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
 
@@ -375,6 +365,17 @@ jobs:
           name: ui-dist
           path: "${{ github.workspace }}/src/ui/dist"
           retention-days: 5
+
+      - name: SonarCloud Scan (UI)
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_UI_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.qualitygate.wait=true
 
   deploy-ui:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
