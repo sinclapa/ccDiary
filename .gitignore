@@ -48,7 +48,7 @@ Thumbs.db
 *.mov
 *.wmv
 
-buildInfrastructure.settings
+scripts/buildInfrastructure.settings
 .certs
 
 # Test

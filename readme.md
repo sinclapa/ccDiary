@@ -40,7 +40,7 @@ It is recommended to install the following applications
 ## Perquisites  
 Setup local environment. This configures user secrets and .env file, will start a docker container for SQL Server and setup Azure Entra.
 ```powershell
-./setuplocal.ps1
+./scripts/setuplocal.ps1
 ```
 
 ## Backend API
@@ -244,7 +244,7 @@ DB_PASSWORD=<password>
 ```
 
 > [!NOTE]
-> Running `./setuplocal.ps1` populates additional values in `src/api/.env`, including `USER_SECRETS_PATH`, `HTTPS_CERTS_PATH`, and `COMPOSE_FILE`.
+> Running `./scripts/setuplocal.ps1` populates additional values in `src/api/.env`, including `USER_SECRETS_PATH`, `HTTPS_CERTS_PATH`, and `COMPOSE_FILE`.
 > `COMPOSE_FILE` is set per OS:
 > * **Windows**: `docker-compose.yml;docker-compose.override.yml`
 > * **Linux/Codespaces**: `docker-compose.yml:docker-compose.override.yml:docker-compose.linux.override.yml`
@@ -252,7 +252,7 @@ DB_PASSWORD=<password>
 > This keeps Linux-specific container user mapping out of Windows runs while still fixing mounted secret permissions on Linux.
 
 > [!NOTE]
-> `./setuplocal.ps1` also provisions a development HTTPS certificate for Docker and writes these values into `src/api/.env`:
+> `./scripts/setuplocal.ps1` also provisions a development HTTPS certificate for Docker and writes these values into `src/api/.env`:
 > * `HTTPS_CERTS_PATH`
 > * `HTTPS_CERT_FILE`
 > * `HTTPS_CERT_PASSWORD`

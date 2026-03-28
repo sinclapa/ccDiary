@@ -1,11 +1,12 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "languageVersion": "2.0",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "1992952650756896340"
+      "templateHash": "16568833449700222395"
     }
   },
   "parameters": {
@@ -28,21 +29,21 @@
     },
     "externalDomainName": {
       "type": "string",
-      "defaultValue": ""
+      "nullable": true
     },
     "location": {
       "type": "string",
       "defaultValue": "[deployment().location]"
     }
   },
-  "resources": [
-    {
+  "resources": {
+    "resourceGroup": {
       "type": "Microsoft.Resources/resourceGroups",
       "apiVersion": "2023-07-01",
       "name": "[format('rg-{0}-{1}', parameters('name'), parameters('environment'))]",
       "location": "[parameters('location')]"
     },
-    {
+    "resourceGroupModule": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "[format('resourceGroupModule-{0}', parameters('environment'))]",
@@ -83,7 +84,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "5594914856685623679"
+              "templateHash": "10240762893148860764"
             }
           },
           "parameters": {
@@ -101,7 +102,7 @@
             },
             "externalDomainName": {
               "type": "string",
-              "defaultValue": ""
+              "nullable": true
             },
             "location": {
               "type": "string",
@@ -112,7 +113,8 @@
             }
           },
           "variables": {
-            "appName": "[format('{0}-{1}', parameters('name'), parameters('environment'))]"
+            "appName": "[format('{0}-{1}', parameters('name'), parameters('environment'))]",
+            "sqlServerName": "[format('sql-{0}', variables('appName'))]"
           },
           "resources": {
             "logAnalytics": {
@@ -148,7 +150,7 @@
             "sqlServer": {
               "type": "Microsoft.Sql/servers",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('sql-{0}', variables('appName'))]",
+              "name": "[variables('sqlServerName')]",
               "location": "[parameters('location')]",
               "identity": {
                 "type": "SystemAssigned"
@@ -168,7 +170,7 @@
             "databaseServerFirewall": {
               "type": "Microsoft.Sql/servers/firewallRules",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('{0}/{1}', format('sql-{0}', variables('appName')), format('sql-fw-{0}-allow-azure-services', variables('appName')))]",
+              "name": "[format('{0}/{1}', variables('sqlServerName'), format('sql-fw-{0}-allow-azure-services', variables('appName')))]",
               "properties": {
                 "startIpAddress": "0.0.0.0",
                 "endIpAddress": "0.0.0.0"
@@ -180,8 +182,12 @@
             "sqlDatabase": {
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('{0}/{1}', format('sql-{0}', variables('appName')), format('sqldb-{0}', variables('appName')))]",
+              "name": "[format('{0}/{1}', variables('sqlServerName'), format('sqldb-{0}', variables('appName')))]",
               "location": "[parameters('location')]",
+              "sku": {
+                "name": "GP_S_Gen5_1",
+                "tier": "GeneralPurpose"
+              },
               "properties": {
                 "createMode": "Default",
                 "collation": "SQL_Latin1_General_CP1_CI_AS",
@@ -197,10 +203,6 @@
                 "useFreeLimit": true,
                 "freeLimitExhaustionBehavior": "AutoPause",
                 "maintenanceConfigurationId": "[subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')]"
-              },
-              "sku": {
-                "name": "GP_S_Gen5_1",
-                "tier": "GeneralPurpose"
               },
               "dependsOn": [
                 "sqlServer"
@@ -222,7 +224,7 @@
               }
             },
             "staticSiteCustomDomain": {
-              "condition": "[and(equals(parameters('environment'), 'prod'), not(empty(parameters('externalDomainName'))))]",
+              "condition": "[and(equals(parameters('environment'), 'prod'), not(empty(coalesce(parameters('externalDomainName'), ''))))]",
               "type": "Microsoft.Web/staticSites/customDomains",
               "apiVersion": "2024-11-01",
               "name": "[format('{0}/{1}', format('stapp-{0}', variables('appName')), parameters('externalDomainName'))]",
@@ -259,7 +261,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.40.2.10011",
-                      "templateHash": "15449211509638702220"
+                      "templateHash": "15295939432263733500"
                     }
                   },
                   "parameters": {
@@ -282,6 +284,9 @@
                       "apiVersion": "2024-03-01",
                       "name": "[toLower(format('ca-{0}', parameters('appName')))]",
                       "location": "[variables('location')]",
+                      "identity": {
+                        "type": "SystemAssigned"
+                      },
                       "properties": {
                         "managedEnvironmentId": "[parameters('containerAppsEnvironmentId')]",
                         "configuration": {
@@ -291,6 +296,7 @@
                             "targetPort": 8080,
                             "transport": "auto",
                             "allowInsecure": false,
+                            "clientCertificateMode": "Ignore",
                             "traffic": [
                               {
                                 "latestRevision": true,
@@ -315,9 +321,6 @@
                             "maxReplicas": 1
                           }
                         }
-                      },
-                      "identity": {
-                        "type": "SystemAssigned"
                       }
                     }
                   },
@@ -361,11 +364,11 @@
             },
             "databaseServerName": {
               "type": "string",
-              "value": "[format('sql-{0}', variables('appName'))]"
+              "value": "[variables('sqlServerName')]"
             },
             "databaseId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Sql/servers/databases', format('sql-{0}', variables('appName')), format('sqldb-{0}', variables('appName')))]"
+              "value": "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), format('sqldb-{0}', variables('appName')))]"
             },
             "databaseName": {
               "type": "string",
@@ -395,14 +398,14 @@
         }
       },
       "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}-{1}', parameters('name'), parameters('environment')))]"
+        "resourceGroup"
       ]
     }
-  ],
+  },
   "outputs": {
     "environment": {
       "type": "object",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-{1}', parameters('name'), parameters('environment'))), 'Microsoft.Resources/deployments', format('resourceGroupModule-{0}', parameters('environment'))), '2025-04-01').outputs]"
+      "value": "[reference('resourceGroupModule').outputs]"
     }
   }
 }
