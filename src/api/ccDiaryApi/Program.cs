@@ -159,6 +159,7 @@ public partial class Program
     /// <summary>
     /// Protected constructor to satisfy static analysis (S1118).
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Utility constructor required by S1118; never instantiated directly.")]
     protected Program()
     {
     }
