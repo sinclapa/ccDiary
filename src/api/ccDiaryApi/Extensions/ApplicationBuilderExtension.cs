@@ -23,7 +23,7 @@ namespace ccDiaryApi.Extensions
                     options.OAuthAppName("ccDiaryAPI Swagger Client");
                     options.OAuthClientId(configuration["Entra:ClientId"]);
                     options.OAuthUsePkce();
-                    options.OAuthScopes([$"{configuration["Entra:ApplicationIdUri"]}/Diary.Update"]);
+                    options.OAuthScopes($"{configuration["Entra:ApplicationIdUri"]}/Diary.Update");
                 });
     }
 }

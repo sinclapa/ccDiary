@@ -14,14 +14,6 @@ namespace ccDiaryApiTest.v1
     [TestClass]
     public class AppInfoControllerTest
     {
-        private static DiaryDatabaseContext GetMemoryContext(string dbName)
-        {
-            var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
-                .UseInMemoryDatabase(databaseName: dbName)
-                .Options;
-            return new DiaryDatabaseContext(options);
-        }
-
         [TestMethod]
         public void Get_ReturnsOk_WhenAppInfoExists()
         {
@@ -61,6 +53,14 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(NotFoundResult));
+        }
+
+        private static DiaryDatabaseContext GetMemoryContext(string dbName)
+        {
+            var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
+                .UseInMemoryDatabase(databaseName: dbName)
+                .Options;
+            return new DiaryDatabaseContext(options);
         }
     }
 }

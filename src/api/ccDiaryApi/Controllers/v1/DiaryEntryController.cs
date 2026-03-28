@@ -39,7 +39,7 @@ namespace ccDiaryApi.Controllers.v1
         [HttpGet]
         public ActionResult<List<int>> Search(Guid diaryId, int year)
         {
-            var from = new DateTime(year, 1, 1);
+            var from = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var to = from.AddYears(1).Subtract(new TimeSpan(1));
             var months = _diaryEntryService.SearchDiaryEntries(diaryId, from, to, SearchType.Month);
             return Ok(months);
@@ -50,7 +50,7 @@ namespace ccDiaryApi.Controllers.v1
         [HttpGet]
         public ActionResult<List<int>> Search(Guid diaryId, int year, int month)
         {
-            var from = new DateTime(year, month, 1);
+            var from = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
             var to = from.AddMonths(1).Subtract(new TimeSpan(1));
             var days = _diaryEntryService.SearchDiaryEntries(diaryId, from, to, SearchType.Day);
             return Ok(days);

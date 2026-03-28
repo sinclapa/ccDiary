@@ -14,16 +14,6 @@ namespace ccDiaryApiTest.v1
     [TestClass]
     public class DiaryDatabaseMigrationManagerTest
     {
-        private static IHost BuildHost(string dbName)
-        {
-            return Host.CreateDefaultBuilder()
-                .ConfigureServices(services =>
-                {
-                    services.AddDbContext<DiaryDatabaseContext>(o => o.UseInMemoryDatabase(dbName));
-                })
-                .Build();
-        }
-
         [TestMethod]
         public void MigrateDatabase_InsertsAppInfo_WhenNoRecordExists()
         {
@@ -73,6 +63,16 @@ namespace ccDiaryApiTest.v1
             var appInfo = verifyCtx.AppInfo.SingleOrDefault(a => a.Id == 1);
             Assert.IsNotNull(appInfo);
             Assert.AreNotEqual("0.0.1-old", appInfo.InformationalVersion);
+        }
+
+        private static IHost BuildHost(string dbName)
+        {
+            return Host.CreateDefaultBuilder()
+                .ConfigureServices(services =>
+                {
+                    services.AddDbContext<DiaryDatabaseContext>(o => o.UseInMemoryDatabase(dbName));
+                })
+                .Build();
         }
     }
 }

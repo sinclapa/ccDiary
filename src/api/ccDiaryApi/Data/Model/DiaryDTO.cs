@@ -11,7 +11,7 @@ namespace ccDiaryApi.Data.Model
     public class DiaryDTO
     {
         [Key]
-        public Guid DiaryId { get; set; }
+        required public Guid DiaryId { get; set; }
 
         [Required]
         [MaxLength(50, ErrorMessage = "Length must not exceed 50 characters")]

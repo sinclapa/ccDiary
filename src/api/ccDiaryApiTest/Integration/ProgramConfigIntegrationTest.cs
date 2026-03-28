@@ -16,6 +16,57 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class ProgramConfigIntegrationTest
     {
+        [TestMethod]
+        public async Task App_StartsAndResponds_WhenMigrationsDisabled()
+        {
+            // Arrange — RUN_MIGRATIONS=false exercises the else-branch (lines 121-123) in Program.cs
+            var factory = new NoMigrationFactory();
+            var client = factory.CreateDefaultClient();
+
+            // Act
+            var response = await client.GetAsync("/api/v1/Diary/Get");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task App_StartsAndResponds_WhenSaPasswordIsSet()
+        {
+            // Arrange — SA_PASSWORD set as an environment variable so AddEnvironmentVariables()
+            // in Program.cs picks it up and exercises the password-override branch (lines 55-58).
+            Environment.SetEnvironmentVariable("SA_PASSWORD", "TestPassword123!");
+            try
+            {
+                var factory = new SaPasswordFactory();
+                var client = factory.CreateDefaultClient();
+
+                // Act
+                var response = await client.GetAsync("/api/v1/Diary/Get");
+
+                // Assert
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("SA_PASSWORD", null);
+            }
+        }
+
+        [TestMethod]
+        public async Task App_StartsAndResponds_WhenEnvironmentIsLocal()
+        {
+            // Arrange — "Local" environment exercises the AddUserSecrets branch (lines 30-32)
+            var factory = new LocalEnvironmentFactory();
+            var client = factory.CreateDefaultClient();
+
+            // Act
+            var response = await client.GetAsync("/api/v1/Diary/Get");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        }
+
         /// <summary>
         /// Factory that sets RUN_MIGRATIONS=false to cover the skip-migration branch in Program.cs.
         /// Uses an in-memory database so no schema creation is needed.
@@ -75,57 +126,6 @@ namespace ccDiaryApiTest.Integration
                 base.ConfigureWebHost(builder);
                 builder.UseEnvironment("Local");
             }
-        }
-
-        [TestMethod]
-        public async Task App_StartsAndResponds_WhenMigrationsDisabled()
-        {
-            // Arrange — RUN_MIGRATIONS=false exercises the else-branch (lines 121-123) in Program.cs
-            var factory = new NoMigrationFactory();
-            var client = factory.CreateDefaultClient();
-
-            // Act
-            var response = await client.GetAsync("/api/v1/Diary/Get");
-
-            // Assert
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        }
-
-        [TestMethod]
-        public async Task App_StartsAndResponds_WhenSaPasswordIsSet()
-        {
-            // Arrange — SA_PASSWORD set as an environment variable so AddEnvironmentVariables()
-            // in Program.cs picks it up and exercises the password-override branch (lines 55-58).
-            Environment.SetEnvironmentVariable("SA_PASSWORD", "TestPassword123!");
-            try
-            {
-                var factory = new SaPasswordFactory();
-                var client = factory.CreateDefaultClient();
-
-                // Act
-                var response = await client.GetAsync("/api/v1/Diary/Get");
-
-                // Assert
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("SA_PASSWORD", null);
-            }
-        }
-
-        [TestMethod]
-        public async Task App_StartsAndResponds_WhenEnvironmentIsLocal()
-        {
-            // Arrange — "Local" environment exercises the AddUserSecrets branch (lines 30-32)
-            var factory = new LocalEnvironmentFactory();
-            var client = factory.CreateDefaultClient();
-
-            // Act
-            var response = await client.GetAsync("/api/v1/Diary/Get");
-
-            // Assert
-            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         }
     }
 }

@@ -31,8 +31,6 @@ if (builder.Environment.IsEnvironment("Local") || builder.Environment.IsEnvironm
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-var environment = builder.Environment.EnvironmentName;
-
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -43,7 +41,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
-Log.Logger.Information($"ASPNETCORE_ENVIRONMENT = {builder.Configuration["ASPNETCORE_ENVIRONMENT"]}");
+Log.Logger.Information("ASPNETCORE_ENVIRONMENT = {Environment}", builder.Configuration["ASPNETCORE_ENVIRONMENT"]);
 string connectionString = Program.GetRequiredConnectionString(builder.Configuration);
 
 var connStrBuilder = new SqlConnectionStringBuilder(connectionString);
@@ -151,13 +149,20 @@ app.MapControllers();
 
 app.MapAllActuators();
 
-app.Run();
+await app.RunAsync();
 
 /// <summary>
 /// Create partial class to aid unit testing.
 /// </summary>
 public partial class Program
 {
+    /// <summary>
+    /// Protected constructor to satisfy static analysis (S1118).
+    /// </summary>
+    protected Program()
+    {
+    }
+
     // Missing connection string causes startup failure; not testable in integration tests
     // because the test factory always provides a connection string via appsettings.
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Startup guard; requires removing all connection string config sources to trigger — not testable in standard integration tests.")]
