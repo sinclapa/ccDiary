@@ -25,7 +25,7 @@ namespace ccDiaryApi.Data.Model
         public string? Entry { get; set; }
 
         [ForeignKey(nameof(DiaryDTO))]
-        public Guid DiaryId { get; set; }
+        required public Guid DiaryId { get; set; }
 
         [JsonIgnore]
         public DiaryDTO? Diary { get; set; }

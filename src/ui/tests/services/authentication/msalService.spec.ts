@@ -147,6 +147,7 @@ describe('msalService', () => {
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api/resource'
     await globalThis.fetch(resource, { headers: { 'X-Test': '1' } })
+    expect(fetchMock).toHaveBeenCalled()
     //const lastCall = fetchMock.mock.calls[0]
     //const headers = lastCall[1].headers
     //expect(headers.get('Authorization')).toBe('Bearer token')
@@ -159,6 +160,7 @@ describe('msalService', () => {
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://other/resource'
     await globalThis.fetch(resource, { headers: { 'X-Test': '1' } })
+    expect(fetchMock).toHaveBeenCalled()
     //const lastCall = fetchMock.mock.calls[0]
     //expect(lastCall[1].headers.get('Authorization')).toBeUndefined()
   })
@@ -171,6 +173,7 @@ describe('msalService', () => {
     await service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api/resource'
     await globalThis.fetch(resource)
+    expect(fetchMock).toHaveBeenCalled()
     //const lastCall = fetchMock.mock.calls[0]
     //expect(lastCall[1].headers.get('Authorization')).toBe('Bearer token')
   })

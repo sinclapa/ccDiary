@@ -5,8 +5,6 @@
 namespace ccDiaryApiTest.v1
 {
     using ccDiaryApi.Controllers.v1;
-    using Microsoft.Extensions.Logging;
-    using Moq;
 
     [TestClass]
     public class WeatherForecastControllerTest
@@ -15,8 +13,7 @@ namespace ccDiaryApiTest.v1
         public void TestMethod1()
         {
             // Arrange
-            var loggerMock = new Mock<ILogger<WeatherForecastController>>();
-            var controller = new WeatherForecastController(loggerMock.Object);
+            var controller = new WeatherForecastController();
 
             // Act
             var response = controller.Get();
@@ -29,8 +26,7 @@ namespace ccDiaryApiTest.v1
         public void Tes()
         {
             // Arrange
-            var loggerMock = new Mock<ILogger<WeatherForecastController>>();
-            var controller = new WeatherForecastController(loggerMock.Object);
+            var controller = new WeatherForecastController();
 
             // Act
             var response = controller.Get();

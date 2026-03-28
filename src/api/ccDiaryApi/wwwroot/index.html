@@ -19,22 +19,20 @@
         <li><a href="/api/v1/AppInfo/Get">App Info API</a></li>
     </ul>
 
-    <script>
-        (async () => {
-            try {
-                const response = await fetch('/api/assembly-info');
-                if (!response.ok) {
-                    throw new Error('Unable to load assembly info.');
-                }
-
-                const data = await response.json();
-                document.getElementById('assembly-name').textContent = data.assemblyName ?? 'Unknown';
-                document.getElementById('assembly-version').textContent = data.assemblyVersion ?? 'Unknown';
-            } catch {
-                document.getElementById('assembly-name').textContent = 'Unavailable';
-                document.getElementById('assembly-version').textContent = 'Unavailable';
+    <script type="module">
+        try {
+            const response = await fetch('/api/assembly-info');
+            if (!response.ok) {
+                throw new Error('Unable to load assembly info.');
             }
-        })();
+
+            const data = await response.json();
+            document.getElementById('assembly-name').textContent = data.assemblyName ?? 'Unknown';
+            document.getElementById('assembly-version').textContent = data.assemblyVersion ?? 'Unknown';
+        } catch {
+            document.getElementById('assembly-name').textContent = 'Unavailable';
+            document.getElementById('assembly-version').textContent = 'Unavailable';
+        }
     </script>
 </body>
 </html>
