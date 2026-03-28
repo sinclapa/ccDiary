@@ -54,6 +54,7 @@ cloud-native architecture. The seed data contains a WW1 diary (Sapper Arthur Car
 - Container Registry: Uses image references for Container Apps
 - CI/CD: PowerShell scripts + GitHub Actions (secrets/variables configured by buildInfrastructure.ps1)
 - Cloud Platform: Microsoft Azure (Container Apps, SQL Database serverless, Static Web Apps, Entra ID)
+- Code Quality: SonarCloud (3 separate projects: API, UI, Infra — quality gate blocks CI on failure)
 
 ### Development Tools (Recommended)
 
@@ -476,6 +477,39 @@ dotnet ef database update --project ccDiaryApi
 7. CORS is wide open (all origins) - suitable for development; review for production
 8. Steeltoe actuators available at `/actuator` (health, info, metrics)
 
+## Code Quality (SonarCloud)
+
+The project uses SonarCloud for static analysis across three separate projects. Quality gate failure blocks the CI pipeline (`qualitygate.wait=true`).
+
+### SonarCloud Projects
+
+| Project Key | Scope | Config |
+|---|---|---|
+| `cookingcode_ccDiary_api` | `src/api/` — C# API code | CLI args in `build-api` CI job |
+| `cookingcode_ccDiary_ui` | `src/ui/src/`, `src/ui/tests/` | `sonar-project.properties` (repo root) |
+| `cookingcode_ccDiary_infra` | `deploy/`, `scripts/`, `data/`, `*.ps1` | `sonar-project-infra.properties` (repo root) |
+
+### CI Integration
+
+- **API**: Uses `dotnet-sonarscanner` CLI; JDK 17 required; coverage fed from `dotnet-coverage` XML output; EF Migrations excluded from analysis and coverage
+- **UI**: Uses `SonarSource/sonarcloud-github-action@v3`; LCOV coverage from `src/ui/coverage/lcov.info`; `*.d.ts` and `dist/` excluded
+- **Infra**: Uses `SonarSource/sonarcloud-github-action@v3`; scans Bicep, PowerShell, shell scripts, and SQL; `src/` excluded
+
+### Required GitHub Secrets & Variables
+
+| Name | Type | Purpose |
+|---|---|---|
+| `SONAR_TOKEN` | Secret | Authentication token for all three SonarCloud projects |
+| `SONAR_ORGANIZATION` | Variable | SonarCloud organization (`cookingcode`) |
+| `SONAR_API_PROJECT_KEY` | Variable | `cookingcode_ccDiary_api` |
+| `SONAR_UI_PROJECT_KEY` | Variable | `cookingcode_ccDiary_ui` |
+| `SONAR_INFRA_PROJECT_KEY` | Variable | `cookingcode_ccDiary_infra` |
+
+### Configuration Files
+
+- `sonar-project.properties` — UI project settings (sources, test paths, LCOV paths, exclusions)
+- `sonar-project-infra.properties` — Infra project settings (inclusions for deploy/scripts/data, exclusions for src/)
+
 ---
 
 ## Resources
@@ -491,5 +525,5 @@ dotnet ef database update --project ccDiaryApi
 
 ---
 
-**Last Updated**: 2026-03-22
+**Last Updated**: 2026-03-28
 **Created For**: Claude Code instances working on ccDiary repository

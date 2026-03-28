@@ -23,6 +23,19 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 - Responsive web UI
 - Automated infrastructure deployment to Azure
 - Docker Compose support for local development
+- Continuous code quality analysis via SonarCloud (API, UI, and Infra projects)
+
+## Code Quality
+
+This project uses [SonarCloud](https://sonarcloud.io) for continuous static analysis, split across three projects:
+
+| Project | Scope |
+|---|---|
+| **API** (`cookingcode_ccDiary_api`) | ASP.NET Core C# source (`src/api/`), excluding EF Migrations |
+| **UI** (`cookingcode_ccDiary_ui`) | Vue/TypeScript source and tests (`src/ui/`), configured via `sonar-project.properties` |
+| **Infra** (`cookingcode_ccDiary_infra`) | Bicep, PowerShell, shell scripts, and SQL (`deploy/`, `scripts/`, `data/`), configured via `sonar-project-infra.properties` |
+
+SonarCloud quality gates run automatically on every push and pull request to `main`. A failing quality gate blocks CI. Coverage results from `dotnet-coverage` (API) and Vitest (UI) are uploaded to SonarCloud as part of each build.
 
 # Development Environment Pre-Requisites
 It is recommended to install the following applications
