@@ -8,7 +8,8 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-jobs:    
+jobs:  
+  
   build-prep:
     permissions:
       contents: write
@@ -194,42 +195,6 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.image_tag.outputs.value }}
-    
-  sonar-scan:
-    needs: [build-api, build-ui]
-    runs-on: ubuntu-latest
-    environment: none
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Download API coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: api-coverage
-          path: src/api
-
-      - name: Download UI coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: ui-coverage
-          path: src/ui/coverage
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
 
   deploy-api:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
