@@ -582,10 +582,17 @@ jobs:
       - name: Seed test data
         working-directory: ./
         run: |
-          curl -sf -X POST "${{ steps.api_url.outputs.value }}/api/v1/DiaryArchive/Import" \
+          HTTP_STATUS=$(curl -s -o /tmp/seed_response.json -w "%{http_code}" -X POST \
+            "${{ steps.api_url.outputs.value }}/api/v1/DiaryArchive/Import" \
             -H "Authorization: Bearer ${{ steps.api_token.outputs.value }}" \
             -H "Content-Type: application/json" \
-            -d @data/test_data.json
+            -d @data/test_data.json)
+          echo "HTTP Status: $HTTP_STATUS"
+          cat /tmp/seed_response.json
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "Seeding failed with HTTP $HTTP_STATUS" >&2
+            exit 1
+          fi
           echo "Test data seeded."
 
       - name: Run E2E Tests
