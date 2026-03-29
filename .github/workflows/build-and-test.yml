@@ -573,10 +573,10 @@ jobs:
           RESPONSE=$(curl -s -X POST \
             -d "client_id=$AZURE_CLIENT_ID&scope=${ENTRA_APPLICATION_ID_URI}/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
             "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token")
-          TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
+          echo "Azure AD raw response: $RESPONSE"
+          TOKEN=$(echo "$RESPONSE" | jq -r .access_token 2>/dev/null)
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Failed to acquire API token" >&2
-            echo "$RESPONSE" | jq '{error:.error,error_description:.error_description}' 2>/dev/null || echo "$RESPONSE" >&2
+            echo "Failed to acquire API token"
             exit 1
           fi
           # Decode JWT claims for diagnostics (aud/iss are not secret values)
