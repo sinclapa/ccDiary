@@ -82,7 +82,6 @@ ccDiary/
 │   ├── main.bicep                     # Subscription-level entrypoint
 │   ├── resourceGroup.bicep            # Resource group resources (Log Analytics, SQL, Static Web App, CAE)
 │   ├── containerApps.bicep            # Container App definition (0.25 CPU, 0.5Gi, 0-1 replicas)
-│   ├── main.json                      # Generated ARM template (from Bicep)
 │   └── bicepconfig.json               # Bicep linting (all core rules set to error)
 │
 ├── scripts/                           # Setup and deployment scripts

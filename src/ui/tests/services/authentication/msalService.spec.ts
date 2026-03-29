@@ -122,11 +122,12 @@ describe('msalService', () => {
     await expect(brokenService.getToken()).rejects.toThrow('MSAL not initialized')
   })
 
-  it('getToken: throws if no accounts', async () => {
+  it('getToken: returns null when no accounts are logged in', async () => {
     vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([])
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    await service.getToken()
-    expect(spy).toHaveBeenCalledWith('Silent token acquisition error:', expect.any(Error))
+    const result = await service.getToken()
+    expect(result).toBeNull()
+    expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
 

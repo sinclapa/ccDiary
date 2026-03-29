@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Globalization;
+using System.Reflection;
 using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
@@ -18,11 +19,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.OpenTelemetry;
 using Steeltoe.Common.HealthChecks;
 using Steeltoe.Management.Endpoint;
 using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
-using Steeltoe.Management.Endpoint.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -38,8 +39,32 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+    .WriteTo.OpenTelemetry(o =>
+    {
+        var endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+        if (!string.IsNullOrEmpty(endpoint))
+        {
+            o.Endpoint = endpoint.TrimEnd('/') + "/v1/logs";
+            o.Protocol = OtlpProtocol.HttpProtobuf;
+            o.ResourceAttributes["service.name"] = "ccDiaryApi";
+            var headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"];
+            if (!string.IsNullOrEmpty(headers))
+            {
+                foreach (var part in headers.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var idx = part.IndexOf('=', StringComparison.Ordinal);
+                    if (idx > 0)
+                    {
+                        o.Headers.Add(part[..idx].Trim(), part[(idx + 1)..].Trim());
+                    }
+                }
+            }
+        }
+    }, ignoreEnvironment: true)
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
+
+builder.Host.UseSerilog();
 
 Log.Logger.Information("ASPNETCORE_ENVIRONMENT = {Environment}", builder.Configuration["ASPNETCORE_ENVIRONMENT"]);
 string connectionString = Program.GetRequiredConnectionString(builder.Configuration);
@@ -89,8 +114,6 @@ builder.Services.AddHealthActuator();
 
 builder.Services.AddInfoActuator();
 
-builder.Services.AddMetricsActuator();
-
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -104,6 +127,11 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 {
     builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
 }));
+
+builder.Services.AddCcDiaryOpenTelemetry(
+    builder.Configuration,
+    serviceName: "ccDiaryApi",
+    serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown");
 
 var app = builder.Build();
 

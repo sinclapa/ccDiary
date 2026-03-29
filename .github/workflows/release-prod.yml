@@ -42,6 +42,7 @@ jobs:
           sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ui-dist/config.js
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ui-dist/config.js
           sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ui-dist/config.js
+          sed -i "s/^\(\s*VITE_FARO_URL:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.GRAFANA_FARO_URL }}\2/" ui-dist/config.js
 
       - name: Deploy UI to Prod
         id: builddeploy-prod
@@ -64,7 +65,7 @@ jobs:
             --name ${{ vars.CONTAINER_APP_NAME }} \
             --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
             --image ${{ steps.api_image.outputs.value }} \
-            --set-env-vars "RUN_MIGRATIONS=true" \
+            --set-env-vars "RUN_MIGRATIONS=true" "OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}" "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}" "OTEL_SERVICE_NAME=ccDiaryApi" \
             --output none
 
       - name: Wait for revision to be running

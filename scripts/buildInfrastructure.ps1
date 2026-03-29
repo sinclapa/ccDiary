@@ -173,6 +173,48 @@ else {
     $sonarToken = $params["SonarToken"]
 }
 
+if (-Not ($params.ContainsKey("GrafanaOtlpEndpoint"))) {
+    $grafanaOtlpEndpoint = Read-Host -Prompt "Enter the Grafana Cloud OTLP endpoint (leave empty to disable telemetry, e.g. https://otlp-gateway-prod-eu-west-0.grafana.net/otlp)"
+    $params.Add("GrafanaOtlpEndpoint", $grafanaOtlpEndpoint)
+}
+else {
+    $grafanaOtlpEndpoint = $params["GrafanaOtlpEndpoint"]
+}
+
+if (-Not ($params.ContainsKey("GrafanaInstanceId"))) {
+    $grafanaInstanceId = Read-Host -Prompt "Enter the Grafana Cloud instance ID (numeric, found on the OTLP connection page)"
+    $params.Add("GrafanaInstanceId", $grafanaInstanceId)
+}
+else {
+    $grafanaInstanceId = $params["GrafanaInstanceId"]
+}
+
+if (-Not ($params.ContainsKey("GrafanaApiToken"))) {
+    $grafanaApiTokenSecure = Read-Host -Prompt "Enter the Grafana Cloud API token (scopes: metrics:write, logs:write, traces:write)" -AsSecureString
+    $grafanaApiToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($grafanaApiTokenSecure))
+    $params.Add("GrafanaApiToken", $grafanaApiToken)
+}
+else {
+    $grafanaApiToken = $params["GrafanaApiToken"]
+}
+
+$grafanaOtlpAuthHeader = ""
+if ($grafanaInstanceId -and $grafanaApiToken) {
+    $grafanaOtlpAuthHeaderBytes = [System.Text.Encoding]::UTF8.GetBytes("${grafanaInstanceId}:${grafanaApiToken}")
+    $grafanaOtlpAuthHeader = "Authorization=Basic $([System.Convert]::ToBase64String($grafanaOtlpAuthHeaderBytes))"
+}
+
+if (-Not ($params.ContainsKey("GrafanaFaroUrl"))) {
+    $grafanaFaroUrl = Read-Host -Prompt "Enter the Grafana Cloud Faro collector URL (leave empty to disable frontend telemetry, e.g. https://faro-collector-prod-eu-west-0.grafana.net/collect/<appId>)"
+    $params.Add("GrafanaFaroUrl", $grafanaFaroUrl)
+}
+else {
+    $grafanaFaroUrl = $params["GrafanaFaroUrl"]
+}
+
+# Remove stale key from previous script version
+$params.Remove("GrafanaOtlpAuthHeader")
+
 $params | ConvertTo-StringData | Set-Content $settingsFile
 
 <# --------------------------------------------------------------------------------- #>
@@ -293,7 +335,10 @@ $envVars = @(
         "Entra__ClientId=$entraClientId",
         "Entra__ApplicationIdUri=$entraApplicationIdURI",
         "ASPNETCORE_ENVIRONMENT=$environment",
-        "RUN_MIGRATIONS=false"
+        "RUN_MIGRATIONS=false",
+        "OTEL_EXPORTER_OTLP_ENDPOINT=$grafanaOtlpEndpoint",
+        "OTEL_EXPORTER_OTLP_HEADERS=$grafanaOtlpAuthHeader",
+        "OTEL_SERVICE_NAME=ccDiaryApi"
 )
 
 az containerapp update `
@@ -340,6 +385,9 @@ gh secret set "ENTRA_CLIENT_SECRET".ToUpper() --body "${entraClientCredentialsPa
 gh secret set "ENTRA_APPLICATION_ID_URI".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
 gh secret set "TENANT_ID".ToUpper() --body "$tenantId" --repo $gitHubRepo --env "${environment}"
 gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
+gh secret set "OTEL_EXPORTER_OTLP_ENDPOINT" --body "$grafanaOtlpEndpoint" --repo $gitHubRepo --env "${environment}"
+gh secret set "OTEL_EXPORTER_OTLP_HEADERS" --body "$grafanaOtlpAuthHeader" --repo $gitHubRepo --env "${environment}"
+gh secret set "GRAFANA_FARO_URL" --body "$grafanaFaroUrl" --repo $gitHubRepo --env "${environment}"
 
 Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan
 gh variable set "SONAR_API_PROJECT_KEY" --body "$sonarApiProjectKey" --repo $gitHubRepo

@@ -111,6 +111,17 @@ if (-not $localDBPassword) {
     $localDBPassword = Read-Host -Prompt "Enter the password for the local database"
 }
 
+$otlpEndpoint = $apiEnv["OTEL_EXPORTER_OTLP_ENDPOINT"]
+if (-not $otlpEndpoint) {
+    $otlpEndpoint = Read-Host -Prompt "Enter Grafana Cloud OTLP endpoint (leave empty to disable local telemetry, e.g. https://otlp-gateway-prod-eu-west-0.grafana.net/otlp)"
+}
+
+$otlpAuthHeader = $apiEnv["OTEL_EXPORTER_OTLP_HEADERS"]
+if (-not $otlpAuthHeader -and $otlpEndpoint) {
+    $otlpAuthHeaderSecure = Read-Host -Prompt "Enter Grafana Cloud OTLP auth header (format: Authorization=Basic <base64>)" -AsSecureString
+    $otlpAuthHeader = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($otlpAuthHeaderSecure))
+}
+
 $httpsCertFile = $apiEnv["HTTPS_CERT_FILE"]
 if (-not $httpsCertFile) {
     $httpsCertFile = "ccdiaryapi.pfx"
@@ -255,18 +266,38 @@ $apiEnv["COMPOSE_FILE"] = $composeFiles
 $apiEnv["Entra__TenantId"] = $tenantId
 $apiEnv["Entra__ClientId"] = $entraClientId
 $apiEnv["Entra__ApplicationIdUri"] = $entraApplicationIdURI
+$apiEnv["OTEL_EXPORTER_OTLP_ENDPOINT"] = $otlpEndpoint
+$apiEnv["OTEL_EXPORTER_OTLP_HEADERS"] = $otlpAuthHeader
 $apiEnv | ConvertTo-StringData | Set-Content -Path $envPath
 Write-Host "  USER_SECRETS_PATH set to: $userSecretsPath" -ForegroundColor Gray
 Write-Host "  HTTPS_CERTS_PATH set to: $httpsCertsPath" -ForegroundColor Gray
 Write-Host "  HTTPS_CERT_FILE set to: $httpsCertFile" -ForegroundColor Gray
 Write-Host "  HTTPS_CERT_PASSWORD set to: $httpsCertPassword" -ForegroundColor Gray
 Write-Host "  COMPOSE_FILE set to: $composeFiles" -ForegroundColor Gray
+if ($otlpEndpoint) {
+    Write-Host "  OTEL_EXPORTER_OTLP_ENDPOINT set (Grafana telemetry enabled)" -ForegroundColor Gray
+} else {
+    Write-Host "  OTEL_EXPORTER_OTLP_ENDPOINT not set (Grafana telemetry disabled locally)" -ForegroundColor Yellow
+}
 
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" init
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "SA_PASSWORD" "$localDBPassword"
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:TenantId" "$tenantId"
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ClientId" "$entraClientId"
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+
+$vuePath = "$PSScriptRoot/../src/ui/.env.dev.local"
+if (Test-Path $vuePath) {
+    $content = Get-Content -Raw $vuePath | ConvertFrom-StringData
+}
+else {
+    $content = @{}
+}
+
+$faroUrl = $content["VITE_FARO_URL"] -replace '^"(.*)"$', '$1'
+if (-not $faroUrl -and $otlpEndpoint) {
+    $faroUrl = Read-Host -Prompt "Enter Grafana Cloud Faro collector URL (leave empty to disable frontend telemetry, e.g. https://faro-collector-prod-eu-west-0.grafana.net/collect/<appId>)"
+}
 
 Write-Host "Updating Local UI Build" -ForegroundColor Cyan
 function SetValueInHashTable {
@@ -286,16 +317,14 @@ function SetValueInHashTable {
     }
 }
 
-$vuePath = "$PSScriptRoot/../src/ui/.env.dev.local"
-if (Test-Path $vuePath) {
-    $content = Get-Content -Raw $vuePath | ConvertFrom-StringData
-}
-else {
-    $content = @{}
-}
 SetValueInHashTable $content "VITE_CLIENT_ID" """$entraClientId"""
 SetValueInHashTable $content "VITE_TENANT_ID" """$tenantId"""
 SetValueInHashTable $content "VITE_APPLICATION_ID_URI" """$entraApplicationIdURI"""
+SetValueInHashTable $content "VITE_ENVIRONMENT" """local"""
+SetValueInHashTable $content "VITE_APP_VERSION" """0.0.0-local"""
+if ($faroUrl) {
+    SetValueInHashTable $content "VITE_FARO_URL" """$faroUrl"""
+}
 $content | ConvertTo-StringData | Set-Content $vuePath
 
 Write-Host "Starting local SQL Server instance..." -ForegroundColor Cyan

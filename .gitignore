@@ -51,6 +51,11 @@ Thumbs.db
 scripts/buildInfrastructure.settings
 .certs
 
+# Generated ARM template (compiled from Bicep)
+deploy/main.json
+
 # Test
 coverage/
 reports/
+test-results/
+playwright-report/

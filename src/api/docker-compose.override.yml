@@ -8,6 +8,9 @@ services:
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/home/app/.aspnet/https/${HTTPS_CERT_FILE:-ccdiaryapi.pfx}
       - ASPNETCORE_Kestrel__Certificates__Default__Password=${HTTPS_CERT_PASSWORD}
       - SA_PASSWORD=${DB_PASSWORD}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS:-}
+      - OTEL_SERVICE_NAME=ccDiaryApi
     ports:
       - "54628:8080"
       - "54629:443"

@@ -5,6 +5,7 @@ declare global {
       VITE_CLIENT_ID?: string;
       VITE_TENANT_ID?: string;
       VITE_APPLICATION_ID_URI?: string;
+      VITE_FARO_URL?: string;
       [key: string]: any;
     };
   }
