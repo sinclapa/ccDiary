@@ -1,0 +1,1284 @@
+{
+  "diary": {
+    "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509",
+    "title": "Local: WW1 Diary",
+    "author": "Sapper Arthur Carpenter",
+    "description": "Sapper Arthur Carpenter's 1918 WW1 diary chronicles his journey from England to East Africa, surviving submarine attacks in the Mediterranean, then months working as a stevedore along the coast. He witnessed the Armistice in November and finally sailed home in early 1919."
+  },
+  "diaryEntries": [
+    {
+      "diaryEntryId": "b712f351-efc2-4424-1a5c-08de012fb313",
+      "date": "1918-05-21T07:20:00Z",
+      "location": "Sandwich, UK",
+      "entry": "May 21st 1918, I left Sandwich for Southampton at 8.20 AM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "1e5128fe-f162-4d8b-1a5d-08de012fb313",
+      "date": "1918-05-21T14:00:00Z",
+      "location": "Southampton, UK",
+      "entry": "I arrived at Southampton at 3 PM and left Southampton at 8 PM on board the Antrim for France.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "03901fea-ba5c-4eff-1a5e-08de012fb313",
+      "date": "1918-05-22T02:30:00Z",
+      "location": "Le Harve, France",
+      "entry": "I arrived at Le Harve at 3.30 AM on May 22nd. We walked about four miles to a Rest Camp where we had our dinner or 'at least' it was called a dinner. We had some white bread the first for years and it was lovely. I just managed to get a couple of bottles of beer which went down very good indeed.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "af59b9c4-07ce-4ef8-1a5f-08de012fb313",
+      "date": "1918-05-22T15:00:00Z",
+      "location": "Le Harve, France",
+      "entry": "We left Le Harve at 4 PM by train for Marseilles Passing through a very pretty part of France and was stopped on the way at midnight on May 22nd by an air Raid on Paris.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c93f150d-47f6-4b53-1a60-08de012fb313",
+      "date": "1918-05-23T10:00:00Z",
+      "location": "Train, France",
+      "entry": "We had some biscuits and bully beef about 11 AM, the first food for 22 hours in fact all the time we were in the train we were fed once a day.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "6b2a8642-72a0-426a-1a61-08de012fb313",
+      "date": "1918-05-23T23:00:00Z",
+      "location": "Marseilles, France",
+      "entry": "We arrived at Marseilles at midnight on Friday May 24th and slept in the train for the rest of the night.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "fdc09682-3861-47a6-1a62-08de012fb313",
+      "date": "1918-05-25T09:00:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "Another Biscuit for Breakfast and fall in to march to the rest camp. About 2 miles we Reached the rest camp in the morning of May 25th very tired and thirsty.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "028371e0-2fa9-47bc-1a63-08de012fb313",
+      "date": "1918-05-26T11:00:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "Sunday May 26th me and my chum went for a walk by the sea front had 2 bottles of wine at 1/8 per large bottle, very good.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "8a081a04-0dc8-4189-1a64-08de012fb313",
+      "date": "1918-05-27T11:00:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "Monday May 27th cleaned up our camp and went for a walk along the sea front again. Very pretty place and very nice wine.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b4596a7e-9e8b-4207-4506-08de0132be20",
+      "date": "1918-05-28T11:00:00Z",
+      "location": "Marseilles, France",
+      "entry": "Tuesday May 28th we had a day in Marseilles and had a good time. It is a very pretty city very fine buildings and very nice wine. Wine is very cheap here, but beer is 1 and 10 per pint bottle but very good. I met some boys from off a ship all from Southampton and had a lively hour with them, but we had to be back in camp by 8.30 PM which we were and quite sober after having a splendid time.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "1eb58db9-9776-40f1-8923-08de03520f77",
+      "date": "1918-05-29T11:00:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "Wednesday May 29th had a nice quiet day in Camp and had sports and racing in the evening",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f9367db8-b3e9-454c-8924-08de03520f77",
+      "date": "1918-05-30T17:50:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "Thursday May 30th nobody allowed to leave the Camp special parade at 6.50PM 14 men were absent so nobody allowed to leave the Camp next day.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "127dea34-9440-4175-8925-08de03520f77",
+      "date": "1918-05-31T16:00:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "Friday May 31st had a splendid boxing competition in the evening and saw some good fighting by the black men. Nobody to leave the camp, under orders to pack up our bit to go away. Special parade at 5PM told we are leaving Rest Camp next day at 12.45 PM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "99dcf9e4-4b10-4125-8926-08de03520f77",
+      "date": "1918-06-01T11:50:00Z",
+      "location": "Rest Camp, Marseilles, France",
+      "entry": "June 1st up very early in the morning rolled our blankets ready for return to the stores. Left rest camp for docks at 12.50 PM. Put on Board SS Ormonde for work in the docks as there is a dockers strike on here.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "0570736a-9678-4670-8927-08de03520f77",
+      "date": "1918-06-02T12:30:00Z",
+      "location": "SS Ormonde, Marseilles, France",
+      "entry": "Sunday June 2nd told off for work as a steward to start work at 1.30PM had the morning off",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "573a6aba-4d14-4f4a-8928-08de03520f77",
+      "date": "1918-06-03T06:00:00Z",
+      "location": "SS Ormonde, Marseilles, France",
+      "entry": "Monday June 3rd start work at 7AM until midday, afternoon off, evening in Marseilles. Had a good time",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "736dc7dc-5da6-4732-8929-08de03520f77",
+      "date": "1918-06-04T10:00:00Z",
+      "location": "SS Ormonde, Marseilles, France",
+      "entry": "Tuesday June 4th started work at 8AM finished at 11AM took our bit ashore in the afternoon.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "7da40cf7-d543-4669-892a-08de03520f77",
+      "date": "1918-06-04T18:30:00Z",
+      "location": "SS Indarra, Marseilles, France",
+      "entry": "Left the SS Ormonde at 6.30PM went on board the SS Indarra at 7.30PM. Very rough sleeping quarters, we slept on the floors and tables and on deck in fact anywhere. 32 men told off for table with room only for 16 men for meals. We have our meals in two sitting 16 each. Some hope we shall soon leave this ship we seem in for a rough time.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "8ea98653-ee86-4b46-892b-08de03520f77",
+      "date": "1918-06-05T06:30:00Z",
+      "location": "SS Indarra, Marseilles, France",
+      "entry": "Breakfast 7.30AM everybody complaining.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "456d2bc5-d7a1-441c-892c-08de03520f77",
+      "date": "1918-06-05T13:00:00Z",
+      "location": "SS Indarra, Marseilles, France",
+      "entry": "A lot of French troops come aboard this afternoon. Parade at 2PM with lifebelts for boat drill and inspection.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e350e787-8ae4-4723-892d-08de03520f77",
+      "date": "1918-06-05T15:00:00Z",
+      "location": "SS Indarra",
+      "entry": "June 5th left Marseilles at 4 PM, anchored just outside the harbour. For night I slept on deck under the stars and on the Mediterranean Sea on a lovely June night. A lot of fighting amongst the crew 2 fight on shore and 2 on board a very good start. One of the crews running about the deck with a damn great knife looking for trouble",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e0842d69-5de2-429a-892e-08de03520f77",
+      "date": "1918-06-06T22:15:00Z",
+      "location": "SS Indarra",
+      "entry": "Thursday June 6th laid outside the harbour all day. Had boat drill and told off to our boat stations and left Marseilles for good or see. At 11.15 PM escorted by eight Japanese Destroyers we have five big troop ship in our convoy.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "1c496a7b-c20e-44c9-892f-08de03520f77",
+      "date": "1918-06-07T11:00:00Z",
+      "location": "SS Indarra",
+      "entry": "Friday June 7th started work and worked until dinner time then told off to work in steward's department.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "10c5a10a-aafd-42a0-8930-08de03520f77",
+      "date": "1918-06-08T21:00:00Z",
+      "location": "SS Indarra",
+      "entry": "June 8th I took charge of the officer's bathroom to assist the bedroom steward I slept in the bathroom had a splendid bed, had all my food in first class pantry. I am still going on alright the sea is a bit choppy. Siren sounded 4 blasts at 10PM we all got the wind up thought old Fritzy had got us but it turned out to be a signal to the other boats.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "25c5f741-aa54-4271-8931-08de03520f77",
+      "date": "1918-06-09T11:00:00Z",
+      "location": "SS Indarra",
+      "entry": "Sunday June 9th sea very rough feeling a bit seasick but not very bad yet. We expect to reach Malta today.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "9e1f9389-bd13-4d89-8932-08de03520f77",
+      "date": "1918-06-09T18:30:00Z",
+      "location": "SS Indarra, Malta",
+      "entry": "Sunday we have arrived at Malta at 7.30PM after a fairly rough passage 10 Destroyers with us.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e086f129-d7d0-4883-8933-08de03520f77",
+      "date": "1918-06-10T11:00:00Z",
+      "location": "SS Indarra, Malta",
+      "entry": "Monday June 10th stayed in Malta harbour all day.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "72ac6233-9718-4dee-8934-08de03520f77",
+      "date": "1918-06-11T13:00:00Z",
+      "location": "SS Indarra",
+      "entry": "Tuesday June 11th left Malta at 2.00 PM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "39124ec0-5741-4537-8935-08de03520f77",
+      "date": "1918-06-12T05:00:00Z",
+      "location": "SS Indarra",
+      "entry": "Wednesday June 12th sighted a submarine at 6.00 AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "34d9c72b-4573-45a2-8936-08de03520f77",
+      "date": "1918-06-12T05:10:00Z",
+      "location": "SS Indarra",
+      "entry": "Jap Destroyer sank her at 6.10 AM. We saw some sharks in the sea close to our boat the sea is very calm like a lake. We saw a big ship at night lighted up looks like a hospital ship, but a lot of our chaps has got the wind up and won't go below but must sleep or walk about the decks with lifebelts on. I am still in the best of health. Order out that all port holes to be closed night and day and all watertight compartments closed. We are now in the most dangerous part, 2 big ships lost here last week. Not yet got the wind up.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d2483a0d-0298-48d0-8937-08de03520f77",
+      "date": "1918-06-13T14:00:00Z",
+      "location": "SS Indarra",
+      "entry": "Thursday June 13th an unlucky number, I hope it will be lucky this time. The sea is like a mill pond lovely and smooth we hope to reach Alexandria tomorrow, Friday, if all goes well everybody on board is very anxious and a lot of them has got the wind up. I changed into my thin drill clothes today feel a lot cooler and better. We were all inoculated again at 3PM that makes 3 times in less than 2 months.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "8bc915e7-f666-4652-8938-08de03520f77",
+      "date": "1918-06-13T15:00:00Z",
+      "location": "SS Indarra",
+      "entry": "It is 4PM now and the Japs have just opened fire on a submarine we cannot see the result from our ship. Jap signalled have sunk sub with depth charges.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "4f41d2c2-06a0-499e-8939-08de03520f77",
+      "date": "1918-06-14T10:00:00Z",
+      "location": "SS Indarra, Alexandria",
+      "entry": "Friday June 14th arrived safely at Alexandria at 11AM after a terrible exciting time a whole lot of German submarines just outside the harbour waiting for us we had a very big escort come out to meet us 2 seaplanes, 1 aeroplane, 1 balloon and about 20 war vessels of different kinds not including our own escort of 10 destroyers the Japs sank 3 subs in less than half an hour. We saw two blown right up out of the water. That made 5 submarines sunk on our Journey from Malta to Alexandria not so bad as they meant to have us but the Japs were too smart for them.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "8efdcb1c-5266-4a47-893a-08de03520f77",
+      "date": "1918-06-14T19:00:00Z",
+      "location": "Alexandria",
+      "entry": "We left the SS Indarra at 8PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "83c60444-bea3-4922-893b-08de03520f77",
+      "date": "1918-06-14T20:00:00Z",
+      "location": "Desert",
+      "entry": "and left Alexandria at 9PM. Traveling all night in the train through the desert where it was very hot in fact in the daytime you could not bear your hand to touch the side of the carriage.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "4ce49608-2eb8-4143-893c-08de03520f77",
+      "date": "1918-06-15T10:00:00Z",
+      "location": "Port Suez",
+      "entry": "We arrived at Port Suez at 11AM on June 15th.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b6736d74-14e4-4218-893d-08de03520f77",
+      "date": "1918-06-15T14:30:00Z",
+      "location": "SS Willochra",
+      "entry": "Went on board the SS Willochra and left Suez at 3.30PM. Passing though the Red Sea we saw the mountains on which Noah's ark rested after the flood and mount Sinai where Moses wrote the 10 Commandments. These we saw on the Arabian coast on the other side the Egyptian coast we saw the monument marking the spot where children of Israel walked through the Red Sea.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "99803d96-2ed6-4ac3-1f79-08de035e87b1",
+      "date": "1918-06-16T07:15:00Z",
+      "location": "SS Willochra",
+      "entry": "Sunday June 16th I am told off for fatigue at 8.15AM this is not such a good ship as the SS Indarra was to us.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "414e1492-01e2-464a-1f7a-08de035e87b1",
+      "date": "1918-06-18T11:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 18th started work in the pantry. Plenty of good food and plenty of work.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "dde798f3-0483-4da4-1f7b-08de035e87b1",
+      "date": "1918-06-20T09:30:00Z",
+      "location": "SS Willochra",
+      "entry": "June 20th reached Aden 10.30, anchored outside harbour very hot here but a very nice breeze blowing. We were nearly five days passing through the Red Sea. We passed through Hells Gate",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "982a91c6-1cd6-4f16-1f7c-08de035e87b1",
+      "date": "1918-06-20T13:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 20th left Aden at 2PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a3c9b79e-df29-475a-1f7d-08de035e87b1",
+      "date": "1918-06-21T11:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 21st In the Indian Ocean, very hot here not much breeze now seeing a lot of flying fish. The day very quiet nothing doing only the ocean to look upon. Wrote a letter home but missed the mail so must send it later on we passed Somaliland",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c9223b67-d9cb-4c84-1f7e-08de035e87b1",
+      "date": "1918-06-22T20:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 22nd saw the Southern Cross in the sky very clearly.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "9eb877c2-eef1-487d-1f7f-08de035e87b1",
+      "date": "1918-06-22T22:00:00Z",
+      "location": "SS Willochra",
+      "entry": "Saturday June 22nd very strong wind blowing and the sea very rough most of our boys are seasick. Feeling a bit queer myself afraid I am in for a rough time this time",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f1cb6c89-d760-4125-1f80-08de035e87b1",
+      "date": "1918-06-23T11:00:00Z",
+      "location": "SS Willochra",
+      "entry": "Sunday June 23rd sea still very rough not got me down yet. Very near though but still at work. Both my mates sick. It is Sunday today I feel a bit down again always am on Sundays for I think of our Sunday in old England",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "540ee8f2-3394-4c1e-1f81-08de035e87b1",
+      "date": "1918-06-24T11:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 24th the sea is a bit more calm this morning. A quiet day crossed the line in the afternoon",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b2a36509-8ea7-4843-1f82-08de035e87b1",
+      "date": "1918-06-25T11:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 25th quiet day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "cbb9d02e-afae-4c06-1f83-08de035e87b1",
+      "date": "1918-06-26T11:00:00Z",
+      "location": "SS Willochra",
+      "entry": "June 26th quiet day sea much calmer. Concert in the evening turned out to be a good one.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "8913a597-6a93-4496-1f84-08de035e87b1",
+      "date": "1918-06-27T02:00:00Z",
+      "location": "SS Willochra, Mombasa, Kenya",
+      "entry": "June 27th Reached Mombasa 3AM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b84e2819-5b3e-4dce-1f85-08de035e87b1",
+      "date": "1918-06-27T06:00:00Z",
+      "location": "SS Willochra, Kilindini, Mombasa, Kenya",
+      "entry": "Waited outside harbour entered into Kilindini at 7.0AM when the KAR (King's African Rifles) disembarked on lighters as we could not get to the quayside.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a14a63fb-1ace-4654-1f87-08de035e87b1",
+      "date": "1918-06-27T08:15:00Z",
+      "location": "SS Willochra, Kilindini, Mombasa, Kenya",
+      "entry": "Hospital ship Gareon came into harbour at 9.15AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "69540925-ed2d-439d-1f86-08de035e87b1",
+      "date": "1918-06-27T15:30:00Z",
+      "location": "SS Willochra, Mombasa, Kenya",
+      "entry": "We left Kilindini 4.30PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "cb56c299-8687-4b66-1f88-08de035e87b1",
+      "date": "1918-06-28T09:30:00Z",
+      "location": "SS Willochra, Dar es Salaam",
+      "entry": "June 28th arrived outside Dar es Salaam 10.30AM. Had to wait all day and night until 7AM for the tide before entering harbour.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f565033b-ff2f-4be0-1f89-08de035e87b1",
+      "date": "1918-06-28T16:30:00Z",
+      "location": "SS Willochra, Dar es Salaam",
+      "entry": "British cruiser came alongside at 5.30PM and laid outside the Harbour.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "4f96943f-c86c-461a-1f8a-08de035e87b1",
+      "date": "1918-06-29T05:15:00Z",
+      "location": "SS Willochra, Dar es Salaam",
+      "entry": "June 29th Cruiser left at 6.15AM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "ff73bf7a-6d72-49c1-1f8b-08de035e87b1",
+      "date": "1918-06-29T06:15:00Z",
+      "location": "SS Willochra, Dar es Salaam",
+      "entry": "We entered Dar es Salaam harbour at 7.15 AM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "bbfd5e2f-44d1-45f1-1f8c-08de035e87b1",
+      "date": "1918-06-29T09:00:00Z",
+      "location": "SS Willochra, Dar es Salaam",
+      "entry": "Disembarked about 10AM. Marched to the JWT camp for a rest and to be reclassified for different stations along the coast",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "3e28fe19-ffa4-454b-26b5-08de039e9ad3",
+      "date": "1918-07-03T16:30:00Z",
+      "location": "SS Umtata, Dar es Salaam",
+      "entry": "July 3rd left camp to go on Board SS Umtata as cheeber with four other pals at 5.30PM to remain on board living and sleeping as second class passengers. Nice clean cabin 5 & 6 course breakfast coffee in bed at 6AM, luncheon at 1.30PM, afternoon tea at 4PM, late 6 or 7 Course dinner at 7PM. We are to stay on board for trips up and down the coast.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "4177f8de-dff9-4241-26b6-08de039e9ad3",
+      "date": "1918-07-06T11:00:00Z",
+      "location": "SS Umtata, Dar es Salaam",
+      "entry": "Saturday July 6th started to load in the evening",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "cd9f0b1a-e208-4ea0-26b7-08de039e9ad3",
+      "date": "1918-07-09T10:00:00Z",
+      "location": "SS Umtata, Dar es Salaam",
+      "entry": "Tuesday July 9th finished boarding and sailed for Zanzibar about 11AM arrived.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "8a07fbf4-a567-41eb-26b8-08de039e9ad3",
+      "date": "1918-07-09T15:00:00Z",
+      "location": "SS Umtata, Zanzibar",
+      "entry": "At Zanzibar 4PM July",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b4fa5b50-c9a7-43e6-26b9-08de039e9ad3",
+      "date": "1918-07-10T21:00:00Z",
+      "location": "SS Umtata, Zanzibar",
+      "entry": "Wednesday July 10th had half day on shore, 3 days holiday for the natives. We had a fine time ashore we saw their fair, also had good look round the town Beer 2/= a pint. Had whisky and sodas at 10' a drink. More than you get in old England for 2/=. arrived back on board at 10PM perfectly sober.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "14fed862-54db-4789-26ba-08de039e9ad3",
+      "date": "1918-07-10T22:00:00Z",
+      "location": "SS Umtata, Zanzibar",
+      "entry": "July 10th to 14th ship took on coal and water. Women working on the coal barges.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d4043a56-2751-4bff-26bb-08de039e9ad3",
+      "date": "1918-07-15T05:00:00Z",
+      "location": "SS Umtata, Zanzibar",
+      "entry": "July 15th left Zanzibar at 6AM for ports down the coast first call Lindi",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "13eed214-9251-4db4-2bef-08de04115f16",
+      "date": "1918-07-16T11:15:00Z",
+      "location": "SS Umtata, Lindi",
+      "entry": "July 16th we arrived at Lindi at 12.15PM took black troops on board in the afternoon and almost 120 white troops making 1700 altogether.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b8d96dd6-a830-4ea9-2bf0-08de04115f16",
+      "date": "1918-07-17T10:45:00Z",
+      "location": "SS Umtata, Mikidani",
+      "entry": "July 17th left Lindi at 8AM passed Mikindani at 11.45AM. Saw 2 Black men flogged on the deck. Made to lay on the deck with their trousers off and receive 10 lashes each with a Kaboko (raw hippo hide)",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "9fb183d5-752d-40fc-2bf1-08de04115f16",
+      "date": "1918-07-19T06:45:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "July 19th passed Mozambique at 7.15AM, arrived at Lumbo 7.45AM. Disembarked troops and started to unload cargo",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e91dc297-1ce5-49f9-2bf2-08de04115f16",
+      "date": "1918-07-20T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "July 20th went ashore in the afternoon walked round the camp and nearly had to stay on shore all night but just managed to get back on board. We had a sing song in the evening on deck. Plenty of Whisky and Cigars.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a1b2c3d4-1111-4aaa-2bf4-08de04115f16",
+      "date": "1918-07-21T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "July 21st Chief Steward lost 11 bottles Whisky and £5 in money",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "130dbfd6-c1f5-4baf-2bf3-08de04115f16",
+      "date": "1918-07-22T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "July 22nd Ship baker laid up with bad foot no bread on board. Served out with ships biscuits and they are as hard as bricks",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b2c3d4e5-2222-4bbb-2bf5-08de04115f16",
+      "date": "1918-07-22T17:30:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "July 22nd at 6.30PM 2nd Officer and Chief Steward fighting about the bread and biscuits. Oh this is a ship.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c3d4e5f6-3333-4ccc-2bf6-08de04115f16",
+      "date": "1918-07-25T14:30:00Z",
+      "location": "SS Umtata",
+      "entry": "July 25th Finished unloading and left Mozambique B.EA (British East Africa) at 3.30.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d4e5f6a7-4444-4ddd-2bf7-08de04115f16",
+      "date": "1918-07-26T07:00:00Z",
+      "location": "SS Umtata, Port Amelia (Pemba)",
+      "entry": "July 26th arrived at Port Amelia (Pemba) at 8AM, unloaded by 5PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e5f6a7b8-5555-4eee-2bf8-08de04115f16",
+      "date": "1918-07-27T03:30:00Z",
+      "location": "SS Umtata",
+      "entry": "July 27th left Port Amelia at 4.30AM for Lindi. Major gave us great praise at Port Amelia for the way we did our work (what lto)",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f6a7b8c9-6666-4fff-2bf9-08de04115f16",
+      "date": "1918-07-28T06:30:00Z",
+      "location": "SS Umtata, Lindi",
+      "entry": "Arrived at Lindi July 28/18 at 7.30AM. Hospital Ship Ubarni came into Lindi at 8AM and left again 4.30PM on July 29th.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a7b8c9d0-7777-4aaa-2bfa-08de04115f16",
+      "date": "1918-07-29T16:00:00Z",
+      "location": "SS Umtata, Lindi",
+      "entry": "We left Lindi July 29th at 5PM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b8c9d0e1-8888-4bbb-2bfb-08de04115f16",
+      "date": "1918-07-30T06:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Arrived at Kilwa July 30th at 7AM. Very pretty harbour water edge lined with green trees making it look lovely very small place nothing much doing here Place nearly closed taking up light Railways about 90 miles of it to come up.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c9d0e1f2-9999-4ccc-2bfc-08de04115f16",
+      "date": "1918-07-31T16:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "We left Kilwa July 31st at 5PM for Mozambique P.E.A.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d0e1f2a3-aaaa-4ddd-2bfd-08de04115f16",
+      "date": "1918-08-02T11:00:00Z",
+      "location": "SS Umtata, Mozambique",
+      "entry": "Arrived at Mozambique at 12 noon on Aug 2nd arrived at Lumbo PM Aug 2nd saw Portugese Cruiser and one English Cruiser the Challenger lying in harbour.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e1f2a3b4-bbbb-4eee-2bfe-08de04115f16",
+      "date": "1918-08-03T06:30:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Hospital Ship Ubani came into Harbour of Lumbo at 7.30AM on Aug 3rd two of the crew of our ship fighting with knives and sticks at 11PM both out and knocked about a great deal had their wounds dressed in the surgery at midnight and again in the morning. This is a ship for fighting and drinking",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f2a3b4c5-cccc-4fff-2bff-08de04115f16",
+      "date": "1918-08-03T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Aug 3rd nothing doing",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a3b4c5d6-dddd-4aaa-2c00-08de04115f16",
+      "date": "1918-08-04T11:00:00Z",
+      "location": "SS Umtata, Mozambique",
+      "entry": "Aug 4th Sunday nothing doing but oh Mozambique is a very dear place for anything 3 Rupees for one Bottle Beer 1 Rupee for one Herring eight Pence for a slice of bread so nothing doing in that line for me",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b4c5d6e7-eeee-4bbb-2c01-08de04115f16",
+      "date": "1918-08-06T06:30:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Aug 6th Hospital Ship Gascon came into harbour at 7.30AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c5d6e7f8-ffff-4ccc-2c02-08de04115f16",
+      "date": "1918-08-06T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Aug 6th nothing doing again",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d6e7f8a9-0000-4ddd-2c03-08de04115f16",
+      "date": "1918-08-07T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Aug 7th nothing doing again but laying about and walking about the deck smoking could do with a little work to help keep me fit have taken to running round the deck of our ship about 12 times first thing in the morning after a good work must do something to keep myself fit",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e7f8a9b0-1111-4eee-2c04-08de04115f16",
+      "date": "1918-08-08T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Aug 8th went ashore in the morning at Lumbo came back and unloaded 10 cars not bad for 6 days work but at 8PM 2 lights came alongside to be loaded we put 18 cars on them and finished loading them by 10.30 32 more cars left on board",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f8a9b0c1-2222-4fff-2c05-08de04115f16",
+      "date": "1918-08-09T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Aug 9th very wet morning it has been raining nearly all night and looks like being a very wet day it let off raining about 10.30AM English Cruiser Talbot came into harbour there are now 2 English Cruisers 1 Portuguese Cruiser 2 Hospital ships in harbour Looks very much like business All the troops on shore have Been served out rifles and 100 rounds of ammunition",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a9b0c1d2-3333-4aaa-2c06-08de04115f16",
+      "date": "1918-08-10T07:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Aug 10th started unloading at 8AM. We left Lumbo at 5PM and left Mozambique at 5.45PM. The sea is very rough old ship rolling about awful I shall be glad when she is loaded again. We took a few Black troops on board at Lumbo for Dar es Sallam.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b0c1d2e3-4444-4bbb-2c07-08de04115f16",
+      "date": "1918-08-11T12:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "We arrived at Port Amelia aug 11th at 1PM, started to unload at once I went ashore with the mails and two boxes of Butter as escort. Tea time 3rd Engineer and chief steward drunk on board the Skipper signalled to the Cruiser Challenger to send a boat and take them off as prisoners the Challenger sent a squad of marines in Steam Pinnace at 7.30PM and put them both under arrest taking them both on board the challenger",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c1d2e3f4-5555-4ccc-2c08-08de04115f16",
+      "date": "1918-08-12T11:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "Aug 12th 3rd Engineer to leave our ship at once and the ship steward came back to our ship to clear up his book and accounts and to be put ashore either at Dar es Salaam or Durban. I am on duty today loading motor cars for Dar es Salaam.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d2e3f4a5-6666-4ddd-2c09-08de04115f16",
+      "date": "1918-08-13T11:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "Aug 13th I am off duty today",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e3f4a5b6-7777-4eee-2c0a-08de04115f16",
+      "date": "1918-08-14T11:30:00Z",
+      "location": "SS Umtata",
+      "entry": "Aug 14th on duty this morning. Left Port Amelia at 12.30PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f4a5b6c7-8888-4fff-2c0b-08de04115f16",
+      "date": "1918-08-15T05:00:00Z",
+      "location": "SS Umtata, Lindi",
+      "entry": "Aug 15th got up at 6AM, had my usual exercise round the deck we arrived at Lindi at 12.30PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a5b6c7d8-9999-4aaa-2c0c-08de04115f16",
+      "date": "1918-08-16T16:00:00Z",
+      "location": "SS Umtata, Lindi",
+      "entry": "Aug 16th we left Lindi at 5PM for Dar es Salaam",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b6c7d8e9-aaaa-4bbb-2c0d-08de04115f16",
+      "date": "1918-08-17T11:00:00Z",
+      "location": "SS Umtata, Dar es Salaam",
+      "entry": "Arrived outside DSM Harbour at 12 noon and dropped anchor in harbour at 12:45 on Aug 17th. Did nothing the remainder of day.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c7d8e9f0-bbbb-4ccc-2c0e-08de04115f16",
+      "date": "1918-08-18T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Aug 18th Sunday started unloading I went to Post Office and our camp for letters. I received 3 letters and 1 paper. 2 lovely photos of ma May and Bertie. Went on duty after lunch.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d8e9f0a1-cccc-4ddd-2c0f-08de04115f16",
+      "date": "1918-08-19T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Aug 19th finished unloading after working all night",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e9f0a1b2-dddd-4eee-2c10-08de04115f16",
+      "date": "1918-08-20T07:00:00Z",
+      "location": "SS Umtata, Zanzibar",
+      "entry": "Aug 20th we left DSM at 8AM and arrived at Zanzibar at 12 noon same day for coal and water. Two English Cruisers laying in harbour here.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f0a1b2c3-eeee-4fff-2c11-08de04115f16",
+      "date": "1918-08-21T11:00:00Z",
+      "location": "Zanzibar",
+      "entry": "Aug 21st we have some white boys aboard so we gave them some of our lunch as they were running short of rations. We went aboard the Salamus in the afternoon with the other boys who are working on her and we had some beer. Our Corporal had two of his chums from the Salamus on board our ship to dinner, damn swank, and ordered us to the other end of the ship after dinner out of their way but of course we did not move so they went themselves. We are expecting some trouble in the morning from them.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b2c3d4e5-0000-4bbb-2c13-08de04115f16",
+      "date": "1918-08-22T12:45:00Z",
+      "location": "SS Umtata",
+      "entry": "Aug 22nd no trouble yet. We left Zanzibar at 1.45PM for Kilwa",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c3d4e5f6-1111-4ccc-2c14-08de04115f16",
+      "date": "1918-08-24T10:15:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Arrived at Kilwa at 11.15AM on Saturday Aug 24th and started to unload at once",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d4e5f6a7-2222-4ddd-2c15-08de04115f16",
+      "date": "1918-08-25T11:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Aug 25th loading up motor cars and all kinds of carts. Working hard all day. Not much fishing as the water is too deep. Let off work at 5PM, no stevedores here we have to do it all ourselves",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e5f6a7b8-3333-4eee-2c16-08de04115f16",
+      "date": "1918-08-26T11:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Aug 26th working hard all day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f6a7b8c9-4444-4fff-2c17-08de04115f16",
+      "date": "1918-08-27T11:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Aug 27th working hard all day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a7b8c9d0-5555-4aaa-2c18-08de04115f16",
+      "date": "1918-08-28T11:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Aug 28th working hard all day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b8c9d0e1-6666-4bbb-2c19-08de04115f16",
+      "date": "1918-08-28T19:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Aug 28th Captain had some friends from shore for the evening we were invited also and we had a good evening. Plenty of whisky and beer and cigars. Two of my pals got fighting afterwards but it all ended alright.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c9d0e1f2-7777-4ccc-2c1a-08de04115f16",
+      "date": "1918-08-29T05:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Aug 29th all ready for work at 6AM but no steam. It is Raining in torrents. We got no steam until 7AM. We finished loading at lunch time and left Kilwa at 4PM for DSM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d0e1f2a3-8888-4ddd-2c1b-08de04115f16",
+      "date": "1918-08-30T06:30:00Z",
+      "location": "SS Umtata, Dar es Salaam",
+      "entry": "Arrived outside DSM harbour at 7.30AM on Aug 30th. Entered the harbour and dropped anchor at 10.30AM. Rain in torrents",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e1f2a3b4-9999-4eee-2c1c-08de04115f16",
+      "date": "1918-08-31T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Saturday Aug 31st unloading all day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f2a3b4c5-aaaa-4fff-2c1d-08de04115f16",
+      "date": "1918-09-01T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Sunday Sept 1st I went ashore for letters but got none for any of the boys I went to our Camp for some clothes for the boys I got 1 pair of trousers and one tunic shirt and 1 hair brush for myself. We started loading up cargo at 7PM. I am off duty tonight.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a3b4c5d6-bbbb-4aaa-2c1e-08de04115f16",
+      "date": "1918-09-02T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Sept 2nd on duty today. Worked till 5PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b4c5d6e7-cccc-4bbb-2c1f-08de04115f16",
+      "date": "1918-09-02T18:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Sept 2nd 2 Black Boys captured in ships store room eating jam and bully beef. 2nd Steward and one of our boys to go ashore in the morning as witnesses against them poor boys",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c5d6e7f8-dddd-4ccc-2c20-08de04115f16",
+      "date": "1918-09-03T06:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Sept 3rd on duty at 7AM. Working all day not allowed ashore. Going to see the MLO in the morning",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d6e7f8a9-eeee-4ddd-2c21-08de04115f16",
+      "date": "1918-09-04T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Sept 4th finished loading in the afternoon I went ashore in the evening. Had dinner at the hotel as guest of our stevedores. I went to the Pictures after dinner. I had a good time on shore. SS Trent laying outside harbour. Sorry she did not come in.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e7f8a9b0-ffff-4eee-2c22-08de04115f16",
+      "date": "1918-09-05T14:30:00Z",
+      "location": "SS Umtata",
+      "entry": "Sept 5th left DSM at 3.30",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f8a9b0c1-0000-4fff-2c23-08de04115f16",
+      "date": "1918-09-06T09:30:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Arrived at Kilwa Sept 6th at 10.30AM and left again same day at 5.30. I went ashore this afternoon to play in a cricket match. We lost.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a9b0c1d2-1111-4aaa-2c24-08de04115f16",
+      "date": "1918-09-07T07:30:00Z",
+      "location": "SS Umtata, Lindi",
+      "entry": "Sept 7th arrived at Lindi about 8.30AM. Started work about 10AM finished unloading.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b0c1d2e3-2222-4bbb-2c25-08de04115f16",
+      "date": "1918-09-08T15:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Sunday morning left Lindi for Port Amelia Sept 8th at 4PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c1d2e3f4-3333-4ccc-2c26-08de04115f16",
+      "date": "1918-09-09T17:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "Arrived at Pt Amelia Sept 9th about 6PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d2e3f4a5-4444-4ddd-2c27-08de04115f16",
+      "date": "1918-09-10T11:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "Sept 10th Started unloading",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e3f4a5b6-5555-4eee-2c28-08de04115f16",
+      "date": "1918-09-11T11:00:00Z",
+      "location": "Port Amelia",
+      "entry": "Sept 11th something wrong in the engine room had to stop all work so we cleaned up and went ashore and got permission to go through the native village. It was the sight of a lifetime. One could easily write a book about all we saw.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f4a5b6c7-6666-4fff-2c29-08de04115f16",
+      "date": "1918-09-12T11:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "Sept 12th working all day. Feeling a bit done up tonight, shall turn in early.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a5b6c7d8-7777-4aaa-2c2a-08de04115f16",
+      "date": "1918-09-13T11:00:00Z",
+      "location": "SS Umtata, Port Amelia",
+      "entry": "Sept 13th feeling better this morning working all day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b6c7d8e9-8888-4bbb-2c2b-08de04115f16",
+      "date": "1918-09-14T15:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Sept 14th finished loading and left Port Ameilia at 4PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c7d8e9f0-9999-4ccc-2c2c-08de04115f16",
+      "date": "1918-09-15T06:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Sept 15th arrived at Mozambique at 7AM arrived at Lumbo at 7.45AM. Hospital ship Gascon in harbour.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d8e9f0a1-aaaa-4ddd-2c2d-08de04115f16",
+      "date": "1918-09-16T11:00:00Z",
+      "location": "SS Umtata, Lumbo",
+      "entry": "Sept 16th finished unloading & loaded up again, took on 500 Black Troopers and a lot of White troopers. In the afternoon we had a very nice little evening us five boys the Bert and most sociable time we have been aboard. I mention this because two of us five are Yankees one is alright. The other I am sorry to say we had to tame him as he would get a few glasses of whisky and start a row. One night he started on me. Now he is more tame. Last night was the best he has been after a drink.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e9f0a1b2-bbbb-4eee-2c2e-08de04115f16",
+      "date": "1918-09-17T07:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Sept 17th left Lumbo at 8AM. Some engine trouble at sea at 10.30AM we hove to for an hour. The old ship did roll. You would think she was going to turn over",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f0a1b2c3-cccc-4fff-2c2f-08de04115f16",
+      "date": "1918-09-18T11:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Sept 18th Quiet day at sea. I never saw the ocean so calm and oily looking. Looks as if we are in for a bad storm",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a1b2c3d4-dddd-4aaa-2c30-08de04115f16",
+      "date": "1918-09-19T11:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Sept 19th yesterday and last night passed without getting the expected storm the sea is more natural this morning.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b2c3d4e5-eeee-4bbb-2c31-08de04115f16",
+      "date": "1918-09-20T06:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Arrived a Kilwa sept 20/18 at 7AM. Started to load first thing after breakfast. We had a mishap in the afternoon 3 pontoons lashed together with heavy boilers & machinery on them. When we lifted the first boiler all the others collapsed the centre one sinking under water, but we only lost one engine, but it was very exciting while it lasted. It was time to see the black boys dive under the water to fasten ropes on the Boiler & boxes of machinery.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c3d4e5f6-ffff-4ccc-2c32-08de04115f16",
+      "date": "1918-09-21T11:00:00Z",
+      "location": "SS Umtata, Kilwa",
+      "entry": "Sept 21st Working all day. The officer working with me has his thumb nail torn right clean off. I feel sorry for him as he is a damn nice fellow. We are now filling up with Black & White Troopers. You can hardly move on deck for them. Got the wind up today thinking about Poor Mays birthday. I wish I was home with you all.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d4e5f6a7-0000-4ddd-2c33-08de04115f16",
+      "date": "1918-09-22T10:00:00Z",
+      "location": "SS Umtata",
+      "entry": "Sunday Sept 22nd finished loading at 11AM and left Kilwa Kiswani at 2.30PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e5f6a7b8-1111-4eee-2c34-08de04115f16",
+      "date": "1918-09-23T06:30:00Z",
+      "location": "SS Umtata, Dar es Salaam",
+      "entry": "Monday Sept 23rd arrived outside D.S.M. at 7.30AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f6a7b8c9-2222-4fff-2c35-08de04115f16",
+      "date": "1918-09-24T07:45:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Tuesday Sept 24th new draft arrived from England and landed at 8.45AM. Left SS Umtata for Camp at 4.45PM. Walked to the camp had tea and went in the town in the evening. We shall miss the food on the Old Umtata.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a7b8c9d0-3333-4aaa-2c36-08de04115f16",
+      "date": "1918-09-25T04:30:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Wednesday Sept 25th up at 5.30. Breakfast at 6AM bully beef and bread. Very different to a 6 course Breakfast but there it is we must make the best of it. Saw the major at 7AM he says you Boys are to go aboard the Hang today. We were pleased. Later order fall in at orderly room at 1.30 to go aboard the Hung shows at 2PM. Packed up in quick time got aboard about 3PM. Very much different from the Umtata but I think we can make ourselves very comfy. I hope we shall stay on this ship until the old Umtata comes back but this one will do us for the duration. No 6 or 7 course meals and then go away hungry. If we are treated all the time we are on this ship as we have been for the few hours we have been aboard her why we shall be alright. She has a mixed crew, Indians and Chinese but mostly Chinese. No work today shall start tomorrow",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b8c9d0e1-4444-4bbb-2c37-08de04115f16",
+      "date": "1918-09-26T11:00:00Z",
+      "location": "SS Hang Moh, Dar es Salaam",
+      "entry": "Thursday Sept 26th started work at 12 noon at no4 hatch. Finished at 5PM. Our cabins are much more roomy and cooler on this ship.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c9d0e1f2-5555-4ccc-2c38-08de04115f16",
+      "date": "1918-09-27T11:00:00Z",
+      "location": "SS Hang Moh, Dar es Salaam",
+      "entry": "Friday Sept 27th finished loading. Went ashore for mails got letters for all the boys but none for myself. I received 4 papers. We had a good evening before we left I went aboard the Salaaraws",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d0e1f2a3-6666-4ddd-2c39-08de04115f16",
+      "date": "1918-09-28T10:00:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Sept 28th we left D.S.M about 11AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e1f2a3b4-7777-4eee-2c3a-08de04115f16",
+      "date": "1918-09-29T04:30:00Z",
+      "location": "SS Hang Moh, Kilindini",
+      "entry": "Arrived outside Kilindini about 5.30AM Sept 29/18. Started unloading after breakfast",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f2a3b4c5-8888-4fff-2c3b-08de04115f16",
+      "date": "1918-09-30T12:30:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Sept 30th left Kilindini at 1.30PM we are a lot more comfortable on this ship as we have more room in our cabins and they are away from the Engines and Boilers. In the Umtata we were sleeping right on the top of the Boilers and our cabin was like a Turkish Bath",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a3b4c5d6-9999-4aaa-2c3c-08de04115f16",
+      "date": "1918-10-02T16:30:00Z",
+      "location": "SS Hang Moh, Port Amelia",
+      "entry": "Oct 2nd we arrived at Port Amelia at 5:30PM after a very nice voyage",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b4c5d6e7-aaaa-4bbb-2c3d-08de04115f16",
+      "date": "1918-10-03T09:30:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Oct 3rd we took a big load of Black Troops aboard and left Port Amelia about 10:30AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c5d6e7f8-bbbb-4ccc-2c3e-08de04115f16",
+      "date": "1918-10-05T05:00:00Z",
+      "location": "SS Hang Moh, Dar es Salaam",
+      "entry": "After a smooth run we reached D.S.M on Oct 5th in the morning about 6AM after running on reduced speed all night. The tug starts come out of harbour for the troops I think we are waiting for the tide before we can go in. Went in harbour about 5PM. Disembarked troops and took on mails for transhipment at Zanzibar",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d6e7f8a9-cccc-4ddd-2c3f-08de04115f16",
+      "date": "1918-10-06T15:30:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Oct 6th left D.S.M at 4.30PM and arrived outside Zanzibar about 8PM anchored for the night.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e7f8a9b0-dddd-4eee-2c40-08de04115f16",
+      "date": "1918-10-07T05:00:00Z",
+      "location": "SS Hang Moh, Zanzibar",
+      "entry": "Reached Zanzibar at 6AM on Oct 7th for coal and water. Nothing doing only read & smoke",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f8a9b0c1-eeee-4fff-2c41-08de04115f16",
+      "date": "1918-10-09T11:00:00Z",
+      "location": "SS Hang Moh, Zanzibar",
+      "entry": "Oct 9th nothing doing. Getting fed up with nothing to do. Have not done one stroke of work since a week ago last Friday. Don't want too much work but would like a little occupy ones mind a little bit. Work keeps me from thinking about thing that get the wind up one",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a9b0c1d2-ffff-4aaa-2c42-08de04115f16",
+      "date": "1918-10-10T03:30:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Oct 10th Left Zanzibar about 4.30AM for Port Amelia",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b0c1d2e3-0000-4bbb-2c43-08de04115f16",
+      "date": "1918-10-11T07:30:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Oct 11th overslept. Woke up at 8.30AM instead of 6.30AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c1d2e3f4-1111-4ccc-2c44-08de04115f16",
+      "date": "1918-10-11T17:30:00Z",
+      "location": "SS Hang Moh, Port Amelia",
+      "entry": "Oct 11th arrived at Port Amelia at 6.30PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d2e3f4a5-2222-4ddd-2c45-08de04115f16",
+      "date": "1918-10-12T11:00:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Oct 12th started to load on motor cars and left for DSM about 7PM. The Ingoma left at 5.30 we caught her up and passed her next day.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e3f4a5b6-3333-4eee-2c46-08de04115f16",
+      "date": "1918-10-14T05:00:00Z",
+      "location": "SS Hang Moh, Dar es Salaam",
+      "entry": "We arrived outside Daressalaam at 6AM one hour before the Ingoma on Monday 14th Oct",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f4a5b6c7-4444-4fff-2c47-08de04115f16",
+      "date": "1918-10-15T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Tuesday Oct 15th nothing doing",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a5b6c7d8-5555-4aaa-2c48-08de04115f16",
+      "date": "1918-10-16T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Wednesday Oct 16th went ashore for mails and our pay. I received 2 Papers but no letter. Got a money order for £1 to send home.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b6c7d8e9-6666-4bbb-2c49-08de04115f16",
+      "date": "1918-10-17T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Thursday Oct 17th I went ashore by myself to send the money and a letter home. The harbour is full of troop ships. We are bringing thousands upon thousands of Black Troops up from the down the coast to Daressalaam as the German Army, which is composed mostly of Black Troops, is in German East Africa again. Our army has followed him from British E.A and through German E.A and through Portuguese E.A nearly into Rhodesia and now back again into German E.A. Hundreds & hundreds of miles",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c7d8e9f0-7777-4ccc-2c4a-08de04115f16",
+      "date": "1918-10-17T12:30:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Thursday Oct 17th we left Daressalaam for Lindi at 1.30PM. We have done no work this time in Port in fact we have not done 3 days work all told since we came on this ship as we keep going from Port to Port for troops and not waiting for Cargo. I am getting the wind up properly. Getting no letters from home it worries me a great deal.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d8e9f0a1-8888-4ddd-2c4b-08de04115f16",
+      "date": "1918-10-18T10:30:00Z",
+      "location": "SS Hang Moh, Lindi",
+      "entry": "We arrived at Lindi about 11.30AM Oct 18th took on motor cars and Black Troops. Finished loading and got steam up already for leaving Sunday afternoon Oct 20th but got orders to stay all night to take more troops on in the morn",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e9f0a1b2-9999-4eee-2c4c-08de04115f16",
+      "date": "1918-10-21T12:00:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Left for Daresalaam Oct 21st at 1PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f0a1b2c3-aaaa-4fff-2c4d-08de04115f16",
+      "date": "1918-10-22T05:30:00Z",
+      "location": "SS Hang Moh, Dar es Salaam",
+      "entry": "Arrived outside D.S.M at 6.30AM on Oct 22nd. Went into the harbour at 5PM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a1b2c3d4-bbbb-4aaa-2c4e-08de04115f16",
+      "date": "1918-10-23T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Oct 23rd nothing doing all day",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b2c3d4e5-cccc-4bbb-2c4f-08de04115f16",
+      "date": "1918-10-24T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Oct 24th nothing doing. Me and my Pal went ashore in the afternoon. Met the civilian Stevedores. They are finished work here (WT or IWT) doing it. All these Stevedores were going back to Durban but when they got to the Quay with all their boxes and things they were not allowed to land or leave. Durban as the Spanish Fever. Is so bad hundreds are dying with it so, these Boys just had the wind up nicely they got their Boss to sign a paper for a case of Whisky. We went to their hotel with them and we had some. We stayed for dinner with them and we had a great old time. Felt query next morning",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c3d4e5f6-dddd-4ccc-2c50-08de04115f16",
+      "date": "1918-10-25T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Oct 25th nothing doing again",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d4e5f6a7-eeee-4ddd-2c51-08de04115f16",
+      "date": "1918-10-26T08:00:00Z",
+      "location": "SS Hang Moh",
+      "entry": "Oct 26th left Daresalaam at 9AM for Mozambique. We have a German Prisoner in the second class cabin with us. He seems a very descent sort of fellow but I have not time for any B. Germans, We had a rough passage this time down.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e5f6a7b8-ffff-4eee-2c52-08de04115f16",
+      "date": "1918-10-28T10:30:00Z",
+      "location": "SS Hang Moh, Mozambique",
+      "entry": "We arrived at Mozambique Oct 28th about 11.30AM",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f6a7b8c9-0000-4fff-2c53-08de04115f16",
+      "date": "1918-10-29T11:00:00Z",
+      "location": "SS Hang Moh, Mozambique",
+      "entry": "Oct 29th started to load up. We took on a big load over 100 motor cars and about 15000 bags of sores besides several hundred tones of Hospital stores and utensils.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a7b8c9d0-1111-4aaa-2c54-08de04115f16",
+      "date": "1918-11-02T11:00:00Z",
+      "location": "SS Hang Moh",
+      "entry": "We finished loading on Saturday noon Nov 2nd and left for Daresalaam at 3.30PM with White and Black troops on board. We had news that Turkey had given in before we left which cheered us up and we had a small wet up on that. My mate and our Corporal had a bit of a fight at the finish but nothing in it. I would sooner have a drink.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b8c9d0e1-2222-4bbb-2c55-08de04115f16",
+      "date": "1918-11-04T17:00:00Z",
+      "location": "SS Hang Moh, Dar es Salaam",
+      "entry": "We arrived outside Daresalaam on Nov 4th at 6PM.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c9d0e1f2-3333-4ccc-2c56-08de04115f16",
+      "date": "1918-11-05T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "We stayed out until 4PM on Nov 5th before we went into harbour going ashore in the morning for letters. We heard today that Austria had given in. What now then Germany lets have you.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d0e1f2a3-4444-4ddd-2c57-08de04115f16",
+      "date": "1918-11-07T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 7th we had a few hours notice to pack up and leave the hang moh got the wind up all the men are taken off the ships as each ship comes into harbour. We have to report ourselves tomorrow morning for work ashore.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e1f2a3b4-5555-4eee-2c58-08de04115f16",
+      "date": "1918-11-08T07:30:00Z",
+      "location": "Dar es Salaam",
+      "entry": "At MLO Office at 8.30 this morning for work & was sent back to Camp I am to go on tonight at 6PM until 12",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f2a3b4c5-6666-4fff-2c59-08de04115f16",
+      "date": "1918-11-09T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 9th no work all day. Concert in the evening at YMCA",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a3b4c5d6-7777-4aaa-2c5a-08de04115f16",
+      "date": "1918-11-10T05:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Change of shift today Nov 10th Sunday started work at 6AM until 12 Camp time of it. Heard today that the Kaiser has given up his throne",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b4c5d6e7-8888-4bbb-2c5b-08de04115f16",
+      "date": "1918-11-11T05:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 11th should work at 6AM left off at 12 midday. Went to a Concert in the evening it was a nice change after being aboard ship so long the food is not so much or as good as it was on the ship but I think I can stick it. Alright we had news today that the armistice was signed at 5AM. The order given in all the camps here that there was to be no demonstration of any kin. A bit off as our col had made arrangements for a bit of a set to but nothing doing but thank God it is over. Now for Blighty",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c5d6e7f8-9999-4ccc-2c5c-08de04115f16",
+      "date": "1918-11-12T05:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 12th started work at 6AM nothing doing left off again at 7AM. I had to toss my mate to see which of us should go. I won so I had the day off",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d6e7f8a9-aaaa-4ddd-2c5d-08de04115f16",
+      "date": "1918-11-14T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 14th no work again today but it is my turn to stay here until 12 to see the Sheder don't run away",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f8a9b0c1-cccc-4fff-2c5f-08de04115f16",
+      "date": "1918-11-14T12:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 14th The War is over in East Africa now Thank God. Extra half hour for lights to be on tonight because the fighting is over.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e7f8a9b0-bbbb-4eee-2c5e-08de04115f16",
+      "date": "1918-11-15T05:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 15th Started work at 6AM. It is raining very hard now but we managed to get to work in the dry before it started. It has been raining all day. Just heard German General Von Lets surrendered yesterday",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "a9b0c1d2-dddd-4aaa-2c60-08de04115f16",
+      "date": "1918-11-16T03:30:00Z",
+      "location": "Dar es Salaam",
+      "entry": "Nov 16th started work a 6AM got up as usual at 4.30 Breakfast at 5AM Bully Beef dry Bread. Bread and jam for dinner at 11AM. Left off work at 12 midday got my hair cur cost 75 cent 1/=. Not bad is it but you can't get it done for less out here",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "b0c1d2e3-eeee-4bbb-2c61-08de04115f16",
+      "date": "1919-02-16T11:00:00Z",
+      "location": "Dar es Salaam",
+      "entry": "I left Daresalaam East Africa for good old Blighty on Sunday Feb 16th 1919.",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "c1d2e3f4-ffff-4ccc-2c62-08de04115f16",
+      "date": "1919-02-23T11:00:00Z",
+      "location": "Durban",
+      "entry": "I arrived at Durban on Sunday Feb 23rd on my birthday. Durban is a very nice place but all the Pubs were closed to soldiers but I went up to the Camp to the Canteen to get just one as it was my Birthday. Had more than one but not too many I sent some letter cards home from Durban",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "d2e3f4a5-0000-4ddd-2c63-08de04115f16",
+      "date": "1919-02-24T11:00:00Z",
+      "location": "Durban",
+      "entry": "We all left Durban on Feb 24th",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "e3f4a5b6-1111-4eee-2c64-08de04115f16",
+      "date": "1919-03-01T11:00:00Z",
+      "location": "Cape Town",
+      "entry": "Arrived at Cape Town on Friday March 1st and sent to a rest Camp at Wynberg it was very nice to be amongst white people again. All the pubs in Wynberg and Cape Town are open to Imperial Troops but not to Colonials. We had a good time here for four or five days",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    },
+    {
+      "diaryEntryId": "f4a5b6c7-2222-4fff-2c65-08de04115f16",
+      "date": "1919-03-05T11:00:00Z",
+      "location": "Cape Town",
+      "entry": "We left Cape Town for good old Southampton on March 5th which place we hope to reach by March 25th",
+      "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
+    }
+  ]
+}

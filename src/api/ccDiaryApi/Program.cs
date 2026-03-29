@@ -19,7 +19,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.OpenTelemetry;
 using Steeltoe.Common.HealthChecks;
 using Steeltoe.Management.Endpoint;
 using Steeltoe.Management.Endpoint.Health;
@@ -39,28 +38,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
-    .WriteTo.OpenTelemetry(o =>
-    {
-        var endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-        if (!string.IsNullOrEmpty(endpoint))
-        {
-            o.Endpoint = endpoint.TrimEnd('/') + "/v1/logs";
-            o.Protocol = OtlpProtocol.HttpProtobuf;
-            o.ResourceAttributes["service.name"] = "ccDiaryApi";
-            var headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"];
-            if (!string.IsNullOrEmpty(headers))
-            {
-                foreach (var part in headers.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var idx = part.IndexOf('=', StringComparison.Ordinal);
-                    if (idx > 0)
-                    {
-                        o.Headers.Add(part[..idx].Trim(), part[(idx + 1)..].Trim());
-                    }
-                }
-            }
-        }
-    }, ignoreEnvironment: true)
+    .WriteTo.OpenTelemetry(o => OpenTelemetryExtensions.ConfigureSerilogOtelSink(o, builder.Configuration), ignoreEnvironment: true)
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 

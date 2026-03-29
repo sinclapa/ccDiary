@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test'
+import { API_BASE } from './config'
 
 // The WW1 diary with the most complete seed data
 const SEEDED_DIARY_TITLE = 'Local: WW1 Diary'
 
 async function getWW1DiaryId(request: import('@playwright/test').APIRequestContext): Promise<string> {
-  const response = await request.get('https://localhost:54629/api/v1/Diary/Get', { ignoreHTTPSErrors: true })
+  const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   const diaries: Array<{ diaryId: string; title: string; author: string }> = await response.json()
   const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE)
     ?? diaries.find(d => d.title.includes('WW1'))

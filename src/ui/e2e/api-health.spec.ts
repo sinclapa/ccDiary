@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test'
-
-const API_BASE = 'https://localhost:54629'
+import { API_BASE } from './config'
 
 test.describe('API health and info endpoints', () => {
   test('actuator health returns UP', async ({ request }) => {

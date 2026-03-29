@@ -8,6 +8,7 @@
     "lint": "eslint . --fix --ignore-path .gitignore",
     "test": "vitest",
     "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=reports/junit.xml --coverage",
+    "test:e2e": "playwright test",
     "coverage": "vitest run --coverage",
     "test:ui": "vitest --environment jsdom --coverage --ui"
   },
