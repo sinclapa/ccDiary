@@ -88,6 +88,18 @@ try {
         }
     )
 
+    $appRoleId = (New-GuidFromString "${resourceGroupId}-${AppName}-approle-diary-seed").ToString()
+    $appRoles = @(
+        @{
+            id = $appRoleId
+            allowedMemberTypes = @("Application")
+            displayName = "Seed test data"
+            description = "Allows seeding of test data for automated testing (used by CI/CD)"
+            value = "Diary.Seed"
+            isEnabled = $true
+        }
+    )
+
     if ($appId -ne "" -and $null -ne $appId) {
         Write-Host "  Updating existing application: $appId"
     } else {
@@ -116,6 +128,7 @@ try {
             }
         }
         api = @{ oauth2PermissionScopes = $oauthScopes }
+        appRoles = $appRoles
     } | ConvertTo-Json -Depth 10
 
     # Write JSON to temp file
@@ -135,6 +148,41 @@ try {
         }
     } finally {
         Remove-Item -Path $tempBodyFile -Force -ErrorAction SilentlyContinue
+    }
+
+    # Ensure service principal exists (auto-created on first app creation, but may lag)
+    Write-Host "  Ensuring service principal exists..."
+    $spId = az ad sp show --id $appId --query "id" -o tsv 2>$null
+    if (-not $spId) {
+        Write-Host "  Creating service principal..."
+        $spId = az ad sp create --id $appId --query "id" -o tsv
+    }
+
+    # Assign Diary.Seed app role to the service principal so client credentials can acquire a token
+    Write-Host "  Assigning Diary.Seed app role to service principal..."
+    $existingAssignments = az rest --method GET `
+        --uri "https://graph.microsoft.com/v1.0/servicePrincipals/${spId}/appRoleAssignments" `
+        --output json | ConvertFrom-Json
+    $alreadyAssigned = $existingAssignments.value | Where-Object { $_.appRoleId -eq $appRoleId }
+    if (-not $alreadyAssigned) {
+        $roleAssignmentBody = @{
+            principalId = $spId
+            resourceId = $spId
+            appRoleId = $appRoleId
+        } | ConvertTo-Json
+        $tempRoleFile = [System.IO.Path]::GetTempFileName()
+        try {
+            Set-Content -Path $tempRoleFile -Value $roleAssignmentBody -Encoding UTF8
+            Get-Content -Path $tempRoleFile | az rest --method POST `
+                --uri "https://graph.microsoft.com/v1.0/servicePrincipals/${spId}/appRoleAssignments" `
+                --headers "Content-Type=application/json" `
+                --body "@-"
+        } finally {
+            Remove-Item -Path $tempRoleFile -Force -ErrorAction SilentlyContinue
+        }
+        Write-Host "  Diary.Seed role assigned."
+    } else {
+        Write-Host "  Diary.Seed role already assigned."
     }
 
     $EntraObjectId = $objectId
