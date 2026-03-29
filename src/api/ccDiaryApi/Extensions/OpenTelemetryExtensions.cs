@@ -5,6 +5,8 @@
 namespace ccDiaryApi.Extensions
 {
     using OpenTelemetry.Exporter;
+    using OpenTelemetry.Instrumentation.AspNetCore;
+    using OpenTelemetry.Instrumentation.SqlClient;
     using OpenTelemetry.Metrics;
     using OpenTelemetry.Resources;
     using OpenTelemetry.Trace;
@@ -41,47 +43,97 @@ namespace ccDiaryApi.Extensions
             var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "unknown";
 
             services.AddOpenTelemetry()
-                .ConfigureResource(resource => resource
-                    .AddService(serviceName, serviceVersion: serviceVersion)
-                    .AddAttributes(new[]
-                    {
-                        new KeyValuePair<string, object>("deployment.environment", environment),
-                    }))
+                .ConfigureResource(resource => ConfigureOtelResource(resource, serviceName, serviceVersion, environment))
                 .WithTracing(tracing => tracing
-                    .AddAspNetCoreInstrumentation(options =>
-                    {
-                        options.RecordException = true;
-                        options.Filter = ctx =>
-                            !ctx.Request.Path.StartsWithSegments("/swagger") &&
-                            !ctx.Request.Path.StartsWithSegments("/actuator") &&
-                            !ctx.Request.Path.StartsWithSegments("/api/assembly-info") &&
-                            !ctx.Request.Path.StartsWithSegments("/health");
-                    })
+                    .AddAspNetCoreInstrumentation(ConfigureAspNetCoreTracing)
                     .AddHttpClientInstrumentation()
-                    .AddSqlClientInstrumentation(options =>
-                    {
-                        options.SetDbStatementForText = true;
-                    })
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Protocol = OtlpExportProtocol.HttpProtobuf;
-                        options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
-                        options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<System.Diagnostics.Activity>
-                        {
-                            ScheduledDelayMilliseconds = 5000,
-                            MaxQueueSize = 2048,
-                        };
-                    }))
+                    .AddSqlClientInstrumentation(ConfigureSqlClientTracing)
+                    .AddOtlpExporter(ConfigureTracingOtlpExporter))
                 .WithMetrics(metrics => metrics
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Protocol = OtlpExportProtocol.HttpProtobuf;
-                    }));
+                    .AddOtlpExporter(ConfigureMetricsOtlpExporter));
 
             return services;
+        }
+
+        /// <summary>
+        /// Configures the OpenTelemetry resource with service name, version, and deployment environment.
+        /// </summary>
+        /// <param name="resource">The resource builder to configure.</param>
+        /// <param name="serviceName">The logical service name.</param>
+        /// <param name="serviceVersion">The service version.</param>
+        /// <param name="environment">The deployment environment (e.g. Production, Development).</param>
+        /// <returns>The configured <paramref name="resource"/> for fluent chaining.</returns>
+        public static ResourceBuilder ConfigureOtelResource(
+            ResourceBuilder resource,
+            string serviceName,
+            string serviceVersion,
+            string environment) =>
+            resource
+                .AddService(serviceName, serviceVersion: serviceVersion)
+                .AddAttributes(new[]
+                {
+                    new KeyValuePair<string, object>("deployment.environment", environment),
+                });
+
+        /// <summary>
+        /// Returns <c>true</c> when the request should be traced.
+        /// Excludes infrastructure paths (Swagger UI, actuator, health check, and assembly-info)
+        /// that produce high-volume, low-value spans.
+        /// </summary>
+        /// <param name="ctx">The HTTP context for the incoming request.</param>
+        /// <returns><c>true</c> if the request should be traced; otherwise <c>false</c>.</returns>
+        public static bool ShouldTraceRequest(HttpContext ctx) =>
+            !ctx.Request.Path.StartsWithSegments("/swagger") &&
+            !ctx.Request.Path.StartsWithSegments("/actuator") &&
+            !ctx.Request.Path.StartsWithSegments("/api/assembly-info") &&
+            !ctx.Request.Path.StartsWithSegments("/health");
+
+        /// <summary>
+        /// Configures ASP.NET Core tracing instrumentation: enables exception recording and
+        /// applies <see cref="ShouldTraceRequest"/> as the sampling filter.
+        /// </summary>
+        /// <param name="options">The instrumentation options to configure.</param>
+        public static void ConfigureAspNetCoreTracing(AspNetCoreTraceInstrumentationOptions options)
+        {
+            options.RecordException = true;
+            options.Filter = ShouldTraceRequest;
+        }
+
+        /// <summary>
+        /// Configures SQL Client tracing instrumentation to capture the full query text in spans.
+        /// </summary>
+        /// <param name="options">The instrumentation options to configure.</param>
+        public static void ConfigureSqlClientTracing(SqlClientTraceInstrumentationOptions options)
+        {
+            options.SetDbStatementForText = true;
+        }
+
+        /// <summary>
+        /// Configures the OTLP exporter used for tracing: HTTP/Protobuf protocol with a batch
+        /// processor (5 s flush interval, 2 048-span queue).
+        /// </summary>
+        /// <param name="options">The exporter options to configure.</param>
+        public static void ConfigureTracingOtlpExporter(OtlpExporterOptions options)
+        {
+            options.Protocol = OtlpExportProtocol.HttpProtobuf;
+            options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
+            options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<System.Diagnostics.Activity>
+            {
+                ScheduledDelayMilliseconds = 5000,
+                MaxQueueSize = 2048,
+            };
+        }
+
+        /// <summary>
+        /// Configures the OTLP exporter used for metrics: HTTP/Protobuf protocol.
+        /// </summary>
+        /// <param name="options">The exporter options to configure.</param>
+        public static void ConfigureMetricsOtlpExporter(OtlpExporterOptions options)
+        {
+            options.Protocol = OtlpExportProtocol.HttpProtobuf;
         }
 
         /// <summary>
@@ -107,7 +159,9 @@ namespace ccDiaryApi.Extensions
                         var idx = part.IndexOf('=', StringComparison.Ordinal);
                         if (idx > 0)
                         {
-                            o.Headers.Add(part[..idx].Trim(), part[(idx + 1)..].Trim());
+                            var key = part[..idx].Trim();
+                            var value = part.Substring(idx + 1).Trim();
+                            o.Headers.Add(key, value);
                         }
                     }
                 }

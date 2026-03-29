@@ -5,8 +5,13 @@
 namespace ccDiaryApiTest.v1
 {
     using ccDiaryApi.Extensions;
+    using Microsoft.AspNetCore.Http;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using OpenTelemetry.Exporter;
+    using OpenTelemetry.Instrumentation.AspNetCore;
+    using OpenTelemetry.Instrumentation.SqlClient;
+    using OpenTelemetry.Resources;
     using Serilog.Sinks.OpenTelemetry;
 
     /// <summary>
@@ -48,6 +53,113 @@ namespace ccDiaryApiTest.v1
             // Assert
             Assert.AreSame(services, result);
             Assert.IsTrue(result.Count > 0);
+        }
+
+        [TestMethod]
+        public void ConfigureOtelResource_SetsServiceNameAndEnvironment()
+        {
+            // Arrange
+            var builder = ResourceBuilder.CreateDefault();
+
+            // Act
+            var result = OpenTelemetryExtensions.ConfigureOtelResource(builder, "test-svc", "1.0.0", "testing");
+
+            // Assert
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceRequest_ReturnsFalse_ForExcludedPaths()
+        {
+            // Arrange
+            var excludedPaths = new[]
+            {
+                "/swagger/index.html",
+                "/actuator/health",
+                "/api/assembly-info",
+                "/health",
+            };
+
+            foreach (var path in excludedPaths)
+            {
+                var ctx = new DefaultHttpContext();
+                ctx.Request.Path = path;
+
+                // Act + Assert
+                Assert.IsFalse(
+                    OpenTelemetryExtensions.ShouldTraceRequest(ctx),
+                    $"Expected path '{path}' to be excluded from tracing.");
+            }
+        }
+
+        [TestMethod]
+        public void ShouldTraceRequest_ReturnsTrue_ForTracedPath()
+        {
+            // Arrange
+            var ctx = new DefaultHttpContext();
+            ctx.Request.Path = "/api/v1/Diary";
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceRequest(ctx);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [TestMethod]
+        public void ConfigureAspNetCoreTracing_SetsRecordExceptionAndFilter()
+        {
+            // Arrange
+            var options = new AspNetCoreTraceInstrumentationOptions();
+
+            // Act
+            OpenTelemetryExtensions.ConfigureAspNetCoreTracing(options);
+
+            // Assert
+            Assert.IsTrue(options.RecordException);
+            Assert.IsNotNull(options.Filter);
+        }
+
+        [TestMethod]
+        public void ConfigureSqlClientTracing_SetsDbStatementForText()
+        {
+            // Arrange
+            var options = new SqlClientTraceInstrumentationOptions();
+
+            // Act
+            OpenTelemetryExtensions.ConfigureSqlClientTracing(options);
+
+            // Assert
+            Assert.IsTrue(options.SetDbStatementForText);
+        }
+
+        [TestMethod]
+        public void ConfigureTracingOtlpExporter_SetsProtocolBatchAndQueueSize()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ConfigureTracingOtlpExporter(options);
+
+            // Assert
+            Assert.AreEqual(OtlpExportProtocol.HttpProtobuf, options.Protocol);
+            Assert.AreEqual(OpenTelemetry.ExportProcessorType.Batch, options.ExportProcessorType);
+            Assert.AreEqual(5000, options.BatchExportProcessorOptions.ScheduledDelayMilliseconds);
+            Assert.AreEqual(2048, options.BatchExportProcessorOptions.MaxQueueSize);
+        }
+
+        [TestMethod]
+        public void ConfigureMetricsOtlpExporter_SetsProtocol()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ConfigureMetricsOtlpExporter(options);
+
+            // Assert
+            Assert.AreEqual(OtlpExportProtocol.HttpProtobuf, options.Protocol);
         }
 
         [TestMethod]
