@@ -573,16 +573,12 @@ jobs:
           RESPONSE=$(curl -s -X POST \
             -d "client_id=$AZURE_CLIENT_ID&scope=${ENTRA_APPLICATION_ID_URI}/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
             "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token")
-          echo "Azure AD raw response: $RESPONSE"
           TOKEN=$(echo "$RESPONSE" | jq -r .access_token 2>/dev/null)
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
             echo "Failed to acquire API token"
+            echo "Azure AD raw response: $RESPONSE"
             exit 1
           fi
-          # Decode JWT claims for diagnostics (aud/iss are not secret values)
-          PAYLOAD=$(printf '%s' "$TOKEN" | cut -d'.' -f2 | tr '_-' '/+' | base64 --decode 2>/dev/null)
-          echo "Token aud: $(printf '%s' "$PAYLOAD" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('aud','?'))" 2>/dev/null)"
-          echo "Token iss: $(printf '%s' "$PAYLOAD" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('iss','?'))" 2>/dev/null)"
           echo "value=${TOKEN}" >> $GITHUB_OUTPUT
 
       - name: Seed test data
