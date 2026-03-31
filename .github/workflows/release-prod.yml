@@ -40,7 +40,7 @@ jobs:
           VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID }}
           VITE_TENANT_ID: ${{ secrets.TENANT_ID }}
           VITE_FARO_URL: ${{ secrets.GRAFANA_FARO_URL }}
-          VITE_ENVIRONMENT: ${{ github.environment }}
+          VITE_ENVIRONMENT: prod
         run: |
           node << 'SCRIPT'
           const fs = require('fs');
