@@ -43,6 +43,7 @@ jobs:
           sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ui-dist/config.js
           sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ui-dist/config.js
           sed -i "s/^\(\s*VITE_FARO_URL:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.GRAFANA_FARO_URL }}\2/" ui-dist/config.js
+          sed -i "/^[[:space:]]*VITE_ENVIRONMENT:/s|\"[^\"]*\"|\"${GITHUB_ENVIRONMENT}\"|" ui-dist/config.js
 
       - name: Deploy UI to Prod
         id: builddeploy-prod

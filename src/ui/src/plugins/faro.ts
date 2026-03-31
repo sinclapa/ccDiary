@@ -19,7 +19,7 @@ export function initFaro() {
     url,
     app: {
       name: 'ccdiary-ui',
-      version: getAppConfigField('VITE_APP_VERSION', { defaultValue: 'unknown' }),
+      version: __APP_VERSION__,
       environment: getAppConfigField('VITE_ENVIRONMENT', { defaultValue: 'unknown' }),
     },
     // Router handles dynamic import failures with a reload — suppress exception events

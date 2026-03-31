@@ -434,11 +434,12 @@ jobs:
           VITE_TENANT_ID: ${{ secrets.TENANT_ID }}
           VITE_FARO_URL: ${{ secrets.GRAFANA_FARO_URL }}
         run: |
+          export VITE_ENVIRONMENT="$GITHUB_ENVIRONMENT"
           node << 'SCRIPT'
           const fs = require('fs');
           const file = './dist/config.js';
           let content = fs.readFileSync(file, 'utf8');
-          const keys = ['VITE_API', 'VITE_APPLICATION_ID_URI', 'VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_FARO_URL'];
+          const keys = ['VITE_API', 'VITE_APPLICATION_ID_URI', 'VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_FARO_URL', 'VITE_ENVIRONMENT'];
           for (const key of keys) {
             const raw = process.env[key] || '';
             const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');

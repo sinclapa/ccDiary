@@ -56,7 +56,6 @@ describe('initFaro', () => {
         const values: Record<string, string> = {
           VITE_FARO_URL: faroUrl,
           VITE_API: 'NOT_SET',
-          VITE_APP_VERSION: '1.2.3',
           VITE_ENVIRONMENT: 'staging',
           ...overrides,
         }
@@ -71,7 +70,7 @@ describe('initFaro', () => {
       const config = mockInitializeFaro.mock.calls[0][0]
       expect(config.url).toBe(faroUrl)
       expect(config.app.name).toBe('ccdiary-ui')
-      expect(config.app.version).toBe('1.2.3')
+      expect(config.app.version).toBe(__APP_VERSION__)
       expect(config.app.environment).toBe('staging')
     })
 
