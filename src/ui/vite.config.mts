@@ -83,6 +83,7 @@ export default defineConfig({
     unstubEnvs: true,
     globals: true,
     environment: 'happy-dom',
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     server: {
       deps: {
         inline: ['vuetify'],

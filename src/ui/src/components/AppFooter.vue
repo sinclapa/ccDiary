@@ -1,7 +1,7 @@
 <template>
   <v-footer app height="40">
     <div class="text-caption text-disabled">
-      <span>Version {{ version }}</span>
+      <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
     </div>
     <a
       v-for="item in items"
@@ -28,9 +28,10 @@
 </template>
 
 <script setup lang="ts">
-  const version =
-    (globalThis as any).__APP_VERSION__
-    ?? (typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__)
+  import { getAppConfigField } from '@/utils/appConfig'
+
+  const version = __APP_VERSION__
+  const environment = getAppConfigField('VITE_ENVIRONMENT', { defaultValue: '' })
   const items = [
     {
       title: 'Vuetify Documentation',

@@ -96,10 +96,8 @@ resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
   name: 'stapp-${appName}'
   location: location
   sku: {
-    name: 'free'
-  }
-  identity: {
-    type: 'SystemAssigned'
+    name: 'Free'
+    tier: 'Free'
   }
   properties: {
     stagingEnvironmentPolicy: 'Enabled'

@@ -56,15 +56,15 @@ export function msalService(
     }
   }
 
-  const getToken = async () => {
+  const getToken = async (): Promise<string | null> => {
     if (!msalInstance) {
       throw new Error('MSAL not initialized. Call initializeMsal() before using MSAL API.')
     }
+    const accounts = msalInstance.getAllAccounts()
+    if (accounts.length === 0) {
+      return null
+    }
     try {
-      const accounts = msalInstance.getAllAccounts()
-      if (accounts.length === 0) {
-        throw new Error('No accounts found. Please login first.')
-      }
       const silentRequest = {
         scopes: [`${getAppConfigField('VITE_APPLICATION_ID_URI')}/Diary.Update`],
         account: accounts[0],
@@ -73,6 +73,7 @@ export function msalService(
       return silentResponse.accessToken
     } catch (error) {
       console.error('Silent token acquisition error:', error)
+      return null
     }
   }
 
@@ -83,14 +84,16 @@ export function msalService(
       const resourceUrl = resource instanceof Request ? resource.url : resource.toString()
       if (resourceUrl.includes(getAppConfigField('VITE_API'))) {
         const accessToken = await getToken()
-        options ??= { headers: {} }
-        const headers = new Headers(options.headers)
-        if (headers.has('Authorization')) {
-          headers.set('Authorization', `Bearer ${accessToken}`)
-        } else {
-          headers.append('Authorization', `Bearer ${accessToken}`)
+        if (accessToken) {
+          options ??= { headers: {} }
+          const headers = new Headers(options.headers)
+          if (headers.has('Authorization')) {
+            headers.set('Authorization', `Bearer ${accessToken}`)
+          } else {
+            headers.append('Authorization', `Bearer ${accessToken}`)
+          }
+          options.headers = headers
         }
-        options.headers = headers
       }
       const response = await originalFetch(resource, options)
       return response

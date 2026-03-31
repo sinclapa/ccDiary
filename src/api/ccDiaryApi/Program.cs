@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Globalization;
+using System.Reflection;
 using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
@@ -22,7 +23,6 @@ using Steeltoe.Common.HealthChecks;
 using Steeltoe.Management.Endpoint;
 using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
-using Steeltoe.Management.Endpoint.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -38,8 +38,11 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+    .WriteTo.OpenTelemetry(o => OpenTelemetryExtensions.ConfigureSerilogOtelSink(o, builder.Configuration), ignoreEnvironment: true)
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
+
+builder.Host.UseSerilog();
 
 Log.Logger.Information("ASPNETCORE_ENVIRONMENT = {Environment}", builder.Configuration["ASPNETCORE_ENVIRONMENT"]);
 string connectionString = Program.GetRequiredConnectionString(builder.Configuration);
@@ -89,8 +92,6 @@ builder.Services.AddHealthActuator();
 
 builder.Services.AddInfoActuator();
 
-builder.Services.AddMetricsActuator();
-
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -104,6 +105,11 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 {
     builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
 }));
+
+builder.Services.AddCcDiaryOpenTelemetry(
+    builder.Configuration,
+    serviceName: "ccDiaryApi",
+    serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown");
 
 var app = builder.Build();
 
