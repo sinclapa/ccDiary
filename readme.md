@@ -9,6 +9,9 @@
 ccDiary is a full-stack diary application that allows users to create, manage, and view diary entries. The application is built with a modern architecture featuring:
 
 ## Architecture & Technology Stack
+
+See [architecture.md](architecture.md) for the full architecture diagram covering cloud environments (dev / staging / prod), resource names, URLs, and local development setup.
+
 - **Backend API**: .NET 8 REST API (ASP.NET Core) with Entity Framework Core for data access
 - **Frontend**: TypeScript/Vue.js UI built with Vite
 - **Database**: SQL Server for persistent storage
