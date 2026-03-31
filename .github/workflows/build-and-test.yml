@@ -582,6 +582,20 @@ jobs:
           fi
           echo "value=${TOKEN}" >> $GITHUB_OUTPUT
 
+      - name: Wait for API to be ready
+        run: |
+          API_URL="${{ steps.api_url.outputs.value }}"
+          echo "Waiting for API at ${API_URL}/actuator/health ..."
+          for i in $(seq 1 20); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/actuator/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "API is ready (attempt $i)."
+              break
+            fi
+            echo "  HTTP $STATUS — retrying in 10s (attempt $i/20)..."
+            sleep 10
+          done
+
       - name: Seed test data
         working-directory: ./
         run: |
