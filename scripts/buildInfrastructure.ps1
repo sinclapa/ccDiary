@@ -201,7 +201,7 @@ else {
 $grafanaOtlpAuthHeader = ""
 if ($grafanaInstanceId -and $grafanaApiToken) {
     $grafanaOtlpAuthHeaderBytes = [System.Text.Encoding]::UTF8.GetBytes("${grafanaInstanceId}:${grafanaApiToken}")
-    $grafanaOtlpAuthHeader = "Authorization: Basic $([System.Convert]::ToBase64String($grafanaOtlpAuthHeaderBytes))"
+    $grafanaOtlpAuthHeader = "Authorization=Basic $([System.Convert]::ToBase64String($grafanaOtlpAuthHeaderBytes))"
 }
 
 if (-Not ($params.ContainsKey("GrafanaFaroUrl"))) {
