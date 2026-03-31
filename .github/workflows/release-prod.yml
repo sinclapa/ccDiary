@@ -37,13 +37,23 @@ jobs:
         env:
           VITE_API: ${{ secrets.API_URL }}
           VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI }}
+          VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID }}
+          VITE_TENANT_ID: ${{ secrets.TENANT_ID }}
+          VITE_FARO_URL: ${{ secrets.GRAFANA_FARO_URL }}
+          VITE_ENVIRONMENT: ${{ github.environment }}
         run: |
-          sed -i "/^[[:space:]]*VITE_APPLICATION_ID_URI:/s|\"[^\"]*\"|\"${VITE_APPLICATION_ID_URI//\"/\\\"}\"|" ui-dist/config.js
-          sed -i "/^[[:space:]]*VITE_API:/s|\"[^\"]*\"|\"${VITE_API//\"/\\\"}\"|" ui-dist/config.js
-          sed -i "s/^\(\s*VITE_CLIENT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.ENTRA_CLIENT_ID }}\2/" ui-dist/config.js
-          sed -i "s/^\(\s*VITE_TENANT_ID:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.TENANT_ID }}\2/" ui-dist/config.js
-          sed -i "s/^\(\s*VITE_FARO_URL:\s*\"\)[^\"]*\(\"\s*,\)/\1${{ secrets.GRAFANA_FARO_URL }}\2/" ui-dist/config.js
-          sed -i "/^[[:space:]]*VITE_ENVIRONMENT:/s|\"[^\"]*\"|\"${GITHUB_ENVIRONMENT}\"|" ui-dist/config.js
+          node << 'SCRIPT'
+          const fs = require('fs');
+          const file = './ui-dist/config.js';
+          let content = fs.readFileSync(file, 'utf8');
+          const keys = ['VITE_API', 'VITE_APPLICATION_ID_URI', 'VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_FARO_URL', 'VITE_ENVIRONMENT'];
+          for (const key of keys) {
+            const raw = process.env[key] || '';
+            const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            content = content.replace(new RegExp(`(${key}:\\s*)"[^"]*"`), (_, prefix) => `${prefix}"${escaped}"`);
+          }
+          fs.writeFileSync(file, content);
+          SCRIPT
 
       - name: Deploy UI to Prod
         id: builddeploy-prod
