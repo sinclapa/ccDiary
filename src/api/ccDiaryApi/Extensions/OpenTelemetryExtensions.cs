@@ -44,6 +44,7 @@ namespace ccDiaryApi.Extensions
                 return services;
             }
 
+            var otlpHeaders = configuration["OTEL_EXPORTER_OTLP_HEADERS"] ?? string.Empty;
             var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "unknown";
 
             services.AddOpenTelemetry()
@@ -53,12 +54,20 @@ namespace ccDiaryApi.Extensions
                     .AddHttpClientInstrumentation()
                     .AddEntityFrameworkCoreInstrumentation(ConfigureEntityFrameworkCoreTracing)
                     .AddSqlClientInstrumentation(ConfigureSqlClientTracing)
-                    .AddOtlpExporter(ConfigureTracingOtlpExporter))
+                    .AddOtlpExporter(opts =>
+                    {
+                        ConfigureTracingOtlpExporter(opts);
+                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders);
+                    }))
                 .WithMetrics(metrics => metrics
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddOtlpExporter(ConfigureMetricsOtlpExporter));
+                    .AddOtlpExporter(opts =>
+                    {
+                        ConfigureMetricsOtlpExporter(opts);
+                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders);
+                    }));
 
             return services;
         }
@@ -81,6 +90,7 @@ namespace ccDiaryApi.Extensions
                 .AddAttributes(new[]
                 {
                     new KeyValuePair<string, object>("deployment.environment", environment),
+                    new KeyValuePair<string, object>("deployment.environment.name", environment),
                 });
 
         /// <summary>
@@ -194,6 +204,24 @@ namespace ccDiaryApi.Extensions
         public static void ConfigureMetricsOtlpExporter(OtlpExporterOptions options)
         {
             options.Protocol = OtlpExportProtocol.HttpProtobuf;
+        }
+
+        /// <summary>
+        /// Applies the OTLP collector endpoint and optional authorization headers to an exporter
+        /// options instance. This ensures the values from <c>IConfiguration</c> (e.g. user secrets
+        /// when running via <c>dotnet run</c>) are used rather than relying solely on process
+        /// environment variables.
+        /// </summary>
+        /// <param name="options">The exporter options to configure.</param>
+        /// <param name="endpoint">The OTLP collector endpoint URL.</param>
+        /// <param name="headers">Optional comma-separated key=value header string (may be empty).</param>
+        public static void ApplyOtlpEndpointAndHeaders(OtlpExporterOptions options, string endpoint, string headers)
+        {
+            options.Endpoint = new Uri(endpoint);
+            if (!string.IsNullOrEmpty(headers))
+            {
+                options.Headers = headers;
+            }
         }
 
         /// <summary>

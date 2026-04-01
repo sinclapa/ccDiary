@@ -253,6 +253,46 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_SetsEndpoint()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+
+            // Assert
+            Assert.AreEqual(new Uri("http://otel-collector:4318"), options.Endpoint);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_SetsHeaders_WhenHeadersProvided()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", "Authorization=Basic dXNlcjpwYXNz");
+
+            // Assert
+            Assert.AreEqual("Authorization=Basic dXNlcjpwYXNz", options.Headers);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_DoesNotSetHeaders_WhenHeadersEmpty()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+            var defaultHeaders = options.Headers;
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+
+            // Assert — Headers property must be unchanged from its default
+            Assert.AreEqual(defaultHeaders, options.Headers);
+        }
+
+        [TestMethod]
         public void ConfigureSerilogOtelSink_DoesNotSetEndpoint_WhenEndpointIsEmpty()
         {
             // Arrange

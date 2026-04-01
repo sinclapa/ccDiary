@@ -2,6 +2,7 @@
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Asp.Versioning;
@@ -25,8 +26,18 @@ using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
 
 var builder = WebApplication.CreateBuilder(args);
+var startupActivitySource = new ActivitySource("ccDiaryApi.Startup");
 builder.Configuration.AddEnvironmentVariables();
-if (builder.Environment.IsEnvironment("Local") || builder.Environment.IsEnvironment("LocalContainer"))
+if (builder.Environment.IsEnvironment("local"))
+{
+    // Keep lowercase ASPNETCORE_ENVIRONMENT value while still loading existing Local settings file.
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+}
+
+if (builder.Environment.IsEnvironment("Local")
+    || builder.Environment.IsEnvironment("local")
+    || builder.Environment.IsEnvironment("LocalContainer")
+    || builder.Environment.IsEnvironment("localcontainer"))
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
@@ -58,7 +69,29 @@ builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
     opts.UseSqlServer(connStrBuilder.ConnectionString));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("Entra"));
+                .AddMicrosoftIdentityWebApi(
+                    jwtBearerOptions =>
+                    {
+                        jwtBearerOptions.Events = new JwtBearerEvents
+                        {
+                            OnAuthenticationFailed = context =>
+                            {
+                                Log.Logger.Warning(context.Exception, "JWT authentication failed for {Path}", context.Request.Path);
+                                return Task.CompletedTask;
+                            },
+                            OnChallenge = context =>
+                            {
+                                Log.Logger.Warning("JWT authentication challenge for {Path}", context.Request.Path);
+                                return Task.CompletedTask;
+                            },
+                            OnForbidden = context =>
+                            {
+                                Log.Logger.Warning("JWT authorization forbidden for {Path}", context.Request.Path);
+                                return Task.CompletedTask;
+                            },
+                        };
+                    },
+                    microsoftIdentityOptions => builder.Configuration.Bind("Entra", microsoftIdentityOptions));
 
 builder.Services.AddApiVersioning(options =>
     {
@@ -115,7 +148,27 @@ var app = builder.Build();
 
 if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
 {
-    app.MigrateDatabase();
+    var migrationStopwatch = Stopwatch.StartNew();
+    using var migrationActivity = startupActivitySource.StartActivity("database.migrate", ActivityKind.Internal);
+    migrationActivity?.SetTag("db.operation", "migrate");
+    migrationActivity?.SetTag("service.name", "ccDiaryApi");
+
+    try
+    {
+        app.MigrateDatabase();
+        migrationStopwatch.Stop();
+        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
+        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
+        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
+    }
+    catch (Exception ex)
+    {
+        migrationStopwatch.Stop();
+        migrationActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
+        Log.Logger.Error(ex, "Database migration failed after {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
+        throw;
+    }
 }
 else
 {
@@ -127,6 +180,66 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
     KnownNetworks = { },
     KnownProxies = { },
+});
+
+app.Use(async (context, next) =>
+{
+    if (!OpenTelemetryExtensions.ShouldTraceRequest(context))
+    {
+        await next();
+        return;
+    }
+
+    var requestStart = Stopwatch.StartNew();
+    try
+    {
+        await next();
+        requestStart.Stop();
+
+        var traceId = Activity.Current?.TraceId.ToString() ?? string.Empty;
+        var spanId = Activity.Current?.SpanId.ToString() ?? string.Empty;
+        var statusCode = context.Response.StatusCode;
+
+        if (statusCode >= 500)
+        {
+            Log.Logger.Warning(
+                "HTTP request completed with server error. Method={Method} Path={Path} StatusCode={StatusCode} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
+                context.Request.Method,
+                context.Request.Path,
+                statusCode,
+                requestStart.ElapsedMilliseconds,
+                traceId,
+                spanId);
+        }
+        else
+        {
+            Log.Logger.Information(
+                "HTTP request completed. Method={Method} Path={Path} StatusCode={StatusCode} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
+                context.Request.Method,
+                context.Request.Path,
+                statusCode,
+                requestStart.ElapsedMilliseconds,
+                traceId,
+                spanId);
+        }
+    }
+    catch (Exception ex)
+    {
+        requestStart.Stop();
+        var traceId = Activity.Current?.TraceId.ToString() ?? string.Empty;
+        var spanId = Activity.Current?.SpanId.ToString() ?? string.Empty;
+
+        Log.Logger.Error(
+            ex,
+            "HTTP request failed. Method={Method} Path={Path} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
+            context.Request.Method,
+            context.Request.Path,
+            requestStart.ElapsedMilliseconds,
+            traceId,
+            spanId);
+
+        throw;
+    }
 });
 
 app.UseSwagger();
