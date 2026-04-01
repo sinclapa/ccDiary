@@ -9,6 +9,7 @@
     <h1>ccDiary API</h1>
     <p><strong>Assembly:</strong> <span id="assembly-name">Loading...</span></p>
     <p><strong>Version:</strong> <span id="assembly-version">Loading...</span></p>
+    <p><strong>Environment:</strong> <span id="environment-name">Loading...</span></p>
 
     <h2>Links</h2>
     <ul>
@@ -28,9 +29,11 @@
             const data = await response.json();
             document.getElementById('assembly-name').textContent = data.assemblyName ?? 'Unknown';
             document.getElementById('assembly-version').textContent = data.assemblyVersion ?? 'Unknown';
+            document.getElementById('environment-name').textContent = data.environmentName ?? 'Unknown';
         } catch {
             document.getElementById('assembly-name').textContent = 'Unavailable';
             document.getElementById('assembly-version').textContent = 'Unavailable';
+            document.getElementById('environment-name').textContent = 'Unavailable';
         }
     </script>
 </body>

@@ -20,16 +20,18 @@ namespace ccDiaryApi.Endpoints
         // Null-coalescing branches (GetEntryAssembly returning null, Name being null) only occur
         // in unusual hosting scenarios and cannot be reliably triggered in unit/integration tests.
         [ExcludeFromCodeCoverage(Justification = "Null-coalescing fallbacks not reachable in standard test environments.")]
-        private static IResult GetAssemblyInfo()
+        private static IResult GetAssemblyInfo(IWebHostEnvironment webHostEnvironment)
         {
             var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
             var assemblyName = assembly.GetName().Name ?? "Unknown";
             var assemblyVersion = AssemblyVersionInfo.GetInformationalVersion(assembly);
+            var environmentName = webHostEnvironment.EnvironmentName;
 
             return Results.Ok(new
             {
                 assemblyName,
                 assemblyVersion,
+                environmentName,
             });
         }
     }
