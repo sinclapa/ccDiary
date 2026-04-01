@@ -85,14 +85,21 @@ export function msalService(
       if (resourceUrl.includes(getAppConfigField('VITE_API'))) {
         const accessToken = await getToken()
         if (accessToken) {
-          options ??= { headers: {} }
-          const headers = new Headers(options.headers)
+          const headers = new Headers(resource instanceof Request ? resource.headers : undefined)
+          if (options?.headers) {
+            new Headers(options.headers).forEach((value, key) => headers.set(key, value))
+          }
+
           if (headers.has('Authorization')) {
             headers.set('Authorization', `Bearer ${accessToken}`)
           } else {
             headers.append('Authorization', `Bearer ${accessToken}`)
           }
-          options.headers = headers
+
+          options = {
+            ...(options ?? {}),
+            headers,
+          }
         }
       }
       const response = await originalFetch(resource, options)

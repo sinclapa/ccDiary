@@ -147,6 +147,8 @@ app.UseCors("cors");
 
 app.UseAuthentication();
 
+app.UseObservabilityUserContext();
+
 app.UseAuthorization();
 
 app.MapAssemblyInfo();
