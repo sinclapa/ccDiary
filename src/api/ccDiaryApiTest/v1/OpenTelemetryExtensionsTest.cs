@@ -4,12 +4,14 @@
 
 namespace ccDiaryApiTest.v1
 {
+    using System.Data;
     using ccDiaryApi.Extensions;
     using Microsoft.AspNetCore.Http;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using OpenTelemetry.Exporter;
     using OpenTelemetry.Instrumentation.AspNetCore;
+    using OpenTelemetry.Instrumentation.EntityFrameworkCore;
     using OpenTelemetry.Instrumentation.SqlClient;
     using OpenTelemetry.Resources;
     using Serilog.Sinks.OpenTelemetry;
@@ -131,6 +133,94 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsTrue(options.SetDbStatementForText);
+        }
+
+        [TestMethod]
+        public void ConfigureEntityFrameworkCoreTracing_SetsExpectedOptions()
+        {
+            // Arrange
+            var options = new EntityFrameworkInstrumentationOptions();
+
+            // Act
+            OpenTelemetryExtensions.ConfigureEntityFrameworkCoreTracing(options);
+
+            // Assert
+            Assert.IsTrue(options.SetDbStatementForText);
+            Assert.IsTrue(options.SetDbStatementForStoredProcedure);
+            Assert.IsNotNull(options.Filter);
+        }
+
+        [DataTestMethod]
+        [DataRow("SELECT 1")]
+        [DataRow("SELECT 1;")]
+        [DataRow(" SELECT 1 ; ")]
+        [DataRow("SELECT 1 FROM DUAL")]
+        [DataRow("SELECT DB_NAME()")]
+        [DataRow("SELECT TOP(1) 1 FROM sys.objects")]
+        [DataRow("SELECT TOP (1) 1 FROM sys.tables")]
+        [DataRow("SELECT SERVERPROPERTY('ProductVersion')")]
+        public void IsLowValueProbeQuery_ReturnsTrue_ForProbeStatements(string query)
+        {
+            // Act
+            var result = OpenTelemetryExtensions.IsLowValueProbeQuery(query);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [DataTestMethod]
+        [DataRow("SELECT * FROM Diary")]
+        [DataRow("EXEC dbo.GetDiaryById @id")]
+        [DataRow("UPDATE Diary SET Title = 'x'")]
+        public void IsLowValueProbeQuery_ReturnsFalse_ForBusinessStatements(string query)
+        {
+            // Act
+            var result = OpenTelemetryExtensions.IsLowValueProbeQuery(query);
+
+            // Assert
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceDbCommand_ReturnsTrue_WhenCommandTextIsEmpty()
+        {
+            // Arrange
+            var command = new Moq.Mock<IDbCommand>();
+            command.SetupGet(c => c.CommandText).Returns(string.Empty);
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceDbCommand("provider", command.Object);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceDbCommand_ReturnsFalse_ForProbeStatement()
+        {
+            // Arrange
+            var command = new Moq.Mock<IDbCommand>();
+            command.SetupGet(c => c.CommandText).Returns("SELECT 1");
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceDbCommand("provider", command.Object);
+
+            // Assert
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceDbCommand_ReturnsTrue_ForBusinessStatement()
+        {
+            // Arrange
+            var command = new Moq.Mock<IDbCommand>();
+            command.SetupGet(c => c.CommandText).Returns("SELECT * FROM Diary");
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceDbCommand("provider", command.Object);
+
+            // Assert
+            Assert.IsTrue(result);
         }
 
         [TestMethod]
