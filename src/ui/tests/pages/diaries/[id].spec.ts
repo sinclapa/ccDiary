@@ -15,6 +15,7 @@ import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { diaryAPI } from '@/services/modules/diaryService'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
 import { state } from '@/services/authentication/msalConfig'
+import { useApiStatusStore } from '@/stores/apiStatus'
 import Component from '@/pages/diaries/[id].vue'
 import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
@@ -446,6 +447,52 @@ describe('[id].vue', () => {
     expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
       dayjs(new Date(2020, 0, 1)).startOf('day').format('YYYY-MM-DD')
     )
+  })
+
+  it('watch(selectedDate) early returns when newDate is undefined', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
+    const callsBefore = searchSpy.mock.calls.length
+
+    // Setting selectedDate to undefined triggers the watch early-return path
+    ;(wrapper.vm as any).selectedDate = undefined
+    await flushPromises()
+
+    // No additional selectDate calls (early return happened)
+    expect(searchSpy.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('reloads diary data when apiStatus.recoveryCount increases', async () => {
+    await flushPromises()
+    const getDiarySpy = vi.spyOn(diaryAPI, 'getDiary')
+    const callsBefore = getDiarySpy.mock.calls.length
+
+    const store = useApiStatusStore()
+    store.recoveryCount++
+    await flushPromises()
+
+    expect(getDiarySpy.mock.calls.length).toBeGreaterThan(callsBefore)
+  })
+
+  it('updateYear returns early when year is undefined', async () => {
+    await flushPromises()
+    const prevYear = (wrapper.vm as any).calendarYear
+    await (wrapper.vm as any).updateYear(undefined)
+    // calendarYear should not have changed
+    expect((wrapper.vm as any).calendarYear).toBe(prevYear)
+  })
+
+  it('watch([calendarYear, calendarMonth]) returns early when year is undefined', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntry)
+    const callsBefore = searchSpy.mock.calls.length
+
+    // Setting calendarYear to undefined triggers the guard early return in the watch
+    ;(wrapper.vm as any).calendarYear = undefined
+    await flushPromises()
+
+    // No additional searchDiaryEntry calls (early return happened)
+    expect(searchSpy.mock.calls.length).toBe(callsBefore)
   })
 
 })

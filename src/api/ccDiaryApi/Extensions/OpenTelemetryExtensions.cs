@@ -4,6 +4,8 @@
 
 namespace ccDiaryApi.Extensions
 {
+    using System.Reflection;
+    using ccDiaryApi.Utilities;
     using OpenTelemetry.Exporter;
     using OpenTelemetry.Instrumentation.AspNetCore;
     using OpenTelemetry.Instrumentation.SqlClient;
@@ -148,9 +150,18 @@ namespace ccDiaryApi.Extensions
             var endpoint = config["OTEL_EXPORTER_OTLP_ENDPOINT"];
             if (!string.IsNullOrEmpty(endpoint))
             {
+                var environment = config["ASPNETCORE_ENVIRONMENT"] ?? "unknown";
+                var serviceVersion = AssemblyVersionInfo.GetInformationalVersion(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly());
+
                 o.Endpoint = endpoint.TrimEnd('/') + "/v1/logs";
                 o.Protocol = OtlpProtocol.HttpProtobuf;
                 o.ResourceAttributes["service.name"] = "ccDiaryApi";
+                o.ResourceAttributes["service.version"] = serviceVersion;
+
+                // Align log resource attributes with trace resource attributes.
+                o.ResourceAttributes["deployment.environment"] = environment;
+                o.ResourceAttributes["deployment.environment.name"] = environment;
+
                 var headers = config["OTEL_EXPORTER_OTLP_HEADERS"];
                 if (!string.IsNullOrEmpty(headers))
                 {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { state } from '@/services/authentication/msalConfig'
+import { useApiStatusStore } from '@/stores/apiStatus'
 import Index from '@/pages/diaries/index.vue'
 import { diaryAPI } from '@/services/modules/diaryService'
 
@@ -170,4 +171,15 @@ describe('pages/diaries/index.vue', () => {
     // Check table row is rendered
     expect(wrapper.html()).toContain('Diary 1');
   });
+
+  it('reloads diaries when apiStatus.recoveryCount increases', async () => {
+    const store = useApiStatusStore()
+    const getDiariesSpy = diaryAPI.getDiaries as ReturnType<typeof vi.fn>
+    const callsBefore = getDiariesSpy.mock.calls.length
+
+    store.recoveryCount++
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(getDiariesSpy.mock.calls.length).toBeGreaterThan(callsBefore)
+  })
 })

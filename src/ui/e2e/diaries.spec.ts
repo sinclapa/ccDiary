@@ -6,6 +6,7 @@ const SEEDED_DIARY_TITLE = 'Local: WW1 Diary'
 
 async function getWW1DiaryId(request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
+  expect(response.ok()).toBeTruthy()
   const diaries: Array<{ diaryId: string; title: string; author: string }> = await response.json()
   const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE)
     ?? diaries.find(d => d.title.includes('WW1'))
@@ -13,9 +14,19 @@ async function getWW1DiaryId(request: import('@playwright/test').APIRequestConte
   return match.diaryId
 }
 
+async function gotoDiaries(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto('/diaries')
+  await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
+}
+
+async function gotoDiaryDetail(page: import('@playwright/test').Page, diaryId: string): Promise<void> {
+  await page.goto(`/diaries/${diaryId}`)
+  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
+}
+
 test.describe('Diaries list', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/diaries', { waitUntil: 'networkidle' })
+    await gotoDiaries(page)
   })
 
   test('loads data table with diary rows', async ({ page }) => {
@@ -35,21 +46,18 @@ test.describe('Diaries list', () => {
   })
 
   test('does not show Add Diary button when not authenticated', async ({ page }) => {
-    // Wait for table to load
-    await page.locator('table').waitFor({ timeout: 10000 })
     // Add Diary button only shows when authenticated
     await expect(page.getByRole('button', { name: 'Add Diary' })).toHaveCount(0)
   })
 
   test('does not show edit or delete buttons when not authenticated', async ({ page }) => {
-    await page.locator('table').waitFor({ timeout: 10000 })
     await expect(page.locator('button:has(.mdi-pencil)')).toHaveCount(0)
     await expect(page.locator('button:has(.mdi-delete)')).toHaveCount(0)
   })
 
   test('clicking diary title navigates to detail page', async ({ page }) => {
     const firstLink = page.locator('table a[href*="diaries/"]').first()
-    await firstLink.waitFor({ timeout: 10000 })
+    await expect(firstLink).toBeVisible({ timeout: 10000 })
     await firstLink.click()
     await expect(page).toHaveURL(/\/diaries\/[a-f0-9-]+/, { timeout: 10000 })
   })
@@ -63,27 +71,24 @@ test.describe('Diary detail page', () => {
   })
 
   test('loads diary detail with date picker', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
   })
 
   test('shows diary title and author', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-date-picker').waitFor({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
     await expect(page.locator('.title')).not.toBeEmpty()
     await expect(page.locator('.author')).not.toBeEmpty()
   })
 
   test('shows diary entries in timeline after selecting a date', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-date-picker').waitFor({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
     const timeline = page.locator('.v-timeline-item')
     await expect(timeline.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('skip-forward moves to a later entry', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-timeline-item').first().waitFor({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Page starts at minDate so skip-backward is already disabled; skip-forward should be enabled
     const startBtn = page.locator('button:has(.mdi-skip-backward)').first()
@@ -95,15 +100,12 @@ test.describe('Diary detail page', () => {
     const forwardBtn = page.locator('button:has(.mdi-fast-forward)').first()
     await expect(forwardBtn).not.toBeDisabled()
     await forwardBtn.click()
-    await page.waitForTimeout(600)
-
-    const entryAfter = await page.locator('.v-timeline-item').first().textContent()
-    expect(entryAfter).not.toBe(entryBefore)
+    await expect.poll(async () => (await page.locator('.v-timeline-item').first().textContent()) ?? '').not.toBe(entryBefore ?? '')
   })
 
   test('skip-to-start button is disabled at page load (starts at first entry)', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-timeline-item').first().waitFor({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Page initialises at minDate so the go-to-start button is already disabled
     const startBtn = page.locator('button:has(.mdi-skip-backward)').first()
@@ -120,8 +122,8 @@ test.describe('Diary detail page', () => {
   })
 
   test('skip-to-end button disables when at last entry', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-timeline-item').first().waitFor({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     const endBtn = page.locator('button:has(.mdi-skip-forward)').first()
     await endBtn.click()
@@ -130,21 +132,18 @@ test.describe('Diary detail page', () => {
   })
 
   test('compact/expand date picker toggle changes button label', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-date-picker').waitFor({ timeout: 12000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
 
     const toggleBtn = page.locator('button:has-text("Compact View"), button:has-text("Expanded View")')
     await expect(toggleBtn).toBeVisible()
-    const initialText = await toggleBtn.textContent()
+    const initialText = (await toggleBtn.textContent())?.trim() ?? ''
     await toggleBtn.click()
-    await page.waitForTimeout(300)
-    await expect(toggleBtn).not.toHaveText(initialText ?? '')
+    await expect.poll(async () => ((await toggleBtn.textContent()) ?? '').trim()).not.toBe(initialText)
   })
 
   test('clicking a marked day loads entries for that day', async ({ page }) => {
-    await page.goto(`/diaries/${ww1DiaryId}`, { waitUntil: 'networkidle' })
-    await page.locator('.v-date-picker').waitFor({ timeout: 12000 })
-    await page.locator('.v-timeline-item').first().waitFor({ timeout: 10000 })
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 10000 })
 
     const firstEntry = await page.locator('.v-timeline-item').first().textContent()
 
@@ -156,23 +155,19 @@ test.describe('Diary detail page', () => {
     const markedDay = page.locator('.diary-day-content:has(.diary-day-marker) button').first()
     if (await markedDay.count() > 0) {
       await markedDay.click()
-      await page.waitForTimeout(600)
-      const newEntry = await page.locator('.v-timeline-item').first().textContent()
-      expect(newEntry).toBeTruthy()
+      await expect.poll(async () => (await page.locator('.v-timeline-item').first().textContent()) ?? '').toBeTruthy()
     }
 
     // Navigate to a different date via forward button and verify entries update
     const fwdBtn = page.locator('button:has(.mdi-fast-forward)').first()
     if (!await fwdBtn.isDisabled()) {
       await fwdBtn.click()
-      await page.waitForTimeout(600)
-      const updatedEntry = await page.locator('.v-timeline-item').first().textContent()
-      expect(updatedEntry).not.toBe(firstEntry)
+      await expect.poll(async () => (await page.locator('.v-timeline-item').first().textContent()) ?? '').not.toBe(firstEntry ?? '')
     }
   })
 
   test('navigating to diary from list page works', async ({ page }) => {
-    await page.goto('/diaries', { waitUntil: 'networkidle' })
+    await gotoDiaries(page)
     const diaryLink = page.locator(`table a[href*="${ww1DiaryId}"]`)
     await expect(diaryLink).toBeVisible({ timeout: 10000 })
     await diaryLink.click()
