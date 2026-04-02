@@ -131,19 +131,19 @@ if (Test-Path -Path $apiCoverageFile) {
     Remove-Item -Path $apiCoverageFile -Force
 }
 
-$dotnetArgs = @(
-    'test',
-    $apiProject,
-    '-c', $Configuration,
-    '/p:CollectCoverage=true',
-    '/p:CoverletOutputFormat=cobertura',
-    "/p:CoverletOutput=$apiCoverageFile"
-)
+$dotnetArgs = New-Object 'System.Collections.Generic.List[string]'
+[void]$dotnetArgs.Add('test')
+[void]$dotnetArgs.Add($apiProject)
+[void]$dotnetArgs.Add('-c')
+[void]$dotnetArgs.Add($Configuration)
+[void]$dotnetArgs.Add('/p:CollectCoverage=true')
+[void]$dotnetArgs.Add('/p:CoverletOutputFormat=cobertura')
+[void]$dotnetArgs.Add("/p:CoverletOutput=$apiCoverageFile")
 if ($NoRestore) {
-    $dotnetArgs += '--no-restore'
+    [void]$dotnetArgs.Add('--no-restore')
 }
 if ($NoBuild) {
-    $dotnetArgs += '--no-build'
+    [void]$dotnetArgs.Add('--no-build')
 }
 
 New-Item -ItemType Directory -Path $scriptLogDir -Force | Out-Null

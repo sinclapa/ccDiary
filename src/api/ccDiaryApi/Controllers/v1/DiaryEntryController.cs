@@ -10,8 +10,6 @@ namespace ccDiaryApi.Controllers.v1
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.Data.SqlClient;
-    using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
 
@@ -99,43 +97,17 @@ namespace ccDiaryApi.Controllers.v1
         [HttpPost]
         public ActionResult<DiaryEntryDTO> Create([FromBody] DiaryEntryDTO diaryEntry)
         {
-            try
-            {
-                var retDiaryEntry = _diaryEntryService.CreateDiaryEntry(diaryEntry);
-                _logger.LogInformation("Diary entry created. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", retDiaryEntry.DiaryEntryId, retDiaryEntry.DiaryId);
-                return Created("URI", retDiaryEntry);
-            }
-            catch (SqlException ex)
-            {
-                _logger.LogError(ex, "Database dependency failure creating diary entry. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", diaryEntry.DiaryEntryId, diaryEntry.DiaryId);
-                throw;
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database update failure creating diary entry. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", diaryEntry.DiaryEntryId, diaryEntry.DiaryId);
-                throw;
-            }
+            var retDiaryEntry = _diaryEntryService.CreateDiaryEntry(diaryEntry);
+            _logger.LogInformation("Diary entry created. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", retDiaryEntry.DiaryEntryId, retDiaryEntry.DiaryId);
+            return Created("URI", retDiaryEntry);
         }
 
         [HttpPut]
         public ActionResult<DiaryEntryDTO> Update([FromBody] DiaryEntryDTO diaryEntry)
         {
-            try
-            {
-                var retDiaryEntry = _diaryEntryService.UpdateDiaryEntry(diaryEntry);
-                _logger.LogInformation("Diary entry updated. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", retDiaryEntry.DiaryEntryId, retDiaryEntry.DiaryId);
-                return Ok(retDiaryEntry);
-            }
-            catch (SqlException ex)
-            {
-                _logger.LogError(ex, "Database dependency failure updating diary entry. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", diaryEntry.DiaryEntryId, diaryEntry.DiaryId);
-                throw;
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database update failure updating diary entry. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", diaryEntry.DiaryEntryId, diaryEntry.DiaryId);
-                throw;
-            }
+            var retDiaryEntry = _diaryEntryService.UpdateDiaryEntry(diaryEntry);
+            _logger.LogInformation("Diary entry updated. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", retDiaryEntry.DiaryEntryId, retDiaryEntry.DiaryId);
+            return Ok(retDiaryEntry);
         }
 
         [Route("{diaryEntryId:guid}")]
@@ -148,22 +120,9 @@ namespace ccDiaryApi.Controllers.v1
                 return NotFound();
             }
 
-            try
-            {
-                _diaryEntryService.DeleteDiaryEntry(diaryEntry);
-                _logger.LogInformation("Diary entry deleted. DiaryEntryId={DiaryEntryId}", diaryEntryId);
-                return Ok();
-            }
-            catch (SqlException ex)
-            {
-                _logger.LogError(ex, "Database dependency failure deleting diary entry. DiaryEntryId={DiaryEntryId}", diaryEntryId);
-                throw;
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database update failure deleting diary entry. DiaryEntryId={DiaryEntryId}", diaryEntryId);
-                throw;
-            }
+            _diaryEntryService.DeleteDiaryEntry(diaryEntry);
+            _logger.LogInformation("Diary entry deleted. DiaryEntryId={DiaryEntryId}", diaryEntryId);
+            return Ok();
         }
 
         [Route("{diaryId:guid}")]

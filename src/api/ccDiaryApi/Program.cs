@@ -148,27 +148,7 @@ var app = builder.Build();
 
 if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
 {
-    var migrationStopwatch = Stopwatch.StartNew();
-    using var migrationActivity = startupActivitySource.StartActivity("database.migrate", ActivityKind.Internal);
-    migrationActivity?.SetTag("db.operation", "migrate");
-    migrationActivity?.SetTag("service.name", "ccDiaryApi");
-
-    try
-    {
-        app.MigrateDatabase();
-        migrationStopwatch.Stop();
-        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
-        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
-        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
-    }
-    catch (Exception ex)
-    {
-        migrationStopwatch.Stop();
-        migrationActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
-        Log.Logger.Error(ex, "Database migration failed after {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
-        throw;
-    }
+    RunDatabaseMigration(app, startupActivitySource);
 }
 else
 {
@@ -182,65 +162,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     KnownProxies = { },
 });
 
-app.Use(async (context, next) =>
-{
-    if (!OpenTelemetryExtensions.ShouldTraceRequest(context))
-    {
-        await next();
-        return;
-    }
-
-    var requestStart = Stopwatch.StartNew();
-    try
-    {
-        await next();
-        requestStart.Stop();
-
-        var traceId = Activity.Current?.TraceId.ToString() ?? string.Empty;
-        var spanId = Activity.Current?.SpanId.ToString() ?? string.Empty;
-        var statusCode = context.Response.StatusCode;
-
-        if (statusCode >= 500)
-        {
-            Log.Logger.Warning(
-                "HTTP request completed with server error. Method={Method} Path={Path} StatusCode={StatusCode} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
-                context.Request.Method,
-                context.Request.Path,
-                statusCode,
-                requestStart.ElapsedMilliseconds,
-                traceId,
-                spanId);
-        }
-        else
-        {
-            Log.Logger.Information(
-                "HTTP request completed. Method={Method} Path={Path} StatusCode={StatusCode} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
-                context.Request.Method,
-                context.Request.Path,
-                statusCode,
-                requestStart.ElapsedMilliseconds,
-                traceId,
-                spanId);
-        }
-    }
-    catch (Exception ex)
-    {
-        requestStart.Stop();
-        var traceId = Activity.Current?.TraceId.ToString() ?? string.Empty;
-        var spanId = Activity.Current?.SpanId.ToString() ?? string.Empty;
-
-        Log.Logger.Error(
-            ex,
-            "HTTP request failed. Method={Method} Path={Path} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
-            context.Request.Method,
-            context.Request.Path,
-            requestStart.ElapsedMilliseconds,
-            traceId,
-            spanId);
-
-        throw;
-    }
-});
+app.UseRequestCompletionLogging();
 
 app.UseSwagger();
 
@@ -271,6 +193,31 @@ app.MapControllers();
 app.MapAllActuators();
 
 await app.RunAsync();
+
+static void RunDatabaseMigration(WebApplication app, ActivitySource activitySource)
+{
+    var migrationStopwatch = Stopwatch.StartNew();
+    using var migrationActivity = activitySource.StartActivity("database.migrate", ActivityKind.Internal);
+    migrationActivity?.SetTag("db.operation", "migrate");
+    migrationActivity?.SetTag("service.name", "ccDiaryApi");
+
+    try
+    {
+        app.MigrateDatabase();
+        migrationStopwatch.Stop();
+        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
+        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
+        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
+    }
+    catch (Exception ex)
+    {
+        migrationStopwatch.Stop();
+        migrationActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
+        Log.Logger.Error(ex, "Database migration failed after {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
+        throw new InvalidOperationException("Database migration failed during startup.", ex);
+    }
+}
 
 /// <summary>
 /// Create partial class to aid unit testing.
