@@ -5,12 +5,14 @@
 namespace ccDiaryApi.Extensions
 {
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using Microsoft.AspNetCore.Builder;
     using Serilog;
 
     /// <summary>
     /// Request logging middleware extensions.
     /// </summary>
+    [ExcludeFromCodeCoverage(Justification = "Middleware wiring and Serilog side effects are validated by integration behavior rather than unit coverage metrics.")]
     public static class RequestLoggingExtensions
     {
         /// <summary>

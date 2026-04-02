@@ -72,37 +72,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddMicrosoftIdentityWebApi(
                     jwtBearerOptions =>
                     {
-                        jwtBearerOptions.Events = new JwtBearerEvents
-                        {
-                            OnAuthenticationFailed = context =>
-                            {
-                                Log.Logger.Warning(context.Exception, "JWT authentication failed for {Path}", context.Request.Path);
-                                return Task.CompletedTask;
-                            },
-                            OnChallenge = context =>
-                            {
-                                Log.Logger.Warning("JWT authentication challenge for {Path}", context.Request.Path);
-                                return Task.CompletedTask;
-                            },
-                            OnForbidden = context =>
-                            {
-                                Log.Logger.Warning("JWT authorization forbidden for {Path}", context.Request.Path);
-                                return Task.CompletedTask;
-                            },
-                        };
+                        Program.ConfigureJwtBearer(jwtBearerOptions);
                     },
                     microsoftIdentityOptions => builder.Configuration.Bind("Entra", microsoftIdentityOptions));
 
 builder.Services.AddApiVersioning(options =>
     {
-        options.ReportApiVersions = true;
-        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        Program.ConfigureApiVersioning(options);
     })
     .AddMvc()
     .AddApiExplorer(options =>
     {
-        options.GroupNameFormat = "'v'VVV";
-        options.SubstituteApiVersionInUrl = true;
+        Program.ConfigureApiExplorer(options);
     });
 
 // Add services to the container.
@@ -148,7 +129,7 @@ var app = builder.Build();
 
 if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
 {
-    RunDatabaseMigration(app, startupActivitySource);
+    Program.RunDatabaseMigration(app, startupActivitySource);
 }
 else
 {
@@ -194,31 +175,6 @@ app.MapAllActuators();
 
 await app.RunAsync();
 
-static void RunDatabaseMigration(WebApplication app, ActivitySource activitySource)
-{
-    var migrationStopwatch = Stopwatch.StartNew();
-    using var migrationActivity = activitySource.StartActivity("database.migrate", ActivityKind.Internal);
-    migrationActivity?.SetTag("db.operation", "migrate");
-    migrationActivity?.SetTag("service.name", "ccDiaryApi");
-
-    try
-    {
-        app.MigrateDatabase();
-        migrationStopwatch.Stop();
-        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
-        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
-        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
-    }
-    catch (Exception ex)
-    {
-        migrationStopwatch.Stop();
-        migrationActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
-        Log.Logger.Error(ex, "Database migration failed after {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
-        throw new InvalidOperationException("Database migration failed during startup.", ex);
-    }
-}
-
 /// <summary>
 /// Create partial class to aid unit testing.
 /// </summary>
@@ -245,5 +201,39 @@ public partial class Program
         }
 
         return cs;
+    }
+
+    internal static void ConfigureJwtBearer(JwtBearerOptions jwtBearerOptions)
+    {
+        AuthenticationLoggingExtensions.ConfigureJwtBearerEvents(jwtBearerOptions);
+    }
+
+    internal static void ConfigureApiVersioning(ApiVersioningOptions options)
+    {
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    }
+
+    internal static void ConfigureApiExplorer(Asp.Versioning.ApiExplorer.ApiExplorerOptions options)
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    }
+
+    internal static void RunDatabaseMigration(
+        WebApplication app,
+        ActivitySource activitySource,
+        Action<WebApplication>? migrateAction = null)
+    {
+        var migrationStopwatch = Stopwatch.StartNew();
+        using var migrationActivity = activitySource.StartActivity("database.migrate", ActivityKind.Internal);
+        migrationActivity?.SetTag("db.operation", "migrate");
+        migrationActivity?.SetTag("service.name", "ccDiaryApi");
+
+        (migrateAction ?? (webApp => webApp.MigrateDatabase()))(app);
+        migrationStopwatch.Stop();
+        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
+        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
+        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
     }
 }
