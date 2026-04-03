@@ -56,7 +56,12 @@ namespace ccDiaryApi.Controllers.v1
             return Created("Uri", retDiary);
         }
 
-        [HttpPut]
+            var sanitizedDiaryId = retDiary.DiaryId
+                .ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary updated. DiaryId={DiaryId}", sanitizedDiaryId);
         public ActionResult<DiaryDTO> Update([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Update(diary);
