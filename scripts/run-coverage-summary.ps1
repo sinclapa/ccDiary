@@ -10,7 +10,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$apiProject = Join-Path $repoRoot 'src/api/ccDiaryApiTest/ccDiaryApiTest.csproj'
+$apiPath = Join-Path $repoRoot 'src/api'
+$apiSolution = Join-Path $apiPath 'ccDiary.sln'
+$apiRunSettings = Join-Path $apiPath 'ccDiary.runsettings'
+$apiResultsDir = Join-Path $apiPath 'TestResults/coverage-api'
 $apiCoverageFile = Join-Path $repoRoot 'src/api/TestResults/coverage-api.cobertura.xml'
 $uiPath = Join-Path $repoRoot 'src/ui'
 $uiCoverageDir = Join-Path $uiPath 'coverage'
@@ -130,15 +133,20 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $apiCoverageFile) -Force 
 if (Test-Path -Path $apiCoverageFile) {
     Remove-Item -Path $apiCoverageFile -Force
 }
+if (Test-Path -Path $apiResultsDir) {
+    Remove-Item -Path $apiResultsDir -Recurse -Force
+}
 
 $dotnetArgs = New-Object 'System.Collections.Generic.List[string]'
 [void]$dotnetArgs.Add('test')
-[void]$dotnetArgs.Add($apiProject)
+[void]$dotnetArgs.Add($apiSolution)
 [void]$dotnetArgs.Add('-c')
 [void]$dotnetArgs.Add($Configuration)
-[void]$dotnetArgs.Add('/p:CollectCoverage=true')
-[void]$dotnetArgs.Add('/p:CoverletOutputFormat=cobertura')
-[void]$dotnetArgs.Add("/p:CoverletOutput=$apiCoverageFile")
+[void]$dotnetArgs.Add('--settings')
+[void]$dotnetArgs.Add($apiRunSettings)
+[void]$dotnetArgs.Add('--collect:"XPlat Code Coverage"')
+[void]$dotnetArgs.Add('--results-directory')
+[void]$dotnetArgs.Add($apiResultsDir)
 if ($NoRestore) {
     [void]$dotnetArgs.Add('--no-restore')
 }
@@ -159,7 +167,7 @@ foreach ($logPath in @($apiOutLog, $apiErrLog, $uiOutLog, $uiErrLog)) {
     }
 }
 
-$apiProcess = Start-Process -FilePath 'dotnet' -ArgumentList $dotnetArgs -WorkingDirectory $repoRoot -NoNewWindow -PassThru -RedirectStandardOutput $apiOutLog -RedirectStandardError $apiErrLog
+$apiProcess = Start-Process -FilePath 'dotnet' -ArgumentList $dotnetArgs -WorkingDirectory $apiPath -NoNewWindow -PassThru -RedirectStandardOutput $apiOutLog -RedirectStandardError $apiErrLog
 $uiProcess = Start-Process -FilePath 'npm.cmd' -ArgumentList @('run', 'coverage') -WorkingDirectory $uiPath -NoNewWindow -PassThru -RedirectStandardOutput $uiOutLog -RedirectStandardError $uiErrLog
 
 $null = $apiProcess.WaitForExit()
@@ -190,6 +198,16 @@ if ($uiProcess.ExitCode -ne 0) {
 
     throw "UI coverage run failed with exit code $($uiProcess.ExitCode)."
 }
+
+$apiCoverageCandidate = Get-ChildItem -Path $apiResultsDir -Recurse -File -Filter 'coverage.cobertura.xml' |
+    Sort-Object LastWriteTimeUtc -Descending |
+    Select-Object -First 1
+
+if ($null -eq $apiCoverageCandidate) {
+    throw "Could not find API cobertura XML file under $apiResultsDir"
+}
+
+Copy-Item -Path $apiCoverageCandidate.FullName -Destination $apiCoverageFile -Force
 
 $uiCoverageFile = Find-UiCoberturaFile -CoverageDir $uiCoverageDir
 

@@ -31,16 +31,19 @@ namespace ccDiaryApi.Controllers.v1
         [HttpGet]
         public ActionResult<DiaryArchiveDTO> Export(Guid diaryId)
         {
-            _logger.LogInformation("Export requested. DiaryId={DiaryId}", diaryId);
+            _logger.LogInformation("Export requested. DiaryId={DiaryId}", SanitizeForLog(diaryId));
 
             var export = _diaryArchiveService.Export(diaryId);
             if (export == null)
             {
-                _logger.LogWarning("Export not found. DiaryId={DiaryId}", diaryId);
+                _logger.LogWarning("Export not found. DiaryId={DiaryId}", SanitizeForLog(diaryId));
                 return NotFound();
             }
 
-            _logger.LogInformation("Export succeeded. DiaryId={DiaryId} EntryCount={EntryCount}", diaryId, export.DiaryEntries?.Count ?? 0);
+            _logger.LogInformation(
+                "Export succeeded. DiaryId={DiaryId} EntryCount={EntryCount}",
+                SanitizeForLog(diaryId),
+                SanitizeForLog(export.DiaryEntries?.Count));
             return Ok(export);
         }
 
@@ -48,8 +51,18 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Import(DiaryArchiveDTO diaryArchive)
         {
             var diary = _diaryArchiveService.Import(diaryArchive);
-            _logger.LogInformation("Import succeeded. DiaryId={DiaryId} EntryCount={EntryCount}", diary.DiaryId, diaryArchive.DiaryEntries?.Count ?? 0);
+            _logger.LogInformation(
+                "Import succeeded. DiaryId={DiaryId} EntryCount={EntryCount}",
+                SanitizeForLog(diary.DiaryId),
+                SanitizeForLog(diaryArchive?.DiaryEntries?.Count));
             return Ok(diary);
+        }
+
+        private static string SanitizeForLog(object? value)
+        {
+            var s = value?.ToString() ?? string.Empty;
+            return s.Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
         }
     }
 }
