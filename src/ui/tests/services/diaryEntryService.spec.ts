@@ -130,7 +130,7 @@ describe('DiaryEntry Service', () => {
     expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/DiaryEntry/Delete/${diaryEntryId}`, baseUrl), { method: 'DELETE' })
   })
 
-    it('Delete DiaryEntry Fail', async () => {
+  it('Delete DiaryEntry Fail', async () => {
     // Arrange
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,

@@ -1,10 +1,14 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿// <copyright file="20260322014907_AddAppInfoTable.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 #nullable disable
 
 namespace ccDiaryApi.Migrations
 {
+    using System;
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class AddAppInfoTable : Migration
     {
@@ -17,7 +21,7 @@ namespace ccDiaryApi.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false),
                     InformationalVersion = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
                 },
                 constraints: table =>
                 {

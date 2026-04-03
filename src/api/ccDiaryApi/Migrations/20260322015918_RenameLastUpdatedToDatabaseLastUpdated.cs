@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿// <copyright file="20260322015918_RenameLastUpdatedToDatabaseLastUpdated.cs" company="CookingCode">
+// Copyright (c) CookingCode. All rights reserved.
+// </copyright>
 
 #nullable disable
 
 namespace ccDiaryApi.Migrations
 {
+    using Microsoft.EntityFrameworkCore.Migrations;
+
     /// <inheritdoc />
     public partial class RenameLastUpdatedToDatabaseLastUpdated : Migration
     {

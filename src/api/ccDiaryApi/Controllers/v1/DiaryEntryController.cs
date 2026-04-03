@@ -63,7 +63,7 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}/{year:int}/{month:int}/{day:int}")]
         [AllowAnonymous]
         [HttpGet]
-        public ActionResult<List<DiaryEntryDTO>> Search(Guid diaryId, int year, int month, int day, [FromHeader(Name="x-utc-offset")][DefaultValue(0)] int utcOffsetMinutes)
+        public ActionResult<List<DiaryEntryDTO>> Search(Guid diaryId, int year, int month, int day, [FromHeader(Name = "x-utc-offset")][DefaultValue(0)] int utcOffsetMinutes)
         {
             var from = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc).AddMinutes(-1 * utcOffsetMinutes);
             var to = from.AddDays(1).Subtract(new TimeSpan(1));

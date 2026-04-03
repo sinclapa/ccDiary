@@ -4,8 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ccDiary is a full-stack diary application that allows users to create, manage, and view diary entries with modern
-cloud-native architecture. The seed data contains a WW1 diary (Sapper Arthur Carpenter, 1918-1919).
+ccDiary is a full-stack diary application that allows users to create, manage, and view diary entries with modern cloud-native architecture
 
 ### Key Characteristics
 
@@ -79,18 +78,8 @@ ccDiary/
 │   └── Diary2 - AI.txt               # Sample diary entry
 │
 ├── deploy/                            # Infrastructure as Code (Bicep)
-│   ├── main.bicep                     # Subscription-level entrypoint
-│   ├── resourceGroup.bicep            # Resource group resources (Log Analytics, SQL, Static Web App, CAE)
-│   ├── containerApps.bicep            # Container App definition (0.25 CPU, 0.5Gi, 0-1 replicas)
-│   └── bicepconfig.json               # Bicep linting (all core rules set to error)
 │
 ├── scripts/                           # Setup and deployment scripts
-│   ├── setuplocal.ps1                 # Interactive local dev environment setup
-│   ├── buildInfrastructure.ps1        # Deploys Azure infra for one environment
-│   ├── buildAllInfrastructure.ps1     # Orchestrates deploy across all environments
-│   ├── entraSetup.ps1                 # Microsoft Entra ID app registration
-│   ├── install-azure-cli.sh           # Azure CLI installer
-│   └── install-powershell.sh          # PowerShell installer
 │
 └── src/                               # Application source code
     ├── api/                           # Backend API (ASP.NET Core)

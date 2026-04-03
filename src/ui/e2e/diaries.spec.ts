@@ -1,25 +1,25 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { API_BASE } from './config'
 
 // The WW1 diary with the most complete seed data
 const SEEDED_DIARY_TITLE = 'Local: WW1 Diary'
 
-async function getWW1DiaryId(request: import('@playwright/test').APIRequestContext): Promise<string> {
+async function getWW1DiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
   const diaries: Array<{ diaryId: string; title: string; author: string }> = await response.json()
-  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE)
-    ?? diaries.find(d => d.title.includes('WW1'))
-    ?? diaries[0]
+  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ??
+    diaries.find(d => d.title.includes('WW1')) ??
+    diaries[0]
   return match.diaryId
 }
 
-async function gotoDiaries(page: import('@playwright/test').Page): Promise<void> {
+async function gotoDiaries (page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/diaries')
   await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
 }
 
-async function gotoDiaryDetail(page: import('@playwright/test').Page, diaryId: string): Promise<void> {
+async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
   await page.goto(`/diaries/${diaryId}`)
   await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
 }

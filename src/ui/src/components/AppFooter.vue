@@ -47,7 +47,7 @@
       title: 'GitHub',
       icon: `mdi-github`,
       href: 'https://github.com/sinclapa/ccDiary',
-    }
+    },
   ]
 </script>
 

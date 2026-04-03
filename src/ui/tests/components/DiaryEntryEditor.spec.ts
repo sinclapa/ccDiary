@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import DiaryEntryEditor from '@/components/DiaryEntryEditor.vue'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
@@ -11,13 +11,13 @@ describe('DiaryEntryEditor.vue', () => {
   const defaultProps = {
     date: new Date(2024, 0, 1, 12, 30),
     location: 'Kitchen',
-    entry: 'Cooked pasta'
+    entry: 'Cooked pasta',
   }
 
   it('renders form fields with initial props', () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: defaultProps,
-      global: { plugins: [vuetify] }
+      global: { plugins: [vuetify] },
     })
     expect((wrapper.find('#location').element as HTMLInputElement).value).toBe('Kitchen')
     expect((wrapper.find('#entry').element as HTMLInputElement).value).toBe('Cooked pasta')
@@ -28,7 +28,7 @@ describe('DiaryEntryEditor.vue', () => {
   it('updates location and entry fields when props change', async () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: { ...defaultProps },
-      global: { plugins: [vuetify] }
+      global: { plugins: [vuetify] },
     })
     await wrapper.setProps({ location: 'Living Room', entry: 'Read a book' })
     await wrapper.vm.$nextTick()
@@ -39,7 +39,7 @@ describe('DiaryEntryEditor.vue', () => {
   it('emits close when Close button is clicked', async () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: defaultProps,
-      global: { plugins: [vuetify] }
+      global: { plugins: [vuetify] },
     })
     await wrapper.find('#close').trigger('click')
     expect(wrapper.emitted('close')).toBeTruthy()
@@ -48,7 +48,7 @@ describe('DiaryEntryEditor.vue', () => {
   it('emits submit with correct payload when Save is clicked and form is valid', async () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: defaultProps,
-      global: { plugins: [vuetify] }
+      global: { plugins: [vuetify] },
     })
 
     // Simulate valid form submission
@@ -67,7 +67,7 @@ describe('DiaryEntryEditor.vue', () => {
   it('does not emit submit if form is invalid', async () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: defaultProps,
-      global: { plugins: [vuetify] }
+      global: { plugins: [vuetify] },
     })
     const submitEventPromise = Promise.resolve({ valid: false })
     await (wrapper.vm as any).submit(submitEventPromise)

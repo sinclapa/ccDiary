@@ -1,10 +1,10 @@
 import { msalInstance as defaultMsalInstance, state as defaultState } from '@/services/authentication/msalConfig'
 import { getAppConfigField } from '@/utils/appConfig'
 
-export function msalService(
+export function msalService (
   msalInstance = defaultMsalInstance,
   state = defaultState,
-    win: Window & typeof globalThis = globalThis as Window & typeof globalThis
+  win: Window & typeof globalThis = globalThis as Window & typeof globalThis
 ) {
   const initializeInstance = async () => {
     try {

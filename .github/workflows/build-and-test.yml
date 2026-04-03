@@ -443,7 +443,7 @@ jobs:
           for (const key of keys) {
             const raw = process.env[key] || '';
             const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-            content = content.replace(new RegExp(`(${key}:\\s*)"[^"]*"`), (_, prefix) => `${prefix}"${escaped}"`);
+            content = content.replace(new RegExp(`(${key}:\\s*)['"][^'"]*['"]`), (_, prefix) => `${prefix}"${escaped}"`);
           }
           fs.writeFileSync(file, content);
           SCRIPT

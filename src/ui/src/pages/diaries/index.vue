@@ -158,7 +158,7 @@
     diaries.value = await diaryAPI.getDiaries()
   }
 
-  watch(() => apiStatus.recoveryCount, (count) => {
+  watch(() => apiStatus.recoveryCount, count => {
     if (count > 0) data()
   })
 

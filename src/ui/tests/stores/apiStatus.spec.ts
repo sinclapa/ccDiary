@@ -1,5 +1,5 @@
-import { setActivePinia, createPinia } from 'pinia'
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApiStatusStore } from '@/stores/apiStatus'
 
 vi.mock('@/utils/appConfig', () => ({

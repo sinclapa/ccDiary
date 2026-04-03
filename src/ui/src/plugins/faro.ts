@@ -1,11 +1,11 @@
-import { initializeFaro, getWebInstrumentations, TransportItemType } from '@grafana/faro-web-sdk'
+import { getWebInstrumentations, initializeFaro, TransportItemType } from '@grafana/faro-web-sdk'
 import type { TransportItem } from '@grafana/faro-core'
-import { TracingInstrumentation, getDefaultOTELInstrumentations } from '@grafana/faro-web-tracing'
+import { getDefaultOTELInstrumentations, TracingInstrumentation } from '@grafana/faro-web-tracing'
 import { getAppConfigField } from '@/utils/appConfig'
 
 const DYNAMIC_IMPORT_ERROR = /Failed to fetch dynamically imported module/
 
-export function initFaro() {
+export function initFaro () {
   const url = getAppConfigField('VITE_FARO_URL')
   if (!url || url === 'NOT_SET') return
 

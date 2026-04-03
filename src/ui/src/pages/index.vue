@@ -1,10 +1,10 @@
 <template>
   <header class="text-center">
     <v-img
-      :src="logo"
       alt="Cooking Code Diary"
-      max-width="200"
       class="mx-auto my-4"
+      max-width="200"
+      :src="logo"
     />
 
     <h1>Cooking Code Diary App</h1>

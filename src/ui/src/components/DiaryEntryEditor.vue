@@ -99,13 +99,13 @@
     }
   }
 
-  watch(() => props.location, (newVal) => {
+  watch(() => props.location, newVal => {
     location.value = newVal
   })
-  watch(() => props.entry, (newVal) => {
+  watch(() => props.entry, newVal => {
     entry.value = newVal
   })
-  watch(() => props.date, (newVal) => {
+  watch(() => props.date, newVal => {
     date.value = new Date(newVal)
     time.value = dayjs(newVal).format('HH:mm')
   })

@@ -2,115 +2,115 @@
   <v-container style="overflow-y: visible">
     <v-row>
       <div>
-      <span class="title">{{ diary?.title }}&nbsp;</span>
-      <span class="author">&nbsp;by {{ diary?.author }}</span>
+        <span class="title">{{ diary?.title }}&nbsp;</span>
+        <span class="author">&nbsp;by {{ diary?.author }}</span>
       </div>
     </v-row>
     <v-row>
       <v-col cols="auto">
         <v-btn
-          :color="isDatePickerExpanded ? 'primary' : 'secondary'"
-          :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
-          class="mb-3"
-          size="small"
-          @click="toggleDatePickerHeight"
           :aria-label="isDatePickerExpanded ? 'Collapse date picker' : 'Expand date picker'"
+          class="mb-3"
+          :color="isDatePickerExpanded ? 'primary' : 'secondary'"
+          size="small"
+          :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
+          @click="toggleDatePickerHeight"
         >
           <v-icon :icon="isDatePickerExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
           {{ isDatePickerExpanded ? 'Compact View' : 'Expanded View' }}
         </v-btn>
         <v-row>
-        <v-date-picker
-          v-model="selectedDate"
-          :month="calendarMonth"
-          :year="calendarYear"
-          :max="maxDate"
-          :min="minDate"
-          :max-height="datePickerHeight"
-          @update:model-value="selectDate"
-          @update:month="updateMonth"
-          @update:year="updateYear"
-        >
-          <template #day="{ item, props }">
-            <div class="diary-day-content">
-              <v-btn v-bind="props" />
-              <span v-if="hasDiaryEntryOnDate(item.isoDate)" class="diary-day-marker" />
-            </div>
-          </template>
-        </v-date-picker>
+          <v-date-picker
+            v-model="selectedDate"
+            :max="maxDate"
+            :max-height="datePickerHeight"
+            :min="minDate"
+            :month="calendarMonth"
+            :year="calendarYear"
+            @update:model-value="selectDate"
+            @update:month="updateMonth"
+            @update:year="updateYear"
+          >
+            <template #day="{ item, props }">
+              <div class="diary-day-content">
+                <v-btn v-bind="props" />
+                <span v-if="hasDiaryEntryOnDate(item.isoDate)" class="diary-day-marker" />
+              </div>
+            </template>
+          </v-date-picker>
         </v-row>
-        <v-row >
+        <v-row>
           <v-col style="margin: 0; padding: 0;">
-        <v-btn
-          class="mb-2"
-          :color="'white'"
-          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
-          @click="moveStart()"
-        >
-          <v-icon>
-            mdi-skip-backward
-          </v-icon>
-        </v-btn>
-        </v-col>
-        <v-col style="margin: 0; padding: 0;">
-        <v-btn
-          class="mb-2"
-          :color="'white'"
-          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
-          @click="moveBackward()"
-        >
-          <v-icon>
-            mdi-rewind
-          </v-icon>
-        </v-btn>
-        </v-col>
-        <v-col style="margin: 0; padding: 0;">
-        <v-dialog
-          v-model="dialog"
-        >
-          <template #activator="{ props }">
             <v-btn
-              v-if="state.isAuthenticated"
               class="mb-2"
-              v-bind="props"
-              @click="editItem()"
+              :color="'white'"
+              :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
+              @click="moveStart()"
             >
-              Add
+              <v-icon>
+                mdi-skip-backward
+              </v-icon>
             </v-btn>
-          </template>
-          <diary-entry-editor
-            :date="editedItem.date"
-            :entry="editedItem.entry"
-            :location="editedItem.location"
-            @close="close"
-            @submit="onSubmitDiaryEntry"
-          />
-        </v-dialog>
-        </v-col>
-        <v-col style="margin: 0; padding: 0;">
-        <v-btn
-          class="mb-2"
-          :color="'white'"
-          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
-          @click="moveForward()"
-        >
-          <v-icon>
-            mdi-fast-forward
-          </v-icon>
-        </v-btn>
-        </v-col>
-        <v-col style="margin: 0; padding: 0;">
-        <v-btn
-          class="mb-2"
-          :color="'white'"
-          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
-          @click="moveEnd()"
-        >
-          <v-icon>
-            mdi-skip-forward
-          </v-icon>
-        </v-btn>
-        </v-col>
+          </v-col>
+          <v-col style="margin: 0; padding: 0;">
+            <v-btn
+              class="mb-2"
+              :color="'white'"
+              :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
+              @click="moveBackward()"
+            >
+              <v-icon>
+                mdi-rewind
+              </v-icon>
+            </v-btn>
+          </v-col>
+          <v-col style="margin: 0; padding: 0;">
+            <v-dialog
+              v-model="dialog"
+            >
+              <template #activator="{ props }">
+                <v-btn
+                  v-if="state.isAuthenticated"
+                  class="mb-2"
+                  v-bind="props"
+                  @click="editItem()"
+                >
+                  Add
+                </v-btn>
+              </template>
+              <diary-entry-editor
+                :date="editedItem.date"
+                :entry="editedItem.entry"
+                :location="editedItem.location"
+                @close="close"
+                @submit="onSubmitDiaryEntry"
+              />
+            </v-dialog>
+          </v-col>
+          <v-col style="margin: 0; padding: 0;">
+            <v-btn
+              class="mb-2"
+              :color="'white'"
+              :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
+              @click="moveForward()"
+            >
+              <v-icon>
+                mdi-fast-forward
+              </v-icon>
+            </v-btn>
+          </v-col>
+          <v-col style="margin: 0; padding: 0;">
+            <v-btn
+              class="mb-2"
+              :color="'white'"
+              :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
+              @click="moveEnd()"
+            >
+              <v-icon>
+                mdi-skip-forward
+              </v-icon>
+            </v-btn>
+          </v-col>
         </v-row>
         <v-dialog v-model="dialogDelete" max-width="500px">
           <v-card>
@@ -133,7 +133,7 @@
             size="small"
           >
             <template #opposite>
-              <div style="width: 80px;" :class="`pt-1 headline font-weight-light text-${'red'}`">
+              <div :class="`pt-1 headline font-weight-light text-${'red'}`" style="width: 80px;">
                 {{ dayjs(diaryEntry.date).format('ddd HH:mm') }}
               </div>
             </template>
@@ -146,16 +146,14 @@
                     icon="mdi-pencil"
                     size="x-small"
                     @click="editItem(diaryEntry)"
-                  >
-                  </v-btn>
+                  />
                   &nbsp;
                   <v-btn
                     :color="'red'"
                     icon="mdi-delete"
                     size="x-small"
                     @click="deleteItem(diaryEntry)"
-                  >
-                  </v-btn>
+                  />
                 </div>
               </h2>
               <div>
@@ -192,7 +190,7 @@
   const editedItem = ref<DiaryEntry>(new DiaryEntry(diaryId, new Date(Date.now()), '', ''))
   const minDate = ref<Date>()
   const maxDate = ref<Date>()
-  const isDatePickerExpanded = ref( window.innerWidth >= 600)
+  const isDatePickerExpanded = ref(window.innerWidth >= 600)
   const calendarMonth = ref<number>()
   const calendarYear = ref<number>()
   const visibleMonth = ref<number>()
@@ -209,7 +207,7 @@
   const toggleDatePickerHeight = () => {
     isDatePickerExpanded.value = !isDatePickerExpanded.value
     localStorage.setItem('id.datePickerExpanded',
-      isDatePickerExpanded.value.toString())
+                         isDatePickerExpanded.value.toString())
   }
 
   async function loadDiary (diaryId: string) {
@@ -397,7 +395,7 @@
     await refreshMarkedDays(visibleYear.value, visibleMonth.value)
   })
 
-  watch(selectedDate, async (newDate) => {
+  watch(selectedDate, async newDate => {
     if (newDate === undefined) {
       return
     }
@@ -419,7 +417,7 @@
     })
   }
 
-  watch(() => apiStatus.recoveryCount, (count) => {
+  watch(() => apiStatus.recoveryCount, count => {
     if (count > 0) loadDiaryData()
   })
 
