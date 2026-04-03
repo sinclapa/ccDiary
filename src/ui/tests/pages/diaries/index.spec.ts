@@ -25,7 +25,6 @@ vi.mock('@/services/authentication/msalConfig', () => ({
   },
 }))
 
-
 describe('pages/diaries/index.vue', () => {
   let wrapper: any
   beforeEach(() => {
@@ -40,7 +39,7 @@ describe('pages/diaries/index.vue', () => {
 
   it('should render the component', () => {
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.findComponent({ name: 'VDataTable'}).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'VDataTable' }).exists()).toBe(true)
   })
 
   it('should fetch diaries on mount', async () => {
@@ -124,7 +123,6 @@ describe('pages/diaries/index.vue', () => {
     expect(wrapper.vm.dialog).toBe(false)
   })
 
-
   it('should conditionally render buttons based on authentication', async () => {
     const mockDiaries = [
       { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
@@ -144,7 +142,7 @@ describe('pages/diaries/index.vue', () => {
     }
     // Remount to trigger onMounted
     const wrapper = mount(Index, {
-      global: { plugins: [vuetify] }
+      global: { plugins: [vuetify] },
     })
     // Wait for onMounted to finish
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -156,21 +154,21 @@ describe('pages/diaries/index.vue', () => {
     const mockDiaries = [
       { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
     ];
-    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries);
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
 
     const wrapper = mount(Index, {
-      global: { plugins: [vuetify] }
-    });
+      global: { plugins: [vuetify] },
+    })
 
     // Wait for onMounted and data fetching
-    await new Promise(resolve => setTimeout(resolve, 0));
-    await wrapper.vm.$nextTick();
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await wrapper.vm.$nextTick()
 
     // Check root div exists
-    expect(wrapper.find('div').exists()).toBe(true);
+    expect(wrapper.find('div').exists()).toBe(true)
     // Check table row is rendered
-    expect(wrapper.html()).toContain('Diary 1');
-  });
+    expect(wrapper.html()).toContain('Diary 1')
+  })
 
   it('reloads diaries when apiStatus.recoveryCount increases', async () => {
     const store = useApiStatusStore()

@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { msalService } from '@/services/authentication/msalService'
 import { msalInstance, state } from '@/services/authentication/msalConfig'
 

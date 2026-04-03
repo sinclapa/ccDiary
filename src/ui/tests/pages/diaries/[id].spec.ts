@@ -1,17 +1,10 @@
-import { vi, afterEach, beforeEach, describe, expect, it } from 'vitest'
-
-// Mock BEFORE importing the component!
-vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    params: { id: 'test-diary-id' }
-  })
-}))
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
-//import { useRoute } from 'vue-router'
+// import { useRoute } from 'vue-router'
 import { diaryAPI } from '@/services/modules/diaryService'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
 import { state } from '@/services/authentication/msalConfig'
@@ -20,6 +13,13 @@ import Component from '@/pages/diaries/[id].vue'
 import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
+
+// Mock BEFORE importing the component!
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    params: { id: 'test-diary-id' },
+  }),
+}))
 
 globalThis.ResizeObserver = require('resize-observer-polyfill')
 
@@ -39,11 +39,11 @@ describe('[id].vue', () => {
       getItem: vi.fn(),
       setItem: vi.fn(),
       clear: vi.fn(),
-      removeItem: vi.fn()
+      removeItem: vi.fn(),
     }
     Object.defineProperty(globalThis, 'localStorage', {
       value: localStorageMock,
-      writable: true
+      writable: true,
     })
 
     vi.clearAllMocks()
@@ -115,7 +115,7 @@ describe('[id].vue', () => {
   // correct text of button displayed when isDatePickerExpanded is true vs false
   it('shows correct toggle button text based on isDatePickerExpanded state', async () => {
     // Set initial state to false
-    (wrapper.vm as any).isDatePickerExpanded = false;
+    (wrapper.vm as any).isDatePickerExpanded = false
 
     await flushPromises()
 
@@ -136,7 +136,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).onSubmitDiaryEntry({
       date: new Date(),
       location: 'New Location',
-      entry: 'New Entry'
+      entry: 'New Entry',
     })
     expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
   })
@@ -150,7 +150,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).onSubmitDiaryEntry({
       date: entry.date,
       location: entry.location,
-      entry: entry.entry
+      entry: entry.entry,
     })
     expect(diaryEntryAPI.updateDiaryEntry).toHaveBeenCalled()
   })
@@ -160,10 +160,10 @@ describe('[id].vue', () => {
     (wrapper.vm as any).isDatePickerExpanded = false;
 
     // Call toggle function
-    (wrapper.vm as any).toggleDatePickerHeight();
+    (wrapper.vm as any).toggleDatePickerHeight()
 
     // Verify state changed to true
-    expect((wrapper.vm as any).isDatePickerExpanded).toBe(true);
+    expect((wrapper.vm as any).isDatePickerExpanded).toBe(true)
   })
 
   // onSubmitDiaryEntry() when date matches selectedDate
@@ -175,13 +175,13 @@ describe('[id].vue', () => {
     (wrapper.vm as any).selectedDate = testDate;
 
     // Setup editedItem for creation (no diaryEntryId)
-    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry');
+    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry')
 
     // Call onSubmitDiaryEntry with matching date
     await (wrapper.vm as any).onSubmitDiaryEntry({
       date: testDate,
       location: 'Updated Location',
-      entry: 'Updated Entry'
+      entry: 'Updated Entry',
     })
 
     // Verify selectDate was called because dates match
@@ -197,7 +197,7 @@ describe('[id].vue', () => {
     (wrapper.vm as any).selectedDate = testDate;
 
     // Setup editedItem with matching date and diaryEntryId
-    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry', 'test-entry-id');
+    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry', 'test-entry-id')
 
     // Call deleteItemConfirm
     await (wrapper.vm as any).deleteItemConfirm()
@@ -348,7 +348,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).onSubmitDiaryEntry({
       date: new Date(2024, 5, 10),
       location: 'Updated Location',
-      entry: 'Updated Entry'
+      entry: 'Updated Entry',
     })
     expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls)
 
@@ -494,7 +494,4 @@ describe('[id].vue', () => {
     // No additional searchDiaryEntry calls (early return happened)
     expect(searchSpy.mock.calls.length).toBe(callsBefore)
   })
-
 })
-
-

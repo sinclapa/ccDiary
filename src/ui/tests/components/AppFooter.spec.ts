@@ -1,8 +1,4 @@
-import { vi, beforeEach, expect, test } from 'vitest'
-
-vi.mock('@/utils/appConfig', () => ({
-  getAppConfigField: vi.fn(),
-}))
+import { beforeEach, expect, test, vi } from 'vitest'
 
 import { mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
@@ -10,6 +6,10 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import AppFooter from '@/components/AppFooter.vue'
 import { getAppConfigField } from '@/utils/appConfig'
+
+vi.mock('@/utils/appConfig', () => ({
+  getAppConfigField: vi.fn(),
+}))
 
 const vuetify = createVuetify({
   components,

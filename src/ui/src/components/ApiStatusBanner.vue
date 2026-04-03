@@ -42,7 +42,7 @@
     }
   }
 
-  watch(() => apiStatus.available, (isAvailable) => {
+  watch(() => apiStatus.available, isAvailable => {
     if (isAvailable) {
       stopCounter()
     } else {

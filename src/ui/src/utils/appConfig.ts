@@ -1,4 +1,4 @@
-export function getAppConfigField(fieldName: string, options?: { placeholder?: string; defaultValue?: string }) {
+export function getAppConfigField (fieldName: string, options?: { placeholder?: string; defaultValue?: string }) {
   const placeholder = options?.placeholder ?? '__PLACEHOLDER__'
   const defaultValue = options?.defaultValue ?? 'NOT_SET'
 

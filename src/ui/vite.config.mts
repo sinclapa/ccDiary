@@ -13,7 +13,6 @@ import { defineConfig } from 'vite'
 import path from 'node:path'
 import pkg from './package.json'
 
-
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -56,14 +55,14 @@ export default defineConfig({
       },
     }),
   ],
-  define: { 
-    'process.env': {}, 
-    '__APP_VERSION__': JSON.stringify(pkg.version) 
+  define: {
+    'process.env': {},
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   resolve: {
     alias: {
-      //'@': fileURLToPath(new URL('./src', import.meta.url)),
-     '@': path.resolve(__dirname, 'src'),
+      // '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@': path.resolve(__dirname, 'src'),
     },
     extensions: [
       '.js',

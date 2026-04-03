@@ -1,10 +1,13 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { initFaro } from '../faro'
+import { getAppConfigField } from '@/utils/appConfig'
 
 const { mockInitializeFaro, mockGetWebInstrumentations, MockTracingInstrumentation, mockGetDefaultOTELInstrumentations } = vi.hoisted(() => ({
   mockInitializeFaro: vi.fn(),
   mockGetWebInstrumentations: vi.fn(() => []),
   MockTracingInstrumentation: vi.fn(),
-  mockGetDefaultOTELInstrumentations: vi.fn((opts) => [{ name: 'mock-otel', options: opts }]),
+  mockGetDefaultOTELInstrumentations: vi.fn(opts => [{ name: 'mock-otel', options: opts }]),
 }))
 
 vi.mock('@grafana/faro-web-sdk', () => ({
@@ -28,9 +31,6 @@ vi.mock('@/utils/appConfig', () => ({
   getAppConfigField: vi.fn(),
 }))
 
-import { initFaro } from '../faro'
-import { getAppConfigField } from '@/utils/appConfig'
-
 describe('initFaro', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -51,7 +51,7 @@ describe('initFaro', () => {
   describe('when VITE_FARO_URL is set', () => {
     const faroUrl = 'https://faro-collector.example.com/collect/abc123'
 
-    function setupMocks(overrides: Record<string, string> = {}) {
+    function setupMocks (overrides: Record<string, string> = {}) {
       vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
         const values: Record<string, string> = {
           VITE_FARO_URL: faroUrl,

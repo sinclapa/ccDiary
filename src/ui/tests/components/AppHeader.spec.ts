@@ -8,7 +8,7 @@ import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
 vi.mock('@/services/authentication/msalConfig')
 const msalServiceSpies = {
-  initializeInstance: vi.fn().mockImplementation(()=> { throw new Error('MSAL instance initialization failed') }),
+  initializeInstance: vi.fn().mockImplementation(() => { throw new Error('MSAL instance initialization failed') }),
   login: vi.fn(),
   logout: vi.fn(),
   handleRedirect: vi.fn().mockResolvedValue(null),
@@ -92,10 +92,10 @@ describe('AppHeader', () => {
         plugins: [vuetify],
         mocks: {
           $vuetify: {
-            display: { mobile: true }
-          }
-        }
-      }
+            display: { mobile: true },
+          },
+        },
+      },
     })
     // Find the navigation drawer
     const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
@@ -112,10 +112,10 @@ describe('AppHeader', () => {
         plugins: [vuetify],
         mocks: {
           $vuetify: {
-            display: { mobile: false }
-          }
-        }
-      }
+            display: { mobile: false },
+          },
+        },
+      },
     })
     // Find the navigation drawer
     const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })

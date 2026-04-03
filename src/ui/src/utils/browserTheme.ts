@@ -8,7 +8,7 @@
  * Determine theme based on system preference
  * @returns 'dark' or 'light'
  */
-export function getSystemTheme(): 'dark' | 'light' {
+export function getSystemTheme (): 'dark' | 'light' {
   try {
     return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   } catch {

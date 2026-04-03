@@ -1,5 +1,5 @@
-import { setActivePinia, createPinia } from 'pinia'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { useAppStore } from '@/stores/app'
 
 describe('useAppStore', () => {
