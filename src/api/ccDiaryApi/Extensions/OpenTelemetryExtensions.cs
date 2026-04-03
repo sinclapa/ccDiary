@@ -4,10 +4,12 @@
 
 namespace ccDiaryApi.Extensions
 {
+    using System.Data;
     using System.Reflection;
     using ccDiaryApi.Utilities;
     using OpenTelemetry.Exporter;
     using OpenTelemetry.Instrumentation.AspNetCore;
+    using OpenTelemetry.Instrumentation.EntityFrameworkCore;
     using OpenTelemetry.Instrumentation.SqlClient;
     using OpenTelemetry.Metrics;
     using OpenTelemetry.Resources;
@@ -42,6 +44,7 @@ namespace ccDiaryApi.Extensions
                 return services;
             }
 
+            var otlpHeaders = configuration["OTEL_EXPORTER_OTLP_HEADERS"] ?? string.Empty;
             var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "unknown";
 
             services.AddOpenTelemetry()
@@ -49,13 +52,22 @@ namespace ccDiaryApi.Extensions
                 .WithTracing(tracing => tracing
                     .AddAspNetCoreInstrumentation(ConfigureAspNetCoreTracing)
                     .AddHttpClientInstrumentation()
+                    .AddEntityFrameworkCoreInstrumentation(ConfigureEntityFrameworkCoreTracing)
                     .AddSqlClientInstrumentation(ConfigureSqlClientTracing)
-                    .AddOtlpExporter(ConfigureTracingOtlpExporter))
+                    .AddOtlpExporter(opts =>
+                    {
+                        ConfigureTracingOtlpExporter(opts);
+                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders);
+                    }))
                 .WithMetrics(metrics => metrics
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddOtlpExporter(ConfigureMetricsOtlpExporter));
+                    .AddOtlpExporter(opts =>
+                    {
+                        ConfigureMetricsOtlpExporter(opts);
+                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders);
+                    }));
 
             return services;
         }
@@ -78,6 +90,7 @@ namespace ccDiaryApi.Extensions
                 .AddAttributes(new[]
                 {
                     new KeyValuePair<string, object>("deployment.environment", environment),
+                    new KeyValuePair<string, object>("deployment.environment.name", environment),
                 });
 
         /// <summary>
@@ -114,6 +127,61 @@ namespace ccDiaryApi.Extensions
         }
 
         /// <summary>
+        /// Configures EF Core tracing instrumentation to capture generated SQL text and record exceptions.
+        /// </summary>
+        /// <param name="options">The instrumentation options to configure.</param>
+        public static void ConfigureEntityFrameworkCoreTracing(EntityFrameworkInstrumentationOptions options)
+        {
+            options.SetDbStatementForText = true;
+            options.SetDbStatementForStoredProcedure = true;
+            options.Filter = ShouldTraceDbCommand;
+        }
+
+        /// <summary>
+        /// Filters out low-value probe queries from EF Core database spans.
+        /// </summary>
+        /// <param name="providerName">The EF provider name.</param>
+        /// <param name="dbCommand">The current database command.</param>
+        /// <returns><c>true</c> when the command should be traced; otherwise <c>false</c>.</returns>
+        public static bool ShouldTraceDbCommand(string? providerName, IDbCommand dbCommand)
+        {
+            _ = providerName;
+
+            var commandText = dbCommand.CommandText?.Trim();
+            if (string.IsNullOrEmpty(commandText))
+            {
+                return true;
+            }
+
+            return !IsLowValueProbeQuery(commandText);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> for DB probe statements that are usually emitted by health checks.
+        /// </summary>
+        /// <param name="commandText">The SQL command text.</param>
+        /// <returns><c>true</c> if this statement is likely a low-value probe; otherwise <c>false</c>.</returns>
+        public static bool IsLowValueProbeQuery(string commandText)
+        {
+            var normalized = commandText.Trim();
+            while (normalized.EndsWith(';'))
+            {
+                normalized = normalized[..^1].TrimEnd();
+            }
+
+            if (string.Equals(normalized, "SELECT 1", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "SELECT 1 FROM DUAL", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "SELECT DB_NAME()", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return normalized.StartsWith("SELECT TOP(1) 1", StringComparison.OrdinalIgnoreCase)
+                || normalized.StartsWith("SELECT TOP (1) 1", StringComparison.OrdinalIgnoreCase)
+                || normalized.StartsWith("SELECT SERVERPROPERTY(", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Configures the OTLP exporter used for tracing: HTTP/Protobuf protocol with a batch
         /// processor (5 s flush interval, 2 048-span queue).
         /// </summary>
@@ -136,6 +204,24 @@ namespace ccDiaryApi.Extensions
         public static void ConfigureMetricsOtlpExporter(OtlpExporterOptions options)
         {
             options.Protocol = OtlpExportProtocol.HttpProtobuf;
+        }
+
+        /// <summary>
+        /// Applies the OTLP collector endpoint and optional authorization headers to an exporter
+        /// options instance. This ensures the values from <c>IConfiguration</c> (e.g. user secrets
+        /// when running via <c>dotnet run</c>) are used rather than relying solely on process
+        /// environment variables.
+        /// </summary>
+        /// <param name="options">The exporter options to configure.</param>
+        /// <param name="endpoint">The OTLP collector endpoint URL.</param>
+        /// <param name="headers">Optional comma-separated key=value header string (may be empty).</param>
+        public static void ApplyOtlpEndpointAndHeaders(OtlpExporterOptions options, string endpoint, string headers)
+        {
+            options.Endpoint = new Uri(endpoint);
+            if (!string.IsNullOrEmpty(headers))
+            {
+                options.Headers = headers;
+            }
         }
 
         /// <summary>

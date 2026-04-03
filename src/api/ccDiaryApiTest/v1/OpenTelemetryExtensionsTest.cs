@@ -4,12 +4,14 @@
 
 namespace ccDiaryApiTest.v1
 {
+    using System.Data;
     using ccDiaryApi.Extensions;
     using Microsoft.AspNetCore.Http;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using OpenTelemetry.Exporter;
     using OpenTelemetry.Instrumentation.AspNetCore;
+    using OpenTelemetry.Instrumentation.EntityFrameworkCore;
     using OpenTelemetry.Instrumentation.SqlClient;
     using OpenTelemetry.Resources;
     using Serilog.Sinks.OpenTelemetry;
@@ -134,6 +136,94 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
+        public void ConfigureEntityFrameworkCoreTracing_SetsExpectedOptions()
+        {
+            // Arrange
+            var options = new EntityFrameworkInstrumentationOptions();
+
+            // Act
+            OpenTelemetryExtensions.ConfigureEntityFrameworkCoreTracing(options);
+
+            // Assert
+            Assert.IsTrue(options.SetDbStatementForText);
+            Assert.IsTrue(options.SetDbStatementForStoredProcedure);
+            Assert.IsNotNull(options.Filter);
+        }
+
+        [DataTestMethod]
+        [DataRow("SELECT 1")]
+        [DataRow("SELECT 1;")]
+        [DataRow(" SELECT 1 ; ")]
+        [DataRow("SELECT 1 FROM DUAL")]
+        [DataRow("SELECT DB_NAME()")]
+        [DataRow("SELECT TOP(1) 1 FROM sys.objects")]
+        [DataRow("SELECT TOP (1) 1 FROM sys.tables")]
+        [DataRow("SELECT SERVERPROPERTY('ProductVersion')")]
+        public void IsLowValueProbeQuery_ReturnsTrue_ForProbeStatements(string query)
+        {
+            // Act
+            var result = OpenTelemetryExtensions.IsLowValueProbeQuery(query);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [DataTestMethod]
+        [DataRow("SELECT * FROM Diary")]
+        [DataRow("EXEC dbo.GetDiaryById @id")]
+        [DataRow("UPDATE Diary SET Title = 'x'")]
+        public void IsLowValueProbeQuery_ReturnsFalse_ForBusinessStatements(string query)
+        {
+            // Act
+            var result = OpenTelemetryExtensions.IsLowValueProbeQuery(query);
+
+            // Assert
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceDbCommand_ReturnsTrue_WhenCommandTextIsEmpty()
+        {
+            // Arrange
+            var command = new Moq.Mock<IDbCommand>();
+            command.SetupGet(c => c.CommandText).Returns(string.Empty);
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceDbCommand("provider", command.Object);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceDbCommand_ReturnsFalse_ForProbeStatement()
+        {
+            // Arrange
+            var command = new Moq.Mock<IDbCommand>();
+            command.SetupGet(c => c.CommandText).Returns("SELECT 1");
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceDbCommand("provider", command.Object);
+
+            // Assert
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void ShouldTraceDbCommand_ReturnsTrue_ForBusinessStatement()
+        {
+            // Arrange
+            var command = new Moq.Mock<IDbCommand>();
+            command.SetupGet(c => c.CommandText).Returns("SELECT * FROM Diary");
+
+            // Act
+            var result = OpenTelemetryExtensions.ShouldTraceDbCommand("provider", command.Object);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [TestMethod]
         public void ConfigureTracingOtlpExporter_SetsProtocolBatchAndQueueSize()
         {
             // Arrange
@@ -160,6 +250,46 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.AreEqual(OtlpExportProtocol.HttpProtobuf, options.Protocol);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_SetsEndpoint()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+
+            // Assert
+            Assert.AreEqual(new Uri("http://otel-collector:4318"), options.Endpoint);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_SetsHeaders_WhenHeadersProvided()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", "Authorization=Basic dXNlcjpwYXNz");
+
+            // Assert
+            Assert.AreEqual("Authorization=Basic dXNlcjpwYXNz", options.Headers);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_DoesNotSetHeaders_WhenHeadersEmpty()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+            var defaultHeaders = options.Headers;
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+
+            // Assert — Headers property must be unchanged from its default
+            Assert.AreEqual(defaultHeaders, options.Headers);
         }
 
         [TestMethod]

@@ -9,6 +9,8 @@ namespace ccDiaryApi.Controllers.v1
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
 
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]/[action]")]
@@ -17,22 +19,31 @@ namespace ccDiaryApi.Controllers.v1
     public class DiaryArchiveController : ControllerBase
     {
         private readonly IDiaryArchiveService _diaryArchiveService;
+        private readonly ILogger<DiaryArchiveController> _logger;
 
-        public DiaryArchiveController(IDiaryArchiveService diaryArchiveService)
+        public DiaryArchiveController(IDiaryArchiveService diaryArchiveService, ILogger<DiaryArchiveController>? logger = null)
         {
             _diaryArchiveService = diaryArchiveService;
+            _logger = logger ?? NullLogger<DiaryArchiveController>.Instance;
         }
 
         [Route("{diaryId:guid}")]
         [HttpGet]
         public ActionResult<DiaryArchiveDTO> Export(Guid diaryId)
         {
+            _logger.LogInformation("Export requested. DiaryId={DiaryId}", SanitizeForLog(diaryId));
+
             var export = _diaryArchiveService.Export(diaryId);
             if (export == null)
             {
+                _logger.LogWarning("Export not found. DiaryId={DiaryId}", SanitizeForLog(diaryId));
                 return NotFound();
             }
 
+            _logger.LogInformation(
+                "Export succeeded. DiaryId={DiaryId} EntryCount={EntryCount}",
+                SanitizeForLog(diaryId),
+                SanitizeForLog(export.DiaryEntries?.Count));
             return Ok(export);
         }
 
@@ -40,7 +51,18 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Import(DiaryArchiveDTO diaryArchive)
         {
             var diary = _diaryArchiveService.Import(diaryArchive);
+            _logger.LogInformation(
+                "Import succeeded. DiaryId={DiaryId} EntryCount={EntryCount}",
+                SanitizeForLog(diary.DiaryId),
+                SanitizeForLog(diaryArchive?.DiaryEntries?.Count));
             return Ok(diary);
+        }
+
+        private static string SanitizeForLog(object? value)
+        {
+            var s = value?.ToString() ?? string.Empty;
+            return s.Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
         }
     }
 }

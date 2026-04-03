@@ -206,4 +206,31 @@ describe('msalService', () => {
     // Should have replaced the old token
     expect(headers.get('Authorization')).toBe('Bearer new-token')
   })
+
+  it('registerAuthorizationHeaderInterceptor: preserves trace headers from Request', async () => {
+    vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([{ id: 1 }] as any)
+    vi.spyOn(msalInstance, 'acquireTokenSilent').mockResolvedValue({ accessToken: 'token' } as any)
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
+    globalThis.fetch = fetchMock
+
+    await service.registerAuthorizationHeaderInterceptor()
+
+    const request = new Request('https://api.example.com/resource', {
+      headers: {
+        traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        tracestate: 'vendor=value',
+        baggage: 'k=v',
+      },
+    })
+
+    await globalThis.fetch(request)
+
+    expect(fetchMock).toHaveBeenCalled()
+    const options = (fetchMock.mock.calls[0] as unknown[] | undefined)?.at(1) as RequestInit | undefined
+    const headers = new Headers(options?.headers)
+    expect(headers.get('Authorization')).toBe('Bearer token')
+    expect(headers.get('traceparent')).toBe('00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01')
+    expect(headers.get('tracestate')).toBe('vendor=value')
+    expect(headers.get('baggage')).toBe('k=v')
+  })
 })

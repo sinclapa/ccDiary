@@ -9,6 +9,8 @@ namespace ccDiaryApi.Controllers.v1
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
 
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]/[action]")]
@@ -17,10 +19,12 @@ namespace ccDiaryApi.Controllers.v1
     public class DiaryController : ControllerBase
     {
         private readonly IDiaryService _diaryService;
+        private readonly ILogger<DiaryController> _logger;
 
-        public DiaryController(IDiaryService diaryService)
+        public DiaryController(IDiaryService diaryService, ILogger<DiaryController>? logger = null)
         {
             _diaryService = diaryService;
+            _logger = logger ?? NullLogger<DiaryController>.Instance;
         }
 
         [HttpGet]
@@ -44,6 +48,11 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Create([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Create(diary);
+            var diaryIdForLog = retDiary.DiaryId.ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary created. DiaryId={DiaryId}", diaryIdForLog);
             return Created("Uri", retDiary);
         }
 
@@ -51,6 +60,11 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Update([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Update(diary);
+            var diaryIdForLog = retDiary.DiaryId.ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary updated. DiaryId={DiaryId}", diaryIdForLog);
             return Ok(retDiary);
         }
 
@@ -65,6 +79,11 @@ namespace ccDiaryApi.Controllers.v1
             }
 
             _diaryService.Delete(diary);
+            var diaryIdForLog = diaryId.ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary deleted. DiaryId={DiaryId}", diaryIdForLog);
             return Ok();
         }
     }

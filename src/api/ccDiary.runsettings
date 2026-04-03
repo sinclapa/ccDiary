@@ -18,6 +18,12 @@
           </Exclude>
         </Configuration>
       </DataCollector>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <ExcludeByFile>**/*Migrations/*.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
     </DataCollectors>
   </DataCollectionRunSettings>
 </RunSettings>

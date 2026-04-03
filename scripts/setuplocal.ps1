@@ -285,6 +285,12 @@ dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" s
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:TenantId" "$tenantId"
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ClientId" "$entraClientId"
 dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+if ($otlpEndpoint) {
+    dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "OTEL_EXPORTER_OTLP_ENDPOINT" "$otlpEndpoint"
+    if ($otlpAuthHeader) {
+        dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "OTEL_EXPORTER_OTLP_HEADERS" "$otlpAuthHeader"
+    }
+}
 
 $vuePath = "$PSScriptRoot/../src/ui/.env.dev.local"
 if (Test-Path $vuePath) {

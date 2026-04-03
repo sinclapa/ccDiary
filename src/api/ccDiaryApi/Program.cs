@@ -2,6 +2,7 @@
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Asp.Versioning;
@@ -25,8 +26,18 @@ using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
 
 var builder = WebApplication.CreateBuilder(args);
+var startupActivitySource = new ActivitySource("ccDiaryApi.Startup");
 builder.Configuration.AddEnvironmentVariables();
-if (builder.Environment.IsEnvironment("Local") || builder.Environment.IsEnvironment("LocalContainer"))
+if (builder.Environment.IsEnvironment("local"))
+{
+    // Keep lowercase ASPNETCORE_ENVIRONMENT value while still loading existing Local settings file.
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+}
+
+if (builder.Environment.IsEnvironment("Local")
+    || builder.Environment.IsEnvironment("local")
+    || builder.Environment.IsEnvironment("LocalContainer")
+    || builder.Environment.IsEnvironment("localcontainer"))
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
@@ -58,18 +69,21 @@ builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
     opts.UseSqlServer(connStrBuilder.ConnectionString));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("Entra"));
+                .AddMicrosoftIdentityWebApi(
+                    jwtBearerOptions =>
+                    {
+                        Program.ConfigureJwtBearer(jwtBearerOptions);
+                    },
+                    microsoftIdentityOptions => builder.Configuration.Bind("Entra", microsoftIdentityOptions));
 
 builder.Services.AddApiVersioning(options =>
     {
-        options.ReportApiVersions = true;
-        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        Program.ConfigureApiVersioning(options);
     })
     .AddMvc()
     .AddApiExplorer(options =>
     {
-        options.GroupNameFormat = "'v'VVV";
-        options.SubstituteApiVersionInUrl = true;
+        Program.ConfigureApiExplorer(options);
     });
 
 // Add services to the container.
@@ -115,7 +129,7 @@ var app = builder.Build();
 
 if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
 {
-    app.MigrateDatabase();
+    Program.RunDatabaseMigration(app, startupActivitySource);
 }
 else
 {
@@ -128,6 +142,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     KnownNetworks = { },
     KnownProxies = { },
 });
+
+app.UseRequestCompletionLogging();
 
 app.UseSwagger();
 
@@ -146,6 +162,8 @@ app.UseStaticFiles();
 app.UseCors("cors");
 
 app.UseAuthentication();
+
+app.UseObservabilityUserContext();
 
 app.UseAuthorization();
 
@@ -183,5 +201,39 @@ public partial class Program
         }
 
         return cs;
+    }
+
+    internal static void ConfigureJwtBearer(JwtBearerOptions jwtBearerOptions)
+    {
+        AuthenticationLoggingExtensions.ConfigureJwtBearerEvents(jwtBearerOptions);
+    }
+
+    internal static void ConfigureApiVersioning(ApiVersioningOptions options)
+    {
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    }
+
+    internal static void ConfigureApiExplorer(Asp.Versioning.ApiExplorer.ApiExplorerOptions options)
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    }
+
+    internal static void RunDatabaseMigration(
+        WebApplication app,
+        ActivitySource activitySource,
+        Action<WebApplication>? migrateAction = null)
+    {
+        var migrationStopwatch = Stopwatch.StartNew();
+        using var migrationActivity = activitySource.StartActivity("database.migrate", ActivityKind.Internal);
+        migrationActivity?.SetTag("db.operation", "migrate");
+        migrationActivity?.SetTag("service.name", "ccDiaryApi");
+
+        (migrateAction ?? (webApp => webApp.MigrateDatabase()))(app);
+        migrationStopwatch.Stop();
+        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
+        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
+        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
     }
 }
