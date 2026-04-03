@@ -48,7 +48,11 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Create([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Create(diary);
-            _logger.LogInformation("Diary created. DiaryId={DiaryId}", retDiary.DiaryId);
+            var diaryIdForLog = retDiary.DiaryId.ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary created. DiaryId={DiaryId}", diaryIdForLog);
             return Created("Uri", retDiary);
         }
 
@@ -56,7 +60,11 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Update([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Update(diary);
-            _logger.LogInformation("Diary updated. DiaryId={DiaryId}", retDiary.DiaryId);
+            var diaryIdForLog = retDiary.DiaryId.ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary updated. DiaryId={DiaryId}", diaryIdForLog);
             return Ok(retDiary);
         }
 
@@ -71,7 +79,11 @@ namespace ccDiaryApi.Controllers.v1
             }
 
             _diaryService.Delete(diary);
-            _logger.LogInformation("Diary deleted. DiaryId={DiaryId}", diaryId);
+            var diaryIdForLog = diaryId.ToString()
+                .Replace(Environment.NewLine, string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+            _logger.LogInformation("Diary deleted. DiaryId={DiaryId}", diaryIdForLog);
             return Ok();
         }
     }
