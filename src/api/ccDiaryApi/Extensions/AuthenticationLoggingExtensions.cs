@@ -24,17 +24,20 @@ namespace ccDiaryApi.Extensions
             {
                 OnAuthenticationFailed = context =>
                 {
-                    Log.Logger.Warning(context.Exception, "JWT authentication failed for {Path}", context.Request.Path);
+                    var sanitizedPath = context.Request.Path.ToString().Replace("\r", string.Empty).Replace("\n", string.Empty);
+                    Log.Logger.Warning(context.Exception, "JWT authentication failed for {Path}", sanitizedPath);
                     return Task.CompletedTask;
                 },
                 OnChallenge = context =>
                 {
-                    Log.Logger.Warning("JWT authentication challenge for {Path}", context.Request.Path);
+                    var sanitizedPath = context.Request.Path.ToString().Replace("\r", string.Empty).Replace("\n", string.Empty);
+                    Log.Logger.Warning("JWT authentication challenge for {Path}", sanitizedPath);
                     return Task.CompletedTask;
                 },
                 OnForbidden = context =>
                 {
-                    Log.Logger.Warning("JWT authorization forbidden for {Path}", context.Request.Path);
+                    var sanitizedPath = context.Request.Path.ToString().Replace("\r", string.Empty).Replace("\n", string.Empty);
+                    Log.Logger.Warning("JWT authorization forbidden for {Path}", sanitizedPath);
                     return Task.CompletedTask;
                 },
             };
