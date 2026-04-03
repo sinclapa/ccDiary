@@ -98,7 +98,10 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryEntryDTO> Create([FromBody] DiaryEntryDTO diaryEntry)
         {
             var retDiaryEntry = _diaryEntryService.CreateDiaryEntry(diaryEntry);
-            _logger.LogInformation("Diary entry created. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", retDiaryEntry.DiaryEntryId, retDiaryEntry.DiaryId);
+            _logger.LogInformation(
+                "Diary entry created. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}",
+                SanitizeForLog(retDiaryEntry.DiaryEntryId),
+                SanitizeForLog(retDiaryEntry.DiaryId));
             return Created("URI", retDiaryEntry);
         }
 
@@ -106,7 +109,10 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryEntryDTO> Update([FromBody] DiaryEntryDTO diaryEntry)
         {
             var retDiaryEntry = _diaryEntryService.UpdateDiaryEntry(diaryEntry);
-            _logger.LogInformation("Diary entry updated. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}", retDiaryEntry.DiaryEntryId, retDiaryEntry.DiaryId);
+            _logger.LogInformation(
+                "Diary entry updated. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}",
+                SanitizeForLog(retDiaryEntry.DiaryEntryId),
+                SanitizeForLog(retDiaryEntry.DiaryId));
             return Ok(retDiaryEntry);
         }
 
@@ -121,7 +127,9 @@ namespace ccDiaryApi.Controllers.v1
             }
 
             _diaryEntryService.DeleteDiaryEntry(diaryEntry);
-            _logger.LogInformation("Diary entry deleted. DiaryEntryId={DiaryEntryId}", diaryEntryId);
+            _logger.LogInformation(
+                "Diary entry deleted. DiaryEntryId={DiaryEntryId}",
+                SanitizeForLog(diaryEntryId));
             return Ok();
         }
 
@@ -141,6 +149,13 @@ namespace ccDiaryApi.Controllers.v1
         {
             var date = _diaryEntryService.MaxDiaryEntryDate(diaryId);
             return Ok(date);
+        }
+
+        private static string SanitizeForLog(object value)
+        {
+            var s = value?.ToString() ?? string.Empty;
+            return s.Replace("\r", string.Empty)
+                    .Replace("\n", string.Empty);
         }
     }
 }
