@@ -37,13 +37,15 @@ namespace ccDiaryApi.Extensions
                 var traceId = Activity.Current?.TraceId.ToString() ?? string.Empty;
                 var spanId = Activity.Current?.SpanId.ToString() ?? string.Empty;
                 var statusCode = context.Response.StatusCode;
+                var sanitizedMethod = context.Request.Method?.Replace("\r", string.Empty).Replace("\n", string.Empty);
+                var sanitizedPath = context.Request.Path.ToString().Replace("\r", string.Empty).Replace("\n", string.Empty);
 
                 if (statusCode >= 500)
                 {
                     Log.Logger.Warning(
                         "HTTP request completed with server error. Method={Method} Path={Path} StatusCode={StatusCode} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
-                        context.Request.Method,
-                        context.Request.Path,
+                        sanitizedMethod,
+                        sanitizedPath,
                         statusCode,
                         requestStart.ElapsedMilliseconds,
                         traceId,
@@ -53,8 +55,8 @@ namespace ccDiaryApi.Extensions
                 {
                     Log.Logger.Information(
                         "HTTP request completed. Method={Method} Path={Path} StatusCode={StatusCode} DurationMs={DurationMs} TraceId={TraceId} SpanId={SpanId}",
-                        context.Request.Method,
-                        context.Request.Path,
+                        sanitizedMethod,
+                        sanitizedPath,
                         statusCode,
                         requestStart.ElapsedMilliseconds,
                         traceId,
