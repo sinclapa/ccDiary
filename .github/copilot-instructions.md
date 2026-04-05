@@ -1,6 +1,6 @@
-# Claude Code Context for ccDiary Repository
+# ccDiary Repository
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding assistants (GitHub Copilot, Claude Code, etc.) when working with code in this repository.
 
 ## Project Overview
 
