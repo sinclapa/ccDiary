@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using Steeltoe.Common.HealthChecks;
@@ -126,6 +127,15 @@ builder.Services.AddCcDiaryOpenTelemetry(
     serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown");
 
 var app = builder.Build();
+
+// Register graceful shutdown for OpenTelemetry batch exporter
+var hostLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+hostLifetime.ApplicationStopping.Register(() =>
+{
+    var tracerProvider = app.Services.GetRequiredService<TracerProvider>();
+    tracerProvider.ForceFlush(30000);
+    tracerProvider.Dispose();
+});
 
 if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
 {
