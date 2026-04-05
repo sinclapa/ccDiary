@@ -224,7 +224,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void ConfigureTracingOtlpExporter_SetsProtocolBatchAndQueueSize()
+        public void ConfigureTracingOtlpExporter_SetsProtocolAndSimpleProcessor()
         {
             // Arrange
             var options = new OtlpExporterOptions();
@@ -234,9 +234,7 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.AreEqual(OtlpExportProtocol.HttpProtobuf, options.Protocol);
-            Assert.AreEqual(OpenTelemetry.ExportProcessorType.Batch, options.ExportProcessorType);
-            Assert.AreEqual(5000, options.BatchExportProcessorOptions.ScheduledDelayMilliseconds);
-            Assert.AreEqual(2048, options.BatchExportProcessorOptions.MaxQueueSize);
+            Assert.AreEqual(OpenTelemetry.ExportProcessorType.Simple, options.ExportProcessorType);
         }
 
         [TestMethod]

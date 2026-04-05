@@ -182,19 +182,16 @@ namespace ccDiaryApi.Extensions
         }
 
         /// <summary>
-        /// Configures the OTLP exporter used for tracing: HTTP/Protobuf protocol with a batch
-        /// processor (5 s flush interval, 2 048-span queue).
+        /// Configures the OTLP exporter used for tracing: HTTP/Protobuf protocol with a simple
+        /// processor for immediate export. Batch processing is avoided to ensure spans are exported
+        /// immediately, even in scale-to-zero environments where the process may terminate before
+        /// a batch flush completes.
         /// </summary>
         /// <param name="options">The exporter options to configure.</param>
         public static void ConfigureTracingOtlpExporter(OtlpExporterOptions options)
         {
             options.Protocol = OtlpExportProtocol.HttpProtobuf;
-            options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
-            options.BatchExportProcessorOptions = new OpenTelemetry.BatchExportProcessorOptions<System.Diagnostics.Activity>
-            {
-                ScheduledDelayMilliseconds = 5000,
-                MaxQueueSize = 2048,
-            };
+            options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
         }
 
         /// <summary>
