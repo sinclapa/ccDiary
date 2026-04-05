@@ -32,6 +32,7 @@
 
   const version = __APP_VERSION__
   const environment = getAppConfigField('VITE_ENVIRONMENT', { defaultValue: '' })
+  const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
   const items = [
     {
       title: 'Vuetify Documentation',
@@ -47,6 +48,11 @@
       title: 'GitHub',
       icon: `mdi-github`,
       href: 'https://github.com/sinclapa/ccDiary',
+    },
+    {
+      title: `API ${apiUrl}`,
+      icon: 'mdi-api',
+      href: apiUrl ? new URL('/', apiUrl).href : '',
     },
   ]
 </script>

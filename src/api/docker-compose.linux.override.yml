@@ -5,8 +5,8 @@ services:
       - RUN_MIGRATIONS=true
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     ports:
-      - "5120:8080"
-      - "7183:8080" # HTTPS is disabled, so we can use the same port for both HTTP and HTTPS
+      - "5121:8080"
+      - "7184:8080" # HTTPS is disabled, so we can use the same port for both HTTP and HTTPS
     volumes:
       - type: bind
         source: ${HTTPS_CERTS_PATH}
