@@ -61,23 +61,26 @@ Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
 
 # Detect if running in GitHub Codespace and build appropriate URLs
 if ($env:CODESPACE_NAME -and $env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
-    Write-Host "  Detected GitHub Codespace environment" -ForegroundColor Gray
-    $baseUrlApi = "https://$env:CODESPACE_NAME-54628.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
-    $baseUrl8080 = "https://$env:CODESPACE_NAME-8080.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
+    Write-Host "  Detected GitHub Codespace environment" -ForegroundColor Gray    
+    $baseUrlApi = "https://$env:CODESPACE_NAME-7183.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
+    $baseUrlApiAlt = "https://$env:CODESPACE_NAME-7184.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
+    $baseUrlUI = "https://$env:CODESPACE_NAME-8080.$env:GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN"
     Write-Host "  Using Codespace URLs:" -ForegroundColor Gray
-    Write-Host "    API (54629): $baseUrlApi" -ForegroundColor Gray
-    Write-Host "    UI (8080): $baseUrl8080" -ForegroundColor Gray
+    Write-Host "    API: $baseUrlApi" -ForegroundColor Gray
+    Write-Host "    API ALT: $baseUrlApiAlt" -ForegroundColor Gray
+    Write-Host "    UI: $baseUrlUI" -ForegroundColor Gray
 }
 else {
-    Write-Host "  Using localhost URLs" -ForegroundColor Gray
-    $baseUrlApi = "https://localhost:54629"
-    $baseUrl8080 = "http://localhost:8080"
+    Write-Host "  Using localhost URLs" -ForegroundColor Gray    
+    $baseUrlApi = "https://localhost:7183"
+    $baseUrlApiAlt = "https://localhost:7184"
+    $baseUrlUI = "http://localhost:8080"
 }
 
 $entraOut = & "$PSScriptRoot/entraSetup.ps1" `
     -AppName "ccdiary-local-$machineName" `
-    -spaUris @("$baseUrlApi/swagger/oauth2-redirect.html", "$baseUrl8080/") `
-    -webUris @("$baseUrlApi/") `
+    -spaUris @("$baseUrlApi/swagger/oauth2-redirect.html", "$baseUrlApiAlt/swagger/oauth2-redirect.html", "$baseUrlUI/") `
+    -webUris @("$baseUrlApi/", "$baseUrlApiAlt/") `
     -resourceGroupId $machineName
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
@@ -326,12 +329,28 @@ function SetValueInHashTable {
 SetValueInHashTable $content "VITE_CLIENT_ID" """$entraClientId"""
 SetValueInHashTable $content "VITE_TENANT_ID" """$tenantId"""
 SetValueInHashTable $content "VITE_APPLICATION_ID_URI" """$entraApplicationIdURI"""
-SetValueInHashTable $content "VITE_ENVIRONMENT" """local"""
-SetValueInHashTable $content "VITE_APP_VERSION" """0.0.0-local"""
+
 if ($faroUrl) {
     SetValueInHashTable $content "VITE_FARO_URL" """$faroUrl"""
 }
 $content | ConvertTo-StringData | Set-Content $vuePath
+
+$vueComposePath = "$PSScriptRoot/../src/ui/.env.devcompose.local"
+if (Test-Path $vueComposePath) {
+    $contentCompose = Get-Content -Raw $vueComposePath | ConvertFrom-StringData
+}
+else {
+    $contentCompose = @{}
+}
+
+SetValueInHashTable $contentCompose "VITE_CLIENT_ID" """$entraClientId"""
+SetValueInHashTable $contentCompose "VITE_TENANT_ID" """$tenantId"""
+SetValueInHashTable $contentCompose "VITE_APPLICATION_ID_URI" """$entraApplicationIdURI"""
+
+if ($faroUrl) {
+    SetValueInHashTable $contentCompose "VITE_FARO_URL" """$faroUrl"""
+}
+$contentCompose | ConvertTo-StringData | Set-Content $vueComposePath
 
 Write-Host "Starting local SQL Server instance..." -ForegroundColor Cyan
 $containerName = "LocalSqlServer"
