@@ -21,6 +21,15 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
+vi.mock('leaflet', () => ({
+  default: {
+    map: vi.fn(() => ({ setView: vi.fn().mockReturnThis(), remove: vi.fn() })),
+    tileLayer: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
+    marker: vi.fn(() => ({ addTo: vi.fn().mockReturnThis() })),
+    Icon: { Default: { prototype: {}, mergeOptions: vi.fn() } },
+  },
+}))
+
 globalThis.ResizeObserver = require('resize-observer-polyfill')
 
 describe('[id].vue', () => {
@@ -137,8 +146,12 @@ describe('[id].vue', () => {
       date: new Date(),
       location: 'New Location',
       entry: 'New Entry',
+      mapLocation: 'London, UK',
+      showMap: true,
     })
     expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
+    expect((wrapper.vm as any).editedItem.mapLocation).toBe('London, UK')
+    expect((wrapper.vm as any).editedItem.showMap).toBe(true)
   })
 
   it('calls onSubmitDiaryEntry for update', async () => {
@@ -151,8 +164,12 @@ describe('[id].vue', () => {
       date: entry.date,
       location: entry.location,
       entry: entry.entry,
+      mapLocation: 'Berlin, Germany',
+      showMap: false,
     })
     expect(diaryEntryAPI.updateDiaryEntry).toHaveBeenCalled()
+    expect((wrapper.vm as any).editedItem.mapLocation).toBe('Berlin, Germany')
+    expect((wrapper.vm as any).editedItem.showMap).toBe(false)
   })
 
   it('should toggle isDatePickerExpanded from false to true', async () => {
@@ -182,6 +199,8 @@ describe('[id].vue', () => {
       date: testDate,
       location: 'Updated Location',
       entry: 'Updated Entry',
+      mapLocation: '',
+      showMap: false,
     })
 
     // Verify selectDate was called because dates match
@@ -286,14 +305,14 @@ describe('[id].vue', () => {
   })
 
   it('resets editedItem after close', async () => {
-    await (wrapper.vm as any).editItem({ location: 'Loc', entry: 'Entry', date: new Date(), diaryEntryId: 'id' })
+    await (wrapper.vm as any).editItem(new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', 'id'))
     await (wrapper.vm as any).close()
     await nextTick() // <-- Wait for Vue to update
     expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
   })
 
   it('resets editedItem after closeDelete', async () => {
-    await (wrapper.vm as any).editItem({ location: 'Loc', entry: 'Entry', date: new Date(), diaryEntryId: 'id' })
+    await (wrapper.vm as any).editItem(new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', 'id'))
     await (wrapper.vm as any).closeDelete()
     await nextTick() // <-- Wait for Vue to update
     expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
@@ -349,6 +368,8 @@ describe('[id].vue', () => {
       date: new Date(2024, 5, 10),
       location: 'Updated Location',
       entry: 'Updated Entry',
+      mapLocation: '',
+      showMap: false,
     })
     expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls)
 
@@ -493,5 +514,40 @@ describe('[id].vue', () => {
 
     // No additional searchDiaryEntry calls (early return happened)
     expect(searchSpy.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('does not show MapView when showMap is false on diaryEntry', async () => {
+    const entryNoMap = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id', 'London, UK', false)
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryNoMap])
+    await flushPromises()
+    await (wrapper.vm as any).selectDate(new Date())
+    await flushPromises()
+    const mapViews = wrapper.findAllComponents({ name: 'MapView' })
+    expect(mapViews.length).toBe(0)
+  })
+
+  it('does not show MapView when showMap is true but mapLocation is empty', async () => {
+    const entryNoMapLoc = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id', '', true)
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryNoMapLoc])
+    await flushPromises()
+    await (wrapper.vm as any).selectDate(new Date())
+    await flushPromises()
+    const mapViews = wrapper.findAllComponents({ name: 'MapView' })
+    expect(mapViews.length).toBe(0)
+  })
+
+  it('shows MapView when showMap is true and mapLocation is set', async () => {
+    const entryWithMap = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id', 'London, UK', true)
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithMap])
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: vi.fn().mockResolvedValue([{ lat: '51.5074', lon: '-0.1278' }]),
+    }))
+    await flushPromises()
+    await (wrapper.vm as any).selectDate(new Date())
+    await flushPromises()
+    const mapViews = wrapper.findAllComponents({ name: 'MapView' })
+    expect(mapViews.length).toBe(1)
+    expect(mapViews[0].props('location')).toBe('London, UK')
+    vi.unstubAllGlobals()
   })
 })

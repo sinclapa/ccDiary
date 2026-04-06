@@ -34,6 +34,24 @@
             auto-grow
             label="Entry"
           />
+
+          <v-switch
+            id="show-map"
+            v-model="showMap"
+            color="primary"
+            label="Show Map"
+            hide-details
+            class="mb-2"
+          />
+
+          <v-text-field
+            v-if="showMap"
+            id="map-location"
+            v-model="mapLocation"
+            label="Map Location"
+            hint="Enter a place name to display on the map"
+            persistent-hint
+          />
         </v-card-text>
         <v-divider />
 
@@ -72,13 +90,15 @@
   import { VDateInput } from 'vuetify/labs/VDateInput'
   import { watch } from 'vue'
 
-  const props = defineProps<{date: Date, location: string, entry: string}>()
+  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const location = ref<string>(props.location)
   const entry = ref<string>(props.entry)
+  const mapLocation = ref<string>(props.mapLocation)
+  const showMap = ref<boolean>(props.showMap)
   const emit = defineEmits({
-    submit (payload: { date: Date, location: string, entry: string }) {
+    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean }) {
       return payload
     },
     close () {
@@ -95,7 +115,13 @@
     if (valid) {
       const [hours, minutes] = time.value.split(':')
       const entryDate = new Date(date.value.setHours(Number(hours), Number(minutes), 0, 0))
-      emit('submit', { date: entryDate, location: location.value, entry: entry.value })
+      emit('submit', {
+        date: entryDate,
+        location: location.value,
+        entry: entry.value,
+        mapLocation: mapLocation.value,
+        showMap: showMap.value,
+      })
     }
   }
 
@@ -108,5 +134,16 @@
   watch(() => props.date, newVal => {
     date.value = new Date(newVal)
     time.value = dayjs(newVal).format('HH:mm')
+  })
+  watch(() => props.mapLocation, newVal => {
+    mapLocation.value = newVal
+  })
+  watch(() => props.showMap, newVal => {
+    showMap.value = newVal
+  })
+  watch(showMap, newVal => {
+    if (newVal && !mapLocation.value) {
+      mapLocation.value = location.value
+    }
   })
 </script>

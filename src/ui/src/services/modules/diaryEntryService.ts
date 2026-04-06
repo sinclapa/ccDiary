@@ -47,7 +47,7 @@ export default class DiaryEntryAPIService {
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry[])
-    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId))
+    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId, x.mapLocation ?? '', x.showMap ?? false))
   }
 
   async getMinDate (diaryId: string) : Promise<Date> {

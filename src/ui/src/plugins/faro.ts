@@ -40,6 +40,25 @@ export function initFaro () {
         instrumentations: getDefaultOTELInstrumentations({
           ignoreUrls: [/\.vue(\?|$)/, /\/@vite\//, /\/@fs\//, /\/node_modules\//],
           propagateTraceHeaderCorsUrls: propagateUrls,
+          fetchInstrumentationOptions: {
+            applyCustomAttributesOnSpan: (span, request) => {
+              const attrs = (span as unknown as { attributes?: Record<string, unknown> }).attributes
+              const rawUrl = String(attrs?.['url.full'] ?? attrs?.['http.url'] ?? '')
+              if (!rawUrl) return
+              let pathname: string
+              try {
+                pathname = new URL(rawUrl).pathname
+              } catch {
+                return
+              }
+              const normalizedPath = pathname.replace(
+                /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+                '{id}',
+              )
+              const method = ((request as RequestInit).method ?? 'GET').toUpperCase()
+              span.updateName(`${method} ${normalizedPath}`)
+            },
+          },
         }),
       }),
     ],

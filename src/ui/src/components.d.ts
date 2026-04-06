@@ -12,6 +12,7 @@ declare module 'vue' {
     AppHeader: typeof import('./components/AppHeader.vue')['default']
     DiaryEditor: typeof import('./components/DiaryEditor.vue')['default']
     DiaryEntryEditor: typeof import('./components/DiaryEntryEditor.vue')['default']
+    MapView: typeof import('./components/MapView.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
