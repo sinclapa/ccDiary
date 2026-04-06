@@ -187,4 +187,3 @@ SonarCloud organization (`cookingcode`)
 ---
 
 **Last Updated**: 2026-04-05
-**Created For**: Claude Code instances working on ccDiary repository

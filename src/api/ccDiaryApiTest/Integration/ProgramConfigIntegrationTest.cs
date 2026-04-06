@@ -79,6 +79,7 @@ namespace ccDiaryApiTest.Integration
             {
                 builder.UseEnvironment("Development");
                 builder.UseSetting("RUN_MIGRATIONS", "false");
+                builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
                 builder.ConfigureServices(services =>
                 {
                     var dbDescriptor = services.SingleOrDefault(

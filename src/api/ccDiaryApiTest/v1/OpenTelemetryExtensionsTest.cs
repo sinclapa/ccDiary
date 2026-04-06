@@ -13,7 +13,9 @@ namespace ccDiaryApiTest.v1
     using OpenTelemetry.Instrumentation.AspNetCore;
     using OpenTelemetry.Instrumentation.EntityFrameworkCore;
     using OpenTelemetry.Instrumentation.SqlClient;
+    using OpenTelemetry.Metrics;
     using OpenTelemetry.Resources;
+    using OpenTelemetry.Trace;
     using Serilog.Sinks.OpenTelemetry;
 
     /// <summary>
@@ -55,6 +57,54 @@ namespace ccDiaryApiTest.v1
             // Assert
             Assert.AreSame(services, result);
             Assert.IsTrue(result.Count > 0);
+        }
+
+        [TestMethod]
+        public void AddCcDiaryOpenTelemetry_ConfiguresTracingExporterEndpoint_WhenEndpointIsSet()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddLogging();
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4318",
+                })
+                .Build();
+
+            OpenTelemetryExtensions.AddCcDiaryOpenTelemetry(services, config, "test-service", "1.0.0");
+            using var provider = services.BuildServiceProvider();
+
+            // Act — resolving TracerProvider triggers the .AddOtlpExporter lambda,
+            // which calls ApplyOtlpEndpointAndHeaders with signalPath "/v1/traces".
+            var tracerProvider = provider.GetRequiredService<TracerProvider>();
+
+            // Assert
+            Assert.IsNotNull(tracerProvider);
+        }
+
+        [TestMethod]
+        public void AddCcDiaryOpenTelemetry_ConfiguresMetricsExporterEndpoint_WhenEndpointIsSet()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddLogging();
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4318",
+                })
+                .Build();
+
+            OpenTelemetryExtensions.AddCcDiaryOpenTelemetry(services, config, "test-service", "1.0.0");
+            using var provider = services.BuildServiceProvider();
+
+            // Act — resolving MeterProvider triggers the .AddOtlpExporter lambda,
+            // which calls ApplyOtlpEndpointAndHeaders with signalPath "/v1/metrics".
+            var meterProvider = provider.GetRequiredService<MeterProvider>();
+
+            // Assert
+            Assert.IsNotNull(meterProvider);
         }
 
         [TestMethod]

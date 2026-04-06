@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryEntryIntegrationTest.cs" company="CookingCode">
+// <copyright file="DiaryEntryIntegrationTest.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -15,12 +15,13 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class DiaryEntryIntegrationTest
     {
-        private HttpClient _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
+        private HttpClient _httpClient = null!;
 
         [TestInitialize]
-        public void CreateHttpClient()
+        public async Task TestInit()
         {
-            _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
+            _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
+            await SharedTestFactory.Factory.ClearDatabaseAsync();
         }
 
         public async Task<DiaryDTO> CreateDiary()

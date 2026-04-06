@@ -29,10 +29,24 @@ namespace ccDiaryApiTest
 
         public string DefaultUserId { get; set; } = "TestUser";
 
+        /// <summary>
+        /// Removes all diary entries and diaries from the database.
+        /// Call from [TestInitialize] to ensure a clean state before each test.
+        /// </summary>
+        public async Task ClearDatabaseAsync()
+        {
+            using var scope = Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DiaryDatabaseContext>();
+            db.DiaryEntries.RemoveRange(db.DiaryEntries);
+            db.Diaries.RemoveRange(db.Diaries);
+            await db.SaveChangesAsync();
+        }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("RUN_MIGRATIONS", "true");
+            builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
             builder.ConfigureServices(services =>
             {
                 var dbContextDescriptor = services.SingleOrDefault(
