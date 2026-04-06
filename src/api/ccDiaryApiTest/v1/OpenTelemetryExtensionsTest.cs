@@ -251,16 +251,29 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void ApplyOtlpEndpointAndHeaders_SetsEndpoint()
+        public void ApplyOtlpEndpointAndHeaders_AppendsSignalPath()
         {
             // Arrange
             var options = new OtlpExporterOptions();
 
             // Act
-            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty, "/v1/traces");
+
+            // Assert — signal path must be appended so the SDK sends to the correct endpoint
+            Assert.AreEqual(new Uri("http://otel-collector:4318/v1/traces"), options.Endpoint);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_StripsTrailingSlashBeforeAppendingSignalPath()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318/otlp/", string.Empty, "/v1/metrics");
 
             // Assert
-            Assert.AreEqual(new Uri("http://otel-collector:4318"), options.Endpoint);
+            Assert.AreEqual(new Uri("http://otel-collector:4318/otlp/v1/metrics"), options.Endpoint);
         }
 
         [TestMethod]
@@ -270,7 +283,7 @@ namespace ccDiaryApiTest.v1
             var options = new OtlpExporterOptions();
 
             // Act
-            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", "Authorization=Basic dXNlcjpwYXNz");
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", "Authorization=Basic dXNlcjpwYXNz", "/v1/traces");
 
             // Assert
             Assert.AreEqual("Authorization=Basic dXNlcjpwYXNz", options.Headers);
@@ -284,7 +297,7 @@ namespace ccDiaryApiTest.v1
             var defaultHeaders = options.Headers;
 
             // Act
-            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty, "/v1/traces");
 
             // Assert — Headers property must be unchanged from its default
             Assert.AreEqual(defaultHeaders, options.Headers);
