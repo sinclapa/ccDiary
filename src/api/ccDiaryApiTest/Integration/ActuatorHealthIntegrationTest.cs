@@ -9,15 +9,16 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class ActuatorHealthIntegrationTest
     {
+        private HttpClient _httpClient = null!;
+
+        [TestInitialize]
+        public void TestInit() => _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
+
         [TestMethod]
         public async Task HealthEndpointReturnsOk()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/actuator/health");
+            var response = await _httpClient.GetAsync("/actuator/health");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -26,12 +27,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task HealthEndpointIncludesDatabaseContributor()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/actuator/health");
+            var response = await _httpClient.GetAsync("/actuator/health");
             var json = await response.Content.ReadAsStringAsync();
 
             // Assert
@@ -41,12 +38,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task HealthEndpointDatabaseReportsUp()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/actuator/health");
+            var response = await _httpClient.GetAsync("/actuator/health");
             var json = await response.Content.ReadAsStringAsync();
 
             // Assert — db details should include status=UP

@@ -11,15 +11,16 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class AppInfoIntegrationTest
     {
+        private HttpClient _httpClient = null!;
+
+        [TestInitialize]
+        public void TestInit() => _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
+
         [TestMethod]
         public async Task GetAppInfo_ReturnsOk()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/api/v1/AppInfo/Get");
+            var response = await _httpClient.GetAsync("/api/v1/AppInfo/Get");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -28,12 +29,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task GetAppInfo_ReturnsExpectedFields()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/api/v1/AppInfo/Get");
+            var response = await _httpClient.GetAsync("/api/v1/AppInfo/Get");
             var result = await response.Content.ReadFromJsonAsync<AppInfoDTO>();
 
             // Assert
@@ -44,12 +41,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task AssemblyInfoEndpoint_ReturnsOk()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/api/assembly-info");
+            var response = await _httpClient.GetAsync("/api/assembly-info");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -58,12 +51,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task AssemblyInfoEndpoint_ReturnsAssemblyNameAndVersion()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/api/assembly-info");
+            var response = await _httpClient.GetAsync("/api/assembly-info");
             var json = await response.Content.ReadAsStringAsync();
 
             // Assert

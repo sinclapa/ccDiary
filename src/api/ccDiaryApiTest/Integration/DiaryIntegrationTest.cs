@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryIntegrationTest.cs" company="CookingCode">
+// <copyright file="DiaryIntegrationTest.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -12,6 +12,8 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class DiaryIntegrationTest
     {
+        private HttpClient _httpClient = null!;
+
         public static async Task<DiaryDTO> CreateDiary(HttpClient httpClient)
         {
             DiaryDTO diary = new ()
@@ -30,15 +32,18 @@ namespace ccDiaryApiTest.Integration
             return diaryResult;
         }
 
+        [TestInitialize]
+        public async Task TestInit()
+        {
+            _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
+            await SharedTestFactory.Factory.ClearDatabaseAsync();
+        }
+
         [TestMethod]
         public async Task GetNoItems()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync("/api/v1/Diary/Get");
+            var response = await _httpClient.GetAsync("/api/v1/Diary/Get");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -51,14 +56,12 @@ namespace ccDiaryApiTest.Integration
         public async Task Get()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-            await CreateDiary(httpClient);
-            await CreateDiary(httpClient);
-            await CreateDiary(httpClient);
+            await CreateDiary(_httpClient);
+            await CreateDiary(_httpClient);
+            await CreateDiary(_httpClient);
 
             // Act
-            var response = await httpClient.GetAsync("/api/v1/Diary/Get");
+            var response = await _httpClient.GetAsync("/api/v1/Diary/Get");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -71,12 +74,10 @@ namespace ccDiaryApiTest.Integration
         public async Task GetById()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-            var diary = await CreateDiary(httpClient);
+            var diary = await CreateDiary(_httpClient);
 
             // Act
-            var response = await httpClient.GetAsync($"/api/v1/Diary/Get/{diary.DiaryId}");
+            var response = await _httpClient.GetAsync($"/api/v1/Diary/Get/{diary.DiaryId}");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -91,14 +92,12 @@ namespace ccDiaryApiTest.Integration
         public async Task GetByIdForUser()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-            var diary = await CreateDiary(httpClient);
+            var diary = await CreateDiary(_httpClient);
 
             // Act
             var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/Diary/Get/{diary.DiaryId}");
             request.Headers.Add("UserId", "testuser");
-            var response = await httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -112,12 +111,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task LoadSwagger()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.GetAsync($"/swagger/index.html");
+            var response = await _httpClient.GetAsync($"/swagger/index.html");
 
             // Assert
             var result = await response.Content.ReadAsStringAsync();
@@ -128,9 +123,6 @@ namespace ccDiaryApiTest.Integration
         public async Task Create()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             DiaryDTO diary = new ()
             {
                 Author = "ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ",
@@ -138,7 +130,7 @@ namespace ccDiaryApiTest.Integration
             };
 
             // Act
-            var response = await httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
@@ -152,12 +144,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task CreateNull()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.PostAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Create", null);
+            var response = await _httpClient.PostAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Create", null);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -167,9 +155,6 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateTooShortTitle()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             DiaryDTO diary = new ()
             {
                 Author = "Paul",
@@ -177,7 +162,7 @@ namespace ccDiaryApiTest.Integration
             };
 
             // Act
-            var response = await httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -187,9 +172,6 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateTooLongTitle()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             DiaryDTO diary = new ()
             {
                 Author = "Paul",
@@ -197,7 +179,7 @@ namespace ccDiaryApiTest.Integration
             };
 
             // Act
-            var response = await httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -207,9 +189,6 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateTooLomgAuthor()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             DiaryDTO diary = new ()
             {
                 Author = "123456789012345678901234567890123456789012345678901",
@@ -217,7 +196,7 @@ namespace ccDiaryApiTest.Integration
             };
 
             // Act
-            var response = await httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -226,12 +205,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task UpdateNull()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.PutAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Update", null);
+            var response = await _httpClient.PutAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Update", null);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -241,15 +216,12 @@ namespace ccDiaryApiTest.Integration
         public async Task Update()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
-            var diary = await CreateDiary(httpClient);
+            var diary = await CreateDiary(_httpClient);
             diary.Author = $"UpdatedAuthor{DateTime.UtcNow.Ticks}";
             diary.Title = $"UpdatedTitle{DateTime.UtcNow.Ticks}";
 
             // Act
-            var response = await httpClient.PutAsJsonAsync("/api/v1/Diary/Update", diary);
+            var response = await _httpClient.PutAsJsonAsync("/api/v1/Diary/Update", diary);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -264,13 +236,10 @@ namespace ccDiaryApiTest.Integration
         public async Task Delete()
         {
             // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
-            var diary = await CreateDiary(httpClient);
+            var diary = await CreateDiary(_httpClient);
 
             // Act
-            var response = await httpClient.DeleteAsync($"/api/v1/Diary/Delete/{diary.DiaryId}");
+            var response = await _httpClient.DeleteAsync($"/api/v1/Diary/Delete/{diary.DiaryId}");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -279,12 +248,8 @@ namespace ccDiaryApiTest.Integration
         [TestMethod]
         public async Task DeleteNotFound()
         {
-            // Arrange
-            var webAppFactory = new CustomWebApplicationFactory<Program>();
-            var httpClient = webAppFactory.CreateDefaultClient();
-
             // Act
-            var response = await httpClient.DeleteAsync($"/api/v1/Diary/Delete/{Guid.NewGuid()}");
+            var response = await _httpClient.DeleteAsync($"/api/v1/Diary/Delete/{Guid.NewGuid()}");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);

@@ -57,7 +57,7 @@ namespace ccDiaryApi.Extensions
                     .AddOtlpExporter(opts =>
                     {
                         ConfigureTracingOtlpExporter(opts);
-                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders);
+                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders, "/v1/traces");
                     }))
                 .WithMetrics(metrics => metrics
                     .AddAspNetCoreInstrumentation()
@@ -66,7 +66,7 @@ namespace ccDiaryApi.Extensions
                     .AddOtlpExporter(opts =>
                     {
                         ConfigureMetricsOtlpExporter(opts);
-                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders);
+                        ApplyOtlpEndpointAndHeaders(opts, otlpEndpoint, otlpHeaders, "/v1/metrics");
                     }));
 
             return services;
@@ -182,16 +182,18 @@ namespace ccDiaryApi.Extensions
         }
 
         /// <summary>
-        /// Configures the OTLP exporter used for tracing: HTTP/Protobuf protocol with a simple
-        /// processor for immediate export. Batch processing is avoided to ensure spans are exported
-        /// immediately, even in scale-to-zero environments where the process may terminate before
-        /// a batch flush completes.
+        /// Configures the OTLP exporter used for tracing: HTTP/Protobuf protocol with a batch
+        /// processor. Spans are exported every 2 seconds rather than on each request, eliminating
+        /// the per-request network round-trip that made the Simple processor slow. Graceful
+        /// shutdown is handled in <c>Program.cs</c> via <c>ForceFlush</c> on
+        /// <c>ApplicationStopping</c>, ensuring in-flight spans are exported before the container exits.
         /// </summary>
         /// <param name="options">The exporter options to configure.</param>
         public static void ConfigureTracingOtlpExporter(OtlpExporterOptions options)
         {
             options.Protocol = OtlpExportProtocol.HttpProtobuf;
-            options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Simple;
+            options.ExportProcessorType = OpenTelemetry.ExportProcessorType.Batch;
+            options.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 2000;
         }
 
         /// <summary>
@@ -209,12 +211,20 @@ namespace ccDiaryApi.Extensions
         /// when running via <c>dotnet run</c>) are used rather than relying solely on process
         /// environment variables.
         /// </summary>
+        /// <remarks>
+        /// When <see cref="OtlpExporterOptions.Endpoint"/> is set programmatically the SDK sets
+        /// <c>AppendSignalPathToEndpoint = false</c>, meaning it will NOT auto-append
+        /// <c>/v1/traces</c> or <c>/v1/metrics</c> to the base URL. The caller must therefore
+        /// pass the appropriate <paramref name="signalPath"/> so the request reaches the correct
+        /// Grafana OTLP endpoint (e.g. <c>/v1/traces</c>, <c>/v1/metrics</c>).
+        /// </remarks>
         /// <param name="options">The exporter options to configure.</param>
-        /// <param name="endpoint">The OTLP collector endpoint URL.</param>
+        /// <param name="endpoint">The OTLP collector base endpoint URL (without signal path).</param>
         /// <param name="headers">Optional comma-separated key=value header string (may be empty).</param>
-        public static void ApplyOtlpEndpointAndHeaders(OtlpExporterOptions options, string endpoint, string headers)
+        /// <param name="signalPath">The signal-specific path to append (e.g. <c>/v1/traces</c>).</param>
+        public static void ApplyOtlpEndpointAndHeaders(OtlpExporterOptions options, string endpoint, string headers, string signalPath)
         {
-            options.Endpoint = new Uri(endpoint);
+            options.Endpoint = new Uri(endpoint.TrimEnd('/') + signalPath);
             if (!string.IsNullOrEmpty(headers))
             {
                 options.Headers = headers;

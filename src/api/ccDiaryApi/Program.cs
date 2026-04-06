@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
@@ -128,13 +129,13 @@ builder.Services.AddCcDiaryOpenTelemetry(
 
 var app = builder.Build();
 
-// Register graceful shutdown for OpenTelemetry batch exporter
+// Flush all pending spans and metrics before the container exits.
+// ApplicationStopping fires on SIGTERM, giving the batch exporters time to drain.
 var hostLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
 hostLifetime.ApplicationStopping.Register(() =>
 {
-    var tracerProvider = app.Services.GetRequiredService<TracerProvider>();
-    tracerProvider.ForceFlush(30000);
-    tracerProvider.Dispose();
+    app.Services.GetRequiredService<TracerProvider>().ForceFlush(5000);
+    app.Services.GetRequiredService<MeterProvider>().ForceFlush(5000);
 });
 
 if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))

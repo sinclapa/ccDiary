@@ -13,7 +13,9 @@ namespace ccDiaryApiTest.v1
     using OpenTelemetry.Instrumentation.AspNetCore;
     using OpenTelemetry.Instrumentation.EntityFrameworkCore;
     using OpenTelemetry.Instrumentation.SqlClient;
+    using OpenTelemetry.Metrics;
     using OpenTelemetry.Resources;
+    using OpenTelemetry.Trace;
     using Serilog.Sinks.OpenTelemetry;
 
     /// <summary>
@@ -55,6 +57,54 @@ namespace ccDiaryApiTest.v1
             // Assert
             Assert.AreSame(services, result);
             Assert.IsTrue(result.Count > 0);
+        }
+
+        [TestMethod]
+        public void AddCcDiaryOpenTelemetry_ConfiguresTracingExporterEndpoint_WhenEndpointIsSet()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddLogging();
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4318",
+                })
+                .Build();
+
+            OpenTelemetryExtensions.AddCcDiaryOpenTelemetry(services, config, "test-service", "1.0.0");
+            using var provider = services.BuildServiceProvider();
+
+            // Act — resolving TracerProvider triggers the .AddOtlpExporter lambda,
+            // which calls ApplyOtlpEndpointAndHeaders with signalPath "/v1/traces".
+            var tracerProvider = provider.GetRequiredService<TracerProvider>();
+
+            // Assert
+            Assert.IsNotNull(tracerProvider);
+        }
+
+        [TestMethod]
+        public void AddCcDiaryOpenTelemetry_ConfiguresMetricsExporterEndpoint_WhenEndpointIsSet()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddLogging();
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4318",
+                })
+                .Build();
+
+            OpenTelemetryExtensions.AddCcDiaryOpenTelemetry(services, config, "test-service", "1.0.0");
+            using var provider = services.BuildServiceProvider();
+
+            // Act — resolving MeterProvider triggers the .AddOtlpExporter lambda,
+            // which calls ApplyOtlpEndpointAndHeaders with signalPath "/v1/metrics".
+            var meterProvider = provider.GetRequiredService<MeterProvider>();
+
+            // Assert
+            Assert.IsNotNull(meterProvider);
         }
 
         [TestMethod]
@@ -224,7 +274,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void ConfigureTracingOtlpExporter_SetsProtocolAndSimpleProcessor()
+        public void ConfigureTracingOtlpExporter_SetsProtocolAndBatchProcessor()
         {
             // Arrange
             var options = new OtlpExporterOptions();
@@ -234,7 +284,8 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.AreEqual(OtlpExportProtocol.HttpProtobuf, options.Protocol);
-            Assert.AreEqual(OpenTelemetry.ExportProcessorType.Simple, options.ExportProcessorType);
+            Assert.AreEqual(OpenTelemetry.ExportProcessorType.Batch, options.ExportProcessorType);
+            Assert.AreEqual(2000, options.BatchExportProcessorOptions.ScheduledDelayMilliseconds);
         }
 
         [TestMethod]
@@ -251,16 +302,29 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void ApplyOtlpEndpointAndHeaders_SetsEndpoint()
+        public void ApplyOtlpEndpointAndHeaders_AppendsSignalPath()
         {
             // Arrange
             var options = new OtlpExporterOptions();
 
             // Act
-            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty, "/v1/traces");
+
+            // Assert — signal path must be appended so the SDK sends to the correct endpoint
+            Assert.AreEqual(new Uri("http://otel-collector:4318/v1/traces"), options.Endpoint);
+        }
+
+        [TestMethod]
+        public void ApplyOtlpEndpointAndHeaders_StripsTrailingSlashBeforeAppendingSignalPath()
+        {
+            // Arrange
+            var options = new OtlpExporterOptions();
+
+            // Act
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318/otlp/", string.Empty, "/v1/metrics");
 
             // Assert
-            Assert.AreEqual(new Uri("http://otel-collector:4318"), options.Endpoint);
+            Assert.AreEqual(new Uri("http://otel-collector:4318/otlp/v1/metrics"), options.Endpoint);
         }
 
         [TestMethod]
@@ -270,7 +334,7 @@ namespace ccDiaryApiTest.v1
             var options = new OtlpExporterOptions();
 
             // Act
-            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", "Authorization=Basic dXNlcjpwYXNz");
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", "Authorization=Basic dXNlcjpwYXNz", "/v1/traces");
 
             // Assert
             Assert.AreEqual("Authorization=Basic dXNlcjpwYXNz", options.Headers);
@@ -284,7 +348,7 @@ namespace ccDiaryApiTest.v1
             var defaultHeaders = options.Headers;
 
             // Act
-            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty);
+            OpenTelemetryExtensions.ApplyOtlpEndpointAndHeaders(options, "http://otel-collector:4318", string.Empty, "/v1/traces");
 
             // Assert — Headers property must be unchanged from its default
             Assert.AreEqual(defaultHeaders, options.Headers);

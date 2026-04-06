@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryEntryIntegrationTest.cs" company="CookingCode">
+// <copyright file="DiaryEntryIntegrationTest.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -15,12 +15,13 @@ namespace ccDiaryApiTest.Integration
     [TestClass]
     public class DiaryEntryIntegrationTest
     {
-        private HttpClient _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
+        private HttpClient _httpClient = null!;
 
         [TestInitialize]
-        public void CreateHttpClient()
+        public async Task TestInit()
         {
-            _httpClient = new CustomWebApplicationFactory<Program>().CreateDefaultClient();
+            _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
+            await SharedTestFactory.Factory.ClearDatabaseAsync();
         }
 
         public async Task<DiaryDTO> CreateDiary()
@@ -90,9 +91,9 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            var diaryEntry2 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 8, 26, 14, 0, 0));
-            var diaryEntry1 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2019, 3, 17, 14, 0, 0));
-            var diaryEntry3 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2021, 9, 13, 14, 0, 0));
+            var diaryEntry2 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 8, 26, 14, 0, 0, DateTimeKind.Utc));
+            var diaryEntry1 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2019, 3, 17, 14, 0, 0, DateTimeKind.Utc));
+            var diaryEntry3 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2021, 9, 13, 14, 0, 0, DateTimeKind.Utc));
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/GetDiaryEntries/{diary.DiaryId}");
@@ -116,7 +117,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             var diaryEntry = new DiaryEntryDTO
             {
-                Date = new DateTime(2020, 6, 17, 14, 0, 0),
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
@@ -140,7 +141,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             var diaryEntry = new DiaryEntryDTO
             {
-                Date = new DateTime(2020, 6, 17, 14, 0, 0),
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = Guid.NewGuid(),
                 Location = $"Location{DateTime.UtcNow.Ticks}",
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
@@ -180,7 +181,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             var diaryEntry = new DiaryEntryDTO
             {
-                Date = new DateTime(2020, 6, 17, 14, 0, 0),
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
                 Entry = $"Notes{DateTime.UtcNow.Ticks}",
             };
@@ -200,7 +201,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             var diaryEntry = new DiaryEntryDTO
             {
-                Date = new DateTime(2020, 6, 17, 14, 0, 0),
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
             };
@@ -229,9 +230,9 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 8, 26, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2019, 3, 17, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2021, 9, 13, 14, 0, 0));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 8, 26, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2019, 3, 17, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2021, 9, 13, 14, 0, 0, DateTimeKind.Utc));
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}");
@@ -251,11 +252,11 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 7, 26, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 14, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 8, 17, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 12, 13, 14, 0, 0));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 7, 26, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 14, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 8, 17, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 12, 13, 14, 0, 0, DateTimeKind.Utc));
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020");
@@ -276,11 +277,11 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 26, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 14, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0));
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 13, 14, 0, 0));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 26, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 14, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 13, 14, 0, 0, DateTimeKind.Utc));
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6");
@@ -301,7 +302,7 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            await CreateDiaryEntry(diary.DiaryId, new DateTime(2022, 12, 26, 14, 0, 0));
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2022, 12, 26, 14, 0, 0, DateTimeKind.Utc));
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2022/12");
@@ -319,7 +320,7 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            var result30 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2022, 9, 30, 14, 0, 0));
+            var result30 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2022, 9, 30, 14, 0, 0, DateTimeKind.Utc));
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2022/9/30");
@@ -336,8 +337,8 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            var result14 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0));
-            var result13 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 13, 0, 0));
+            var result14 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc));
+            var result13 = await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 6, 17, 13, 0, 0, DateTimeKind.Utc));
 
             // Act
             _httpClient.DefaultRequestHeaders.Add("x-utc-offset", "0");
@@ -391,7 +392,7 @@ namespace ccDiaryApiTest.Integration
             var updateDiaryEntry = new DiaryEntryDTO
             {
                 DiaryEntryId = diaryEntry.DiaryEntryId,
-                Date = new DateTime(2021, 5, 16, 13, 0, 0),
+                Date = new DateTime(2021, 5, 16, 13, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
                 Location = $"UpdatedLocation{DateTime.UtcNow.Ticks}",
                 Entry = $"UpdatedNotes{DateTime.UtcNow.Ticks}",
