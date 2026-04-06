@@ -214,6 +214,8 @@ describe('DiaryEntry Service', () => {
       diaryId,
       location: 'TestLocation',
       entry: 'TestEntry',
+      mapLocation: '',
+      showMap: false,
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -245,6 +247,8 @@ describe('DiaryEntry Service', () => {
       diaryId,
       location: 'TestLocation',
       entry: 'TestEntry',
+      mapLocation: '',
+      showMap: false,
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 
