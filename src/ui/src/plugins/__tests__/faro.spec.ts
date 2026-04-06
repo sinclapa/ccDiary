@@ -97,6 +97,15 @@ describe('initFaro', () => {
       expect(otelOptions.propagateTraceHeaderCorsUrls).toHaveLength(0)
     })
 
+    it('ignores fetch spans to the Faro collector URL', () => {
+      setupMocks()
+      initFaro()
+      const otelOptions = mockGetDefaultOTELInstrumentations.mock.calls[0][0]
+      const collectorPattern = otelOptions.ignoreUrls.find((p: unknown) => p instanceof RegExp && p.test(faroUrl)) as RegExp
+      expect(collectorPattern).toBeDefined()
+      expect(collectorPattern.test('https://other.example.com/collect')).toBe(false)
+    })
+
     it('includes ignoreErrors pattern matching dynamic import failures', () => {
       setupMocks()
       initFaro()
@@ -122,6 +131,15 @@ describe('initFaro', () => {
         const logItem = {
           type: 'log',
           payload: { message: 'console.error: Dynamic import error Failed to fetch dynamically imported module: http://localhost:8080/src/pages/diaries/[id].vue' },
+          meta: {},
+        }
+        expect(beforeSend(logItem)).toBeNull()
+      })
+
+      it('filters log events containing the Faro collector URL', () => {
+        const logItem = {
+          type: 'log',
+          payload: { message: `console.error: Failed to send to ${faroUrl}` },
           meta: {},
         }
         expect(beforeSend(logItem)).toBeNull()

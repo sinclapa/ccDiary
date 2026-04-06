@@ -15,6 +15,8 @@ export function initFaro () {
       ? [new RegExp(apiUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))]
       : []
 
+  const collectorUrlPattern = new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+
   initializeFaro({
     url,
     app: {
@@ -24,11 +26,12 @@ export function initFaro () {
     },
     // Router handles dynamic import failures with a reload — suppress exception events
     ignoreErrors: [DYNAMIC_IMPORT_ERROR],
-    // Suppress log events (console.error captures) with the same pattern
+    // Suppress log events (console.error captures) matching the dynamic import error
+    // pattern or containing the Faro collector URL
     beforeSend: (item: TransportItem) => {
       if (item.type === TransportItemType.LOG) {
         const payload = item.payload as { message?: string }
-        if (payload.message && DYNAMIC_IMPORT_ERROR.test(payload.message)) {
+        if (payload.message && (DYNAMIC_IMPORT_ERROR.test(payload.message) || collectorUrlPattern.test(payload.message))) {
           return null
         }
       }
@@ -38,7 +41,7 @@ export function initFaro () {
       ...getWebInstrumentations(),
       new TracingInstrumentation({
         instrumentations: getDefaultOTELInstrumentations({
-          ignoreUrls: [/\.vue(\?|$)/, /\/@vite\//, /\/@fs\//, /\/node_modules\//],
+          ignoreUrls: [/\.vue(\?|$)/, /\/@vite\//, /\/@fs\//, /\/node_modules\//, collectorUrlPattern],
           propagateTraceHeaderCorsUrls: propagateUrls,
           fetchInstrumentationOptions: {
             applyCustomAttributesOnSpan: (span, request) => {
