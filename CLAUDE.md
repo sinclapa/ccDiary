@@ -116,7 +116,7 @@ ccDiary/
 ### Scripts (scripts)
 | Script | Description |
 |---|---|
-| buildAllInfrastructure.ps1 |  |
+| buildAllInfrastructure.ps1 | Deploy infrastructure for all environments (dev, staging, prod) sequentially |
 | buildInfrastructure.ps1 | Build infrastructure in Azure |
 | ensure-local-apps-running.ps1 | Run UI and API if not running |
 | run-coverage-summary.ps1 | Run coverage for API and UI |
@@ -143,19 +143,47 @@ ccDiary/
 
 ## Development Workflow
 
-1. **Setup** Run `scripts/setuplocal.ps1` for initial environment setup
-2. **Format**
-3. **Build**
-4. **Run**
-5. **Test**
-6. **Integration Tests**
-7. **Check Branch Coverage** is >85%
+1. **Setup** — Run `scripts/setuplocal.ps1` for initial environment setup
+2. **Format** — `dotnet format .\ccDiary.sln` (API) / `npm run lint` (UI)
+3. **Build** — `dotnet build ccDiary.sln` (API) / `npm run build` (UI)
+4. **Run** — `dotnet run --project ccDiaryApi\ccDiaryApi.csproj` (API) / `npm run dev` (UI)
+5. **Test** — `dotnet test ccDiary.sln -c Release ...` (API) / `npm run test:ci` (UI)
+6. **Integration Tests** — Ensure both API and UI are running, then `npm run test:e2e`
+7. **Check Branch Coverage** — Must be >85% overall and >85% on branches (SonarCloud gate)
 
-## Git Workflo
+## Git Workflow
 - Branch naming: lowercase and `-` separated using only `a-z`and `0-9`
 - Commit format: `type: description` (feat, fix, refactor, test, docs, feat!), breaking changes have type `feat!` or contain `BREAKING CHANGE` 
 - Always create a branch before changes
 - Run tests before committing
+
+## Local Configuration
+
+Sensitive values are never committed. Override them via:
+- **User secrets** (`dotnet user-secrets`) for local `dotnet run`
+- **Environment variables** for containers
+
+### Required configuration keys
+
+| Key | Purpose |
+|---|---|
+| `ConnectionStrings:SqlConnection` | SQL Server connection string (see `appsettings.Local.json` for template) |
+| `Entra:ClientId` | Entra ID app registration client ID |
+| `Entra:TenantId` | Entra ID tenant ID |
+| `Entra:ApplicationIdUri` | Entra ID application ID URI |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector base URL (optional — OTel is disabled when absent) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Comma-separated `key=value` auth headers for OTLP (e.g. Grafana Cloud token) |
+
+### OpenTelemetry
+
+OTel is configured in `OpenTelemetryExtensions.cs`. When `OTEL_EXPORTER_OTLP_ENDPOINT` is set it exports:
+- **Traces** — ASP.NET Core, HttpClient, EF Core, SqlClient instrumentation → `{endpoint}/v1/traces`
+- **Metrics** — ASP.NET Core, HttpClient, runtime instrumentation → `{endpoint}/v1/metrics`
+- **Logs** — Serilog OTLP sink → `{endpoint}/v1/logs`
+
+Signal paths are always appended explicitly because the SDK disables auto-append when the endpoint is set programmatically. The exporter uses HTTP/Protobuf with a **simple processor** (not batch) to handle scale-to-zero environments where the process may terminate before a batch flush.
+
+Tracing excludes `/swagger`, `/actuator`, `/api/assembly-info`, and `/health` paths, and filters out low-value SQL probe queries (e.g. `SELECT 1`).
 
 ## Infrastructure as Code (Bicep)
 
@@ -186,5 +214,5 @@ SonarCloud organization (`cookingcode`)
 
 ---
 
-**Last Updated**: 2026-04-05
+**Last Updated**: 2026-04-06
 **Created For**: Claude Code instances working on ccDiary repository
