@@ -42,8 +42,8 @@ export function initFaro () {
           propagateTraceHeaderCorsUrls: propagateUrls,
           fetchInstrumentationOptions: {
             applyCustomAttributesOnSpan: (span, request) => {
-              const attrs = (span as unknown as { attributes?: Record<string, unknown> }).attributes
-              const rawUrl = String(attrs?.['url.full'] ?? attrs?.['http.url'] ?? '')
+              const attrs = (span as unknown as { attributes?: Record<string, string> }).attributes
+              const rawUrl = attrs?.['url.full'] ?? attrs?.['http.url'] ?? ''
               if (!rawUrl) return
               let pathname: string
               try {
@@ -51,7 +51,7 @@ export function initFaro () {
               } catch {
                 return
               }
-              const normalizedPath = pathname.replace(
+              const normalizedPath = pathname.replaceAll(
                 /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
                 '{id}',
               )

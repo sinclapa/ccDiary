@@ -137,21 +137,21 @@ describe('initFaro', () => {
       expect(beforeSend(exceptionItem)).toBe(exceptionItem)
     })
 
+    function getSpanNameCallback () {
+      setupMocks({ VITE_API: 'https://api.example.com' })
+      initFaro()
+      const otelOptions = mockGetDefaultOTELInstrumentations.mock.calls[0][0]
+      return otelOptions.fetchInstrumentationOptions?.applyCustomAttributesOnSpan
+    }
+
+    function makeSpan (urlFull?: string, httpUrl?: string) {
+      const attributes: Record<string, unknown> = {}
+      if (urlFull !== undefined) attributes['url.full'] = urlFull
+      if (httpUrl !== undefined) attributes['http.url'] = httpUrl
+      return { attributes, updateName: vi.fn() }
+    }
+
     describe('applyCustomAttributesOnSpan', () => {
-      function getSpanNameCallback () {
-        setupMocks({ VITE_API: 'https://api.example.com' })
-        initFaro()
-        const otelOptions = mockGetDefaultOTELInstrumentations.mock.calls[0][0]
-        return otelOptions.fetchInstrumentationOptions?.applyCustomAttributesOnSpan
-      }
-
-      function makeSpan (urlFull?: string, httpUrl?: string) {
-        const attributes: Record<string, unknown> = {}
-        if (urlFull !== undefined) attributes['url.full'] = urlFull
-        if (httpUrl !== undefined) attributes['http.url'] = httpUrl
-        return { attributes, updateName: vi.fn() }
-      }
-
       it('renames span using url.full (stable semconv)', () => {
         const cb = getSpanNameCallback()
         const span = makeSpan('https://api.example.com/v1/Diary/Get')

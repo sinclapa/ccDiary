@@ -73,11 +73,11 @@
         leafletMap = null
       }
 
-      leafletMap = L.map(mapContainer.value!).setView([parseFloat(lat), parseFloat(lon)], 13)
+      leafletMap = L.map(mapContainer.value!).setView([Number.parseFloat(lat), Number.parseFloat(lon)], 13)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
-      L.marker([parseFloat(lat), parseFloat(lon)]).addTo(leafletMap)
+      L.marker([Number.parseFloat(lat), Number.parseFloat(lon)]).addTo(leafletMap)
     } catch {
       status.value = 'error'
     }

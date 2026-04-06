@@ -24,6 +24,7 @@ namespace ccDiaryApi.Data.Model
 
         public string? MapLocation { get; set; }
 
+        [Required]
         public bool ShowMap { get; set; }
 
         [ForeignKey(nameof(DiaryDTO))]
