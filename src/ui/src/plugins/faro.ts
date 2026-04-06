@@ -15,6 +15,8 @@ export function initFaro () {
       ? [new RegExp(apiUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))]
       : []
 
+  const collectorUrlPattern = new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+
   initializeFaro({
     url,
     app: {
@@ -24,11 +26,12 @@ export function initFaro () {
     },
     // Router handles dynamic import failures with a reload — suppress exception events
     ignoreErrors: [DYNAMIC_IMPORT_ERROR],
-    // Suppress log events (console.error captures) with the same pattern
+    // Suppress log events (console.error captures) matching the dynamic import error
+    // pattern or containing the Faro collector URL
     beforeSend: (item: TransportItem) => {
       if (item.type === TransportItemType.LOG) {
         const payload = item.payload as { message?: string }
-        if (payload.message && DYNAMIC_IMPORT_ERROR.test(payload.message)) {
+        if (payload.message && (DYNAMIC_IMPORT_ERROR.test(payload.message) || collectorUrlPattern.test(payload.message))) {
           return null
         }
       }
@@ -38,8 +41,27 @@ export function initFaro () {
       ...getWebInstrumentations(),
       new TracingInstrumentation({
         instrumentations: getDefaultOTELInstrumentations({
-          ignoreUrls: [/\.vue(\?|$)/, /\/@vite\//, /\/@fs\//, /\/node_modules\//],
+          ignoreUrls: [/\.vue(\?|$)/, /\/@vite\//, /\/@fs\//, /\/node_modules\//, collectorUrlPattern],
           propagateTraceHeaderCorsUrls: propagateUrls,
+          fetchInstrumentationOptions: {
+            applyCustomAttributesOnSpan: (span, request) => {
+              const attrs = (span as unknown as { attributes?: Record<string, string> }).attributes
+              const rawUrl = attrs?.['url.full'] ?? attrs?.['http.url'] ?? ''
+              if (!rawUrl) return
+              let pathname: string
+              try {
+                pathname = new URL(rawUrl).pathname
+              } catch {
+                return
+              }
+              const normalizedPath = pathname.replaceAll(
+                /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+                '{id}',
+              )
+              const method = ((request as RequestInit).method ?? 'GET').toUpperCase()
+              span.updateName(`${method} ${normalizedPath}`)
+            },
+          },
         }),
       }),
     ],

@@ -113,6 +113,58 @@ describe('DiaryEntry Service', () => {
     )
   })
 
+  it('searchDiaryEntryForDay maps mapLocation and showMap from API response', async () => {
+    // Arrange
+    const diaryId = crypto.randomUUID()
+    const entryId = crypto.randomUUID()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ([{
+        diaryId,
+        diaryEntryId: entryId,
+        date: new Date(2024, 8, 17).toISOString(),
+        location: 'Home',
+        entry: 'A note',
+        mapLocation: 'London, UK',
+        showMap: true,
+      }]),
+    } as Response)
+
+    // Act
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    // Assert
+    expect(results).toHaveLength(1)
+    expect(results[0].mapLocation).toBe('London, UK')
+    expect(results[0].showMap).toBe(true)
+  })
+
+  it('searchDiaryEntryForDay defaults mapLocation to empty string when null', async () => {
+    // Arrange
+    const diaryId = crypto.randomUUID()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ([{
+        diaryId,
+        diaryEntryId: crypto.randomUUID(),
+        date: new Date(2024, 8, 17).toISOString(),
+        location: 'Home',
+        entry: 'A note',
+        mapLocation: null,
+        showMap: false,
+      }]),
+    } as Response)
+
+    // Act
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    // Assert
+    expect(results[0].mapLocation).toBe('')
+    expect(results[0].showMap).toBe(false)
+  })
+
   it('Delete DiaryEntry', async () => {
     // Arrange
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -162,6 +214,8 @@ describe('DiaryEntry Service', () => {
       diaryId,
       location: 'TestLocation',
       entry: 'TestEntry',
+      mapLocation: '',
+      showMap: false,
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -193,6 +247,8 @@ describe('DiaryEntry Service', () => {
       diaryId,
       location: 'TestLocation',
       entry: 'TestEntry',
+      mapLocation: '',
+      showMap: false,
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 

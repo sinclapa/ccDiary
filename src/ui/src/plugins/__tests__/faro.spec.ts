@@ -31,6 +31,13 @@ vi.mock('@/utils/appConfig', () => ({
   getAppConfigField: vi.fn(),
 }))
 
+function makeSpan (urlFull?: string, httpUrl?: string) {
+  const attributes: Record<string, unknown> = {}
+  if (urlFull !== undefined) attributes['url.full'] = urlFull
+  if (httpUrl !== undefined) attributes['http.url'] = httpUrl
+  return { attributes, updateName: vi.fn() }
+}
+
 describe('initFaro', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -90,6 +97,15 @@ describe('initFaro', () => {
       expect(otelOptions.propagateTraceHeaderCorsUrls).toHaveLength(0)
     })
 
+    it('ignores fetch spans to the Faro collector URL', () => {
+      setupMocks()
+      initFaro()
+      const otelOptions = mockGetDefaultOTELInstrumentations.mock.calls[0][0]
+      const collectorPattern = otelOptions.ignoreUrls.find((p: unknown) => p instanceof RegExp && p.test(faroUrl)) as RegExp
+      expect(collectorPattern).toBeDefined()
+      expect(collectorPattern.test('https://other.example.com/collect')).toBe(false)
+    })
+
     it('includes ignoreErrors pattern matching dynamic import failures', () => {
       setupMocks()
       initFaro()
@@ -101,40 +117,81 @@ describe('initFaro', () => {
       expect(pattern.test('Some unrelated error')).toBe(false)
     })
 
-    it('beforeSend filters log events containing the dynamic import error message', () => {
-      setupMocks()
-      initFaro()
-      const { beforeSend } = mockInitializeFaro.mock.calls[0][0]
-      const logItem = {
-        type: 'log',
-        payload: { message: 'console.error: Dynamic import error Failed to fetch dynamically imported module: http://localhost:8080/src/pages/diaries/[id].vue' },
-        meta: {},
-      }
-      expect(beforeSend(logItem)).toBeNull()
+    describe('beforeSend', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let beforeSend: (item: any) => any
+
+      beforeEach(() => {
+        setupMocks()
+        initFaro()
+        beforeSend = mockInitializeFaro.mock.calls[0][0].beforeSend
+      })
+
+      it.each([
+        ['dynamic import error', 'console.error: Dynamic import error Failed to fetch dynamically imported module: http://localhost:8080/src/pages/diaries/[id].vue'],
+        ['Faro collector URL', `console.error: Failed to send to ${faroUrl}`],
+      ])('filters log events containing %s', (_, message) => {
+        const logItem = { type: 'log', payload: { message }, meta: {} }
+        expect(beforeSend(logItem)).toBeNull()
+      })
+
+      it('passes through unrelated log events', () => {
+        const logItem = { type: 'log', payload: { message: 'console.error: Some unrelated application error' }, meta: {} }
+        expect(beforeSend(logItem)).toBe(logItem)
+      })
+
+      it('passes through non-log event types unmodified', () => {
+        const exceptionItem = {
+          type: 'exception',
+          payload: { value: 'Failed to fetch dynamically imported module: http://localhost:8080/foo.vue', type: 'TypeError' },
+          meta: {},
+        }
+        expect(beforeSend(exceptionItem)).toBe(exceptionItem)
+      })
     })
 
-    it('beforeSend passes through unrelated log events', () => {
-      setupMocks()
-      initFaro()
-      const { beforeSend } = mockInitializeFaro.mock.calls[0][0]
-      const logItem = {
-        type: 'log',
-        payload: { message: 'console.error: Some unrelated application error' },
-        meta: {},
-      }
-      expect(beforeSend(logItem)).toBe(logItem)
-    })
+    describe('applyCustomAttributesOnSpan', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let cb: (span: any, init: RequestInit, response: Response) => void
+      const GUID = '550e8400-e29b-41d4-a716-446655440000'
 
-    it('beforeSend passes through non-log event types unmodified', () => {
-      setupMocks()
-      initFaro()
-      const { beforeSend } = mockInitializeFaro.mock.calls[0][0]
-      const exceptionItem = {
-        type: 'exception',
-        payload: { value: 'Failed to fetch dynamically imported module: http://localhost:8080/foo.vue', type: 'TypeError' },
-        meta: {},
-      }
-      expect(beforeSend(exceptionItem)).toBe(exceptionItem)
+      beforeEach(() => {
+        setupMocks({ VITE_API: 'https://api.example.com' })
+        initFaro()
+        const otelOptions = mockGetDefaultOTELInstrumentations.mock.calls[0][0]
+        cb = otelOptions.fetchInstrumentationOptions?.applyCustomAttributesOnSpan
+      })
+
+      it.each<[string, string | undefined, string | undefined, string | undefined, string]>([
+        ['renames span using url.full (stable semconv)', 'https://api.example.com/v1/Diary/Get', undefined, 'GET', 'GET /v1/Diary/Get'],
+        ['falls back to http.url when url.full is absent', undefined, 'https://api.example.com/v1/Diary/Create', 'POST', 'POST /v1/Diary/Create'],
+        ['normalizes GUID in Diary path to {id}', `https://api.example.com/v1/Diary/Get/${GUID}`, undefined, 'GET', 'GET /v1/Diary/Get/{id}'],
+        ['normalizes GUID in Diary Delete path to {id}', `https://api.example.com/v1/Diary/Delete/${GUID}`, undefined, 'DELETE', 'DELETE /v1/Diary/Delete/{id}'],
+        ['normalizes GUID in DiaryEntry path to {id}', `https://api.example.com/v1/DiaryEntry/GetMinDate/${GUID}`, undefined, 'GET', 'GET /v1/DiaryEntry/GetMinDate/{id}'],
+        ['preserves year/month/day numeric segments in Search path', `https://api.example.com/v1/DiaryEntry/Search/${GUID}/2024/3/15`, undefined, 'GET', 'GET /v1/DiaryEntry/Search/{id}/2024/3/15'],
+        ['defaults method to GET when RequestInit has no method', 'https://api.example.com/v1/Diary/Get', undefined, undefined, 'GET /v1/Diary/Get'],
+        ['uppercases the HTTP method', 'https://api.example.com/v1/DiaryEntry/Update', undefined, 'put', 'PUT /v1/DiaryEntry/Update'],
+      ])('%s', (_, urlFull, httpUrl, method, expected) => {
+        const span = makeSpan(urlFull, httpUrl)
+        cb(span, method !== undefined ? { method } : {}, {} as Response)
+        expect(span.updateName).toHaveBeenCalledWith(expected)
+      })
+
+      it('does not rename span when attributes object is absent', () => {
+        const span = { updateName: vi.fn() }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cb(span as any, { method: 'GET' }, {} as Response)
+        expect(span.updateName).not.toHaveBeenCalled()
+      })
+
+      it.each([
+        ['url attributes are empty string', '', ''],
+        ['url is malformed', 'not-a-valid-url', undefined],
+      ])('does not rename span when %s', (_, urlFull, httpUrl) => {
+        const span = makeSpan(urlFull as string, httpUrl as string | undefined)
+        cb(span, { method: 'GET' }, {} as Response)
+        expect(span.updateName).not.toHaveBeenCalled()
+      })
     })
   })
 })

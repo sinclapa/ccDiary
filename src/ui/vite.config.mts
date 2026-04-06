@@ -85,7 +85,7 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     server: {
       deps: {
-        inline: ['vuetify'],
+        inline: ['vuetify', 'leaflet'],
       },
     },
     coverage: {

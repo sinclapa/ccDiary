@@ -31,6 +31,12 @@
             @update:month="updateMonth"
             @update:year="updateYear"
           >
+            <template #header="{ transition }">
+              <v-date-picker-header
+                :header="selectedDate ? dayjs(selectedDate).format('ddd D MMM YYYY') : ''"
+                :transition="transition"
+              />
+            </template>
             <template #day="{ item, props }">
               <div class="diary-day-content">
                 <v-btn v-bind="props" />
@@ -82,6 +88,8 @@
                 :date="editedItem.date"
                 :entry="editedItem.entry"
                 :location="editedItem.location"
+                :map-location="editedItem.mapLocation"
+                :show-map="editedItem.showMap"
                 @close="close"
                 @submit="onSubmitDiaryEntry"
               />
@@ -159,6 +167,7 @@
               <div>
                 {{ diaryEntry.entry }}
               </div>
+              <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" :location="diaryEntry.mapLocation" class="mt-2" />
             </div>
           </v-timeline-item>
         </v-timeline>
@@ -281,10 +290,12 @@
     dialog.value = true
   }
 
-  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string}) {
+  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean}) {
     editedItem.value.date = payload.date
     editedItem.value.location = payload.location
     editedItem.value.entry = payload.entry
+    editedItem.value.mapLocation = payload.mapLocation
+    editedItem.value.showMap = payload.showMap
     if (editedItem.value.diaryEntryId === undefined) {
       await diaryEntryAPI.createDiaryEntry(editedItem.value)
     } else {
