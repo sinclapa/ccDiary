@@ -127,30 +127,16 @@ describe('initFaro', () => {
         beforeSend = mockInitializeFaro.mock.calls[0][0].beforeSend
       })
 
-      it('filters log events containing the dynamic import error message', () => {
-        const logItem = {
-          type: 'log',
-          payload: { message: 'console.error: Dynamic import error Failed to fetch dynamically imported module: http://localhost:8080/src/pages/diaries/[id].vue' },
-          meta: {},
-        }
-        expect(beforeSend(logItem)).toBeNull()
-      })
-
-      it('filters log events containing the Faro collector URL', () => {
-        const logItem = {
-          type: 'log',
-          payload: { message: `console.error: Failed to send to ${faroUrl}` },
-          meta: {},
-        }
+      it.each([
+        ['dynamic import error', 'console.error: Dynamic import error Failed to fetch dynamically imported module: http://localhost:8080/src/pages/diaries/[id].vue'],
+        ['Faro collector URL', `console.error: Failed to send to ${faroUrl}`],
+      ])('filters log events containing %s', (_, message) => {
+        const logItem = { type: 'log', payload: { message }, meta: {} }
         expect(beforeSend(logItem)).toBeNull()
       })
 
       it('passes through unrelated log events', () => {
-        const logItem = {
-          type: 'log',
-          payload: { message: 'console.error: Some unrelated application error' },
-          meta: {},
-        }
+        const logItem = { type: 'log', payload: { message: 'console.error: Some unrelated application error' }, meta: {} }
         expect(beforeSend(logItem)).toBe(logItem)
       })
 
@@ -167,6 +153,7 @@ describe('initFaro', () => {
     describe('applyCustomAttributesOnSpan', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let cb: (span: any, init: RequestInit, response: Response) => void
+      const GUID = '550e8400-e29b-41d4-a716-446655440000'
 
       beforeEach(() => {
         setupMocks({ VITE_API: 'https://api.example.com' })
@@ -175,52 +162,19 @@ describe('initFaro', () => {
         cb = otelOptions.fetchInstrumentationOptions?.applyCustomAttributesOnSpan
       })
 
-      it('renames span using url.full (stable semconv)', () => {
-        const span = makeSpan('https://api.example.com/v1/Diary/Get')
-        cb(span, { method: 'GET' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('GET /v1/Diary/Get')
-      })
-
-      it('falls back to http.url when url.full is absent', () => {
-        const span = makeSpan(undefined, 'https://api.example.com/v1/Diary/Create')
-        cb(span, { method: 'POST' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('POST /v1/Diary/Create')
-      })
-
-      it('normalizes GUID in Diary path to {id}', () => {
-        const span = makeSpan('https://api.example.com/v1/Diary/Get/550e8400-e29b-41d4-a716-446655440000')
-        cb(span, { method: 'GET' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('GET /v1/Diary/Get/{id}')
-      })
-
-      it('normalizes GUID in Diary Delete path to {id}', () => {
-        const span = makeSpan('https://api.example.com/v1/Diary/Delete/550e8400-e29b-41d4-a716-446655440000')
-        cb(span, { method: 'DELETE' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('DELETE /v1/Diary/Delete/{id}')
-      })
-
-      it('normalizes GUID in DiaryEntry path to {id}', () => {
-        const span = makeSpan('https://api.example.com/v1/DiaryEntry/GetMinDate/550e8400-e29b-41d4-a716-446655440000')
-        cb(span, { method: 'GET' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('GET /v1/DiaryEntry/GetMinDate/{id}')
-      })
-
-      it('preserves year/month/day numeric segments in Search path', () => {
-        const span = makeSpan('https://api.example.com/v1/DiaryEntry/Search/550e8400-e29b-41d4-a716-446655440000/2024/3/15')
-        cb(span, { method: 'GET' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('GET /v1/DiaryEntry/Search/{id}/2024/3/15')
-      })
-
-      it('defaults method to GET when RequestInit has no method', () => {
-        const span = makeSpan('https://api.example.com/v1/Diary/Get')
-        cb(span, {}, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('GET /v1/Diary/Get')
-      })
-
-      it('uppercases the HTTP method', () => {
-        const span = makeSpan('https://api.example.com/v1/DiaryEntry/Update')
-        cb(span, { method: 'put' }, {} as Response)
-        expect(span.updateName).toHaveBeenCalledWith('PUT /v1/DiaryEntry/Update')
+      it.each<[string, string | undefined, string | undefined, string | undefined, string]>([
+        ['renames span using url.full (stable semconv)', 'https://api.example.com/v1/Diary/Get', undefined, 'GET', 'GET /v1/Diary/Get'],
+        ['falls back to http.url when url.full is absent', undefined, 'https://api.example.com/v1/Diary/Create', 'POST', 'POST /v1/Diary/Create'],
+        ['normalizes GUID in Diary path to {id}', `https://api.example.com/v1/Diary/Get/${GUID}`, undefined, 'GET', 'GET /v1/Diary/Get/{id}'],
+        ['normalizes GUID in Diary Delete path to {id}', `https://api.example.com/v1/Diary/Delete/${GUID}`, undefined, 'DELETE', 'DELETE /v1/Diary/Delete/{id}'],
+        ['normalizes GUID in DiaryEntry path to {id}', `https://api.example.com/v1/DiaryEntry/GetMinDate/${GUID}`, undefined, 'GET', 'GET /v1/DiaryEntry/GetMinDate/{id}'],
+        ['preserves year/month/day numeric segments in Search path', `https://api.example.com/v1/DiaryEntry/Search/${GUID}/2024/3/15`, undefined, 'GET', 'GET /v1/DiaryEntry/Search/{id}/2024/3/15'],
+        ['defaults method to GET when RequestInit has no method', 'https://api.example.com/v1/Diary/Get', undefined, undefined, 'GET /v1/Diary/Get'],
+        ['uppercases the HTTP method', 'https://api.example.com/v1/DiaryEntry/Update', undefined, 'put', 'PUT /v1/DiaryEntry/Update'],
+      ])('%s', (_, urlFull, httpUrl, method, expected) => {
+        const span = makeSpan(urlFull, httpUrl)
+        cb(span, method !== undefined ? { method } : {}, {} as Response)
+        expect(span.updateName).toHaveBeenCalledWith(expected)
       })
 
       it('does not rename span when attributes object is absent', () => {
@@ -230,14 +184,11 @@ describe('initFaro', () => {
         expect(span.updateName).not.toHaveBeenCalled()
       })
 
-      it('does not rename span when url attributes are empty string', () => {
-        const span = makeSpan('', '')
-        cb(span, { method: 'GET' }, {} as Response)
-        expect(span.updateName).not.toHaveBeenCalled()
-      })
-
-      it('does not rename span when url is malformed', () => {
-        const span = makeSpan('not-a-valid-url')
+      it.each([
+        ['url attributes are empty string', '', ''],
+        ['url is malformed', 'not-a-valid-url', undefined],
+      ])('does not rename span when %s', (_, urlFull, httpUrl) => {
+        const span = makeSpan(urlFull as string, httpUrl as string | undefined)
         cb(span, { method: 'GET' }, {} as Response)
         expect(span.updateName).not.toHaveBeenCalled()
       })
