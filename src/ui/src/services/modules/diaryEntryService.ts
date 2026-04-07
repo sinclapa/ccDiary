@@ -52,7 +52,7 @@ export default class DiaryEntryAPIService {
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry[])
-    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId, x.mapLocation ?? '', x.showMap ?? false, x.fromLocation ?? '', x.toLocation ?? '', x.showJourney ?? false))
+    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId, x.mapLocation ?? '', x.showMap ?? false, x.fromLocation ?? '', x.toLocation ?? '', x.showJourney ?? false, x.imageData, x.imageContentType))
   }
 
   async getMinDate (diaryId: string) : Promise<Date> {

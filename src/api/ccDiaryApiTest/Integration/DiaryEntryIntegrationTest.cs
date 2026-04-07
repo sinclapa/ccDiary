@@ -593,6 +593,73 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
+        public async Task CreateWithImageData_PersistsImageFields()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            var base64Image = Convert.ToBase64String(new byte[] { 0xFF, 0xD8, 0xFF }); // JPEG magic bytes
+
+            var diaryEntry = new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Test Location",
+                Entry = "Test entry with image.",
+                ImageData = base64Image,
+                ImageContentType = "image/jpeg",
+            };
+
+            // Act
+            var createResponse = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
+
+            // Assert create
+            Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(created);
+            Assert.AreEqual(base64Image, created.ImageData);
+            Assert.AreEqual("image/jpeg", created.ImageContentType);
+
+            // Verify roundtrip via GET
+            var getResponse = await _httpClient.GetAsync($"/api/v1/DiaryEntry/Get/{created.DiaryEntryId}");
+            Assert.AreEqual(HttpStatusCode.OK, getResponse.StatusCode);
+            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(fetched);
+            Assert.AreEqual(base64Image, fetched.ImageData);
+            Assert.AreEqual("image/jpeg", fetched.ImageContentType);
+        }
+
+        [TestMethod]
+        public async Task UpdateImageData_PersistsChange()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            var created = await CreateDiaryEntry(diary.DiaryId);
+            Assert.IsNull(created.ImageData);
+
+            var base64Image = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47 }); // PNG magic bytes
+
+            // Act — update with image
+            var updateEntry = new DiaryEntryDTO
+            {
+                DiaryEntryId = created.DiaryEntryId,
+                Date = created.Date,
+                DiaryId = diary.DiaryId!.Value,
+                Location = created.Location,
+                Entry = created.Entry,
+                ImageData = base64Image,
+                ImageContentType = "image/png",
+            };
+            var updateResponse = await _httpClient.PutAsJsonAsync("/api/v1/DiaryEntry/Update", updateEntry);
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, updateResponse.StatusCode);
+            var updated = await updateResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(updated);
+            Assert.AreEqual(base64Image, updated.ImageData);
+            Assert.AreEqual("image/png", updated.ImageContentType);
+        }
+
+        [TestMethod]
         public async Task CreateWithDefaultShowJourney_ShowJourneyIsFalse()
         {
             // Arrange

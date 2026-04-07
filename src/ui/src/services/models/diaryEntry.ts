@@ -9,6 +9,8 @@ export interface DiaryEntryInterface {
   fromLocation: string;
   toLocation: string;
   showJourney: boolean;
+  imageData?: string;
+  imageContentType?: string;
 }
 
 export default class DiaryEntry implements DiaryEntryInterface {
@@ -22,8 +24,10 @@ export default class DiaryEntry implements DiaryEntryInterface {
   fromLocation: string
   toLocation: string
   showJourney: boolean
+  imageData?: string
+  imageContentType?: string
 
-  constructor (diaryId: string, date: Date, location: string, entry: string, diaryEntryId?: string, mapLocation = '', showMap = false, fromLocation = '', toLocation = '', showJourney = false) {
+  constructor (diaryId: string, date: Date, location: string, entry: string, diaryEntryId?: string, mapLocation = '', showMap = false, fromLocation = '', toLocation = '', showJourney = false, imageData?: string, imageContentType?: string) {
     this.diaryEntryId = diaryEntryId
     this.diaryId = diaryId
     this.date = date
@@ -34,5 +38,7 @@ export default class DiaryEntry implements DiaryEntryInterface {
     this.fromLocation = fromLocation
     this.toLocation = toLocation
     this.showJourney = showJourney
+    this.imageData = imageData
+    this.imageContentType = imageContentType
   }
 }

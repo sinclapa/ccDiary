@@ -277,4 +277,82 @@ describe('DiaryEntryEditor.vue', () => {
     await wrapper.vm.$nextTick()
     expect((wrapper.vm as any).mapLocation).toBe('')
   })
+
+  it('does not show image drop zone when showImage is false', () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps },
+      global: { plugins: [vuetify] },
+    })
+    expect(wrapper.find('#image-drop-zone').exists()).toBe(false)
+  })
+
+  it('shows image drop zone when showImage is toggled on', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showImage = true
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#image-drop-zone').exists()).toBe(true)
+  })
+
+  it('shows image drop zone when imageData prop is provided', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#image-drop-zone').exists()).toBe(true)
+  })
+
+  it('clears image data when showImage is toggled off', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showImage = false
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as any).imageData).toBeUndefined()
+    expect((wrapper.vm as any).imageContentType).toBeUndefined()
+  })
+
+  it('emits submit with imageData and imageContentType in payload', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
+      global: { plugins: [vuetify] },
+    })
+    const submitEventPromise = Promise.resolve({ valid: true })
+    await (wrapper.vm as any).submit(submitEventPromise)
+    await submitEventPromise
+    const emitted = wrapper.emitted('submit')
+    expect(emitted).toBeTruthy()
+    const payload = emitted![0][0] as { imageData: string | undefined; imageContentType: string | undefined }
+    expect(payload.imageData).toBe('abc123')
+    expect(payload.imageContentType).toBe('image/jpeg')
+  })
+
+  it('emits submit with undefined imageData and imageContentType by default', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps },
+      global: { plugins: [vuetify] },
+    })
+    const submitEventPromise = Promise.resolve({ valid: true })
+    await (wrapper.vm as any).submit(submitEventPromise)
+    await submitEventPromise
+    const emitted = wrapper.emitted('submit')
+    expect(emitted).toBeTruthy()
+    const payload = emitted![0][0] as { imageData: string | undefined; imageContentType: string | undefined }
+    expect(payload.imageData).toBeUndefined()
+    expect(payload.imageContentType).toBeUndefined()
+  })
+
+  it('updates imageData when prop changes', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.setProps({ imageData: 'xyz789' })
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as any).imageData).toBe('xyz789')
+  })
 })

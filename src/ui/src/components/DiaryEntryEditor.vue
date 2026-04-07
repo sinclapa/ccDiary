@@ -79,6 +79,65 @@
             label="To Location"
             persistent-hint
           />
+
+          <v-switch
+            id="show-image"
+            v-model="showImage"
+            class="mb-2 mt-4"
+            color="primary"
+            hide-details
+            label="Add Image"
+          />
+
+          <template v-if="showImage">
+            <div
+              id="image-drop-zone"
+              class="image-drop-zone mt-2"
+              :class="{ 'drag-over': isDragging }"
+              tabindex="0"
+              @click="triggerFileInput"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleDrop"
+            >
+              <v-img
+                v-if="imagePreview"
+                :src="imagePreview"
+                max-height="200"
+              />
+              <div
+                v-else
+                class="drop-zone-placeholder text-center pa-4"
+              >
+                <v-icon
+                  color="grey-lighten-1"
+                  size="48"
+                >
+                  mdi-image-plus
+                </v-icon>
+                <div class="text-grey mt-2 text-body-2">
+                  Click, drag & drop, or paste an image
+                </div>
+              </div>
+            </div>
+            <v-btn
+              v-if="imagePreview"
+              class="mt-2"
+              color="error"
+              size="small"
+              variant="text"
+              @click="clearImage"
+            >
+              Remove Image
+            </v-btn>
+            <input
+              ref="fileInputRef"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              style="display: none"
+              type="file"
+              @change="handleFileSelect"
+            >
+          </template>
         </v-card-text>
         <v-divider />
 
@@ -115,9 +174,9 @@
   import dayjs from 'dayjs'
   import { SubmitEventPromise } from 'vuetify'
   import { VDateInput } from 'vuetify/labs/VDateInput'
-  import { watch } from 'vue'
+  import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
-  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean}>()
+  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, imageData?: string, imageContentType?: string}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const location = ref<string>(props.location)
@@ -127,8 +186,21 @@
   const fromLocation = ref<string>(props.fromLocation)
   const toLocation = ref<string>(props.toLocation)
   const showJourney = ref<boolean>(props.showJourney)
+  const imageData = ref<string | undefined>(props.imageData)
+  const imageContentType = ref<string | undefined>(props.imageContentType)
+  const showImage = ref<boolean>(!!props.imageData)
+  const isDragging = ref<boolean>(false)
+  const fileInputRef = ref<HTMLInputElement | null>(null)
+
+  const imagePreview = computed(() => {
+    if (imageData.value && imageContentType.value) {
+      return `data:${imageContentType.value};base64,${imageData.value}`
+    }
+    return null
+  })
+
   const emit = defineEmits({
-    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean }) {
+    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, imageData: string | undefined, imageContentType: string | undefined }) {
       return payload
     },
     close () {
@@ -154,9 +226,70 @@
         fromLocation: fromLocation.value,
         toLocation: toLocation.value,
         showJourney: showJourney.value,
+        imageData: imageData.value,
+        imageContentType: imageContentType.value,
       })
     }
   }
+
+  function processFile (file: File) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const dataUrl = e.target?.result as string
+      const comma = dataUrl.indexOf(',')
+      imageData.value = dataUrl.slice(comma + 1)
+      imageContentType.value = file.type
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleDrop (event: DragEvent) {
+    isDragging.value = false
+    const file = event.dataTransfer?.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      processFile(file)
+    }
+  }
+
+  function handleFileSelect (event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0]
+    if (file) {
+      processFile(file)
+    }
+  }
+
+  function triggerFileInput () {
+    fileInputRef.value?.click()
+  }
+
+  function clearImage () {
+    imageData.value = undefined
+    imageContentType.value = undefined
+    showImage.value = false
+  }
+
+  function handleWindowPaste (event: ClipboardEvent) {
+    const items = event.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          showImage.value = true
+          processFile(file)
+          break
+        }
+      }
+    }
+  }
+
+  onMounted(() => {
+    window.addEventListener('paste', handleWindowPaste)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('paste', handleWindowPaste)
+  })
 
   watch(() => props.location, newVal => {
     location.value = newVal
@@ -193,4 +326,32 @@
       fromLocation.value = location.value
     }
   })
+  watch(() => props.imageData, newVal => {
+    imageData.value = newVal
+  })
+  watch(() => props.imageContentType, newVal => {
+    imageContentType.value = newVal
+  })
+  watch(showImage, newVal => {
+    if (!newVal) {
+      imageData.value = undefined
+      imageContentType.value = undefined
+    }
+  })
 </script>
+
+<style scoped>
+  .image-drop-zone {
+    border: 2px dashed rgba(var(--v-border-color), var(--v-border-opacity));
+    border-radius: 8px;
+    cursor: pointer;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s;
+  }
+  .image-drop-zone.drag-over {
+    border-color: rgb(var(--v-theme-primary));
+  }
+</style>
