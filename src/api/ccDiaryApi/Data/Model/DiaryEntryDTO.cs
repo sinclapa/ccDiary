@@ -35,6 +35,10 @@ namespace ccDiaryApi.Data.Model
         [Required]
         public bool ShowJourney { get; set; }
 
+        public string? ImageData { get; set; }
+
+        public string? ImageContentType { get; set; }
+
         [ForeignKey(nameof(DiaryDTO))]
         required public Guid DiaryId { get; set; }
 

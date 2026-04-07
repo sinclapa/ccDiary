@@ -366,6 +366,38 @@ describe('DiaryEntry Service', () => {
     expect(results[0].toLocation).toBe('Southampton, UK')
   })
 
+  it('searchDiaryEntryForDay maps imageData and imageContentType from API response', async () => {
+    // Arrange
+    const diaryId = crypto.randomUUID()
+    const entryId = crypto.randomUUID()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ([{
+        diaryId,
+        diaryEntryId: entryId,
+        date: new Date(2024, 8, 17).toISOString(),
+        location: 'Home',
+        entry: 'A note with an image.',
+        mapLocation: '',
+        showMap: false,
+        fromLocation: '',
+        toLocation: '',
+        showJourney: false,
+        imageData: 'abc123',
+        imageContentType: 'image/jpeg',
+      }]),
+    } as Response)
+
+    // Act
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    // Assert
+    expect(results).toHaveLength(1)
+    expect(results[0].imageData).toBe('abc123')
+    expect(results[0].imageContentType).toBe('image/jpeg')
+  })
+
   it('searchDiaryEntryForDay defaults fromLocation and toLocation to empty string when null', async () => {
     // Arrange
     const diaryId = crypto.randomUUID()
