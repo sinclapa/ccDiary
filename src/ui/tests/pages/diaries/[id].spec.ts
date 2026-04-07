@@ -14,10 +14,20 @@ import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
 
+// Shared mocks accessible to tests (vi.hoisted ensures they're available before vi.mock runs)
+const mockRouterPush = vi.hoisted(() => vi.fn())
+const mockRouterReplace = vi.hoisted(() => vi.fn())
+const mockQuery = vi.hoisted(() => ({ date: undefined as string | undefined }))
+
 // Mock BEFORE importing the component!
 vi.mock('vue-router', () => ({
   useRoute: () => ({
     params: { id: 'test-diary-id' },
+    query: mockQuery,
+  }),
+  useRouter: () => ({
+    push: mockRouterPush,
+    replace: mockRouterReplace,
   }),
 }))
 
@@ -55,6 +65,7 @@ describe('[id].vue', () => {
       writable: true,
     })
 
+    mockQuery.date = undefined
     vi.clearAllMocks()
     state.isAuthenticated = false
     vi.spyOn(diaryAPI, 'getDiary').mockResolvedValue(diary)
@@ -386,20 +397,15 @@ describe('[id].vue', () => {
 
   it('moveForward skips dates without entries and stops at first date with entries', async () => {
     await flushPromises()
-    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
 
-    // Start on Jan 1, 2020
+    // Start on Jan 1, 2020; markedDays shows only Jan 3 has an entry
     ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 1)
     ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
     ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
-
-    // Mock: Jan 1 empty, Jan 2 empty, Jan 3 has entry
-    searchDaySpyOnDay.mockImplementation(async (id, year, month, day) => {
-      if (day === 3) {
-        return [new DiaryEntry(diaryId, new Date(year, month - 1, day), 'Loc', 'Entry')]
-      }
-      return []
-    })
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 1
+    ;(wrapper.vm as any).markedDays = [3]
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([3])
 
     await (wrapper.vm as any).moveForward()
 
@@ -409,20 +415,15 @@ describe('[id].vue', () => {
 
   it('moveBackward skips dates without entries and stops at first date with entries', async () => {
     await flushPromises()
-    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
 
-    // Start on Jan 10, 2020
+    // Start on Jan 10, 2020; markedDays shows only Jan 8 has an entry
     ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 10)
     ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
     ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
-
-    // Mock: Jan 10 empty, Jan 9 empty, Jan 8 has entry
-    searchDaySpyOnDay.mockImplementation(async (id, year, month, day) => {
-      if (day === 8) {
-        return [new DiaryEntry(diaryId, new Date(year, month - 1, day), 'Loc', 'Entry')]
-      }
-      return []
-    })
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 1
+    ;(wrapper.vm as any).markedDays = [8]
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([8])
 
     await (wrapper.vm as any).moveBackward()
 
@@ -432,41 +433,41 @@ describe('[id].vue', () => {
 
   it('moveForward respects maxDate boundary when no entries found', async () => {
     await flushPromises()
-    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
 
-    // Start on Jan 8, stop at Jan 10 (maxDate)
+    // Start on Jan 8, stop at Jan 10 (maxDate); no marked days
     ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 8)
     ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
     ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
-
-    // Mock: all dates are empty
-    searchDaySpyOnDay.mockResolvedValue([])
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 1
+    ;(wrapper.vm as any).markedDays = []
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([])
 
     await (wrapper.vm as any).moveForward()
 
     // Should have reached maxDate
     expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
-      dayjs(new Date(2020, 0, 10)).endOf('day').format('YYYY-MM-DD')
+      dayjs(new Date(2020, 0, 10)).format('YYYY-MM-DD')
     )
   })
 
   it('moveBackward respects minDate boundary when no entries found', async () => {
     await flushPromises()
-    const searchDaySpyOnDay = vi.mocked(diaryEntryAPI.searchDiaryEntryForDay)
 
-    // Start on Jan 3, stop at Jan 1 (minDate)
+    // Start on Jan 3, stop at Jan 1 (minDate); no marked days
     ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 3)
     ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
     ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
-
-    // Mock: all dates are empty
-    searchDaySpyOnDay.mockResolvedValue([])
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 1
+    ;(wrapper.vm as any).markedDays = []
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([])
 
     await (wrapper.vm as any).moveBackward()
 
     // Should have reached minDate
     expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(
-      dayjs(new Date(2020, 0, 1)).startOf('day').format('YYYY-MM-DD')
+      dayjs(new Date(2020, 0, 1)).format('YYYY-MM-DD')
     )
   })
 
@@ -549,5 +550,83 @@ describe('[id].vue', () => {
     expect(mapViews.length).toBe(1)
     expect(mapViews[0].props('location')).toBe('London, UK')
     vi.unstubAllGlobals()
+  })
+
+  it('onCalendarSelectDate pushes date to router history', async () => {
+    await flushPromises()
+    const testDate = new Date(2020, 5, 15)
+    await (wrapper.vm as any).onCalendarSelectDate(testDate)
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ date: '2020-06-15' }) })
+    )
+    expect(mockRouterReplace).not.toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ date: '2020-06-15' }) })
+    )
+  })
+
+  it('moveStart replaces (not pushes) router history', async () => {
+    await flushPromises()
+    mockRouterPush.mockClear()
+    mockRouterReplace.mockClear()
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    await (wrapper.vm as any).moveStart()
+    expect(mockRouterReplace).toHaveBeenCalled()
+    expect(mockRouterPush).not.toHaveBeenCalled()
+  })
+
+  it('moveEnd replaces (not pushes) router history', async () => {
+    await flushPromises()
+    mockRouterPush.mockClear()
+    mockRouterReplace.mockClear()
+    ;(wrapper.vm as any).maxDate = new Date(2020, 11, 31)
+    await (wrapper.vm as any).moveEnd()
+    expect(mockRouterReplace).toHaveBeenCalled()
+    expect(mockRouterPush).not.toHaveBeenCalled()
+  })
+
+  it('moveForward replaces (not pushes) router history on navigation', async () => {
+    await flushPromises()
+    mockRouterPush.mockClear()
+    mockRouterReplace.mockClear()
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 0, 10)
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 1
+    ;(wrapper.vm as any).markedDays = [3]
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([3])
+    await (wrapper.vm as any).moveForward()
+    expect(mockRouterReplace).toHaveBeenCalled()
+    expect(mockRouterPush).not.toHaveBeenCalled()
+  })
+
+  it('loadDiaryData uses date from URL query param as initial date', async () => {
+    mockQuery.date = '2020-06-15'
+    vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(new Date(2020, 0, 1))
+    vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(new Date(2020, 11, 31))
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-06-15')
+    newWrapper.unmount()
+  })
+
+  it('loadDiaryData clamps URL date to minDate when before range', async () => {
+    mockQuery.date = '2019-01-01'
+    vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(new Date(2020, 0, 1))
+    vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(new Date(2020, 11, 31))
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-01-01')
+    newWrapper.unmount()
+  })
+
+  it('loadDiaryData clamps URL date to maxDate when after range', async () => {
+    mockQuery.date = '2025-12-31'
+    vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(new Date(2020, 0, 1))
+    vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(new Date(2020, 11, 31))
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-12-31')
+    newWrapper.unmount()
   })
 })

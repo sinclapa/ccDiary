@@ -56,6 +56,8 @@ namespace ccDiaryApi.Services
                     updateDiaryEntry.Date = diaryEntry.Date;
                     updateDiaryEntry.Location = diaryEntry.Location;
                     updateDiaryEntry.Entry = diaryEntry.Entry;
+                    updateDiaryEntry.ShowMap = diaryEntry.ShowMap;
+                    updateDiaryEntry.MapLocation = diaryEntry.MapLocation;
                     _context.Update(updateDiaryEntry);
                 }
             }

@@ -27,7 +27,7 @@
             :min="minDate"
             :month="calendarMonth"
             :year="calendarYear"
-            @update:model-value="selectDate"
+            @update:model-value="onCalendarSelectDate"
             @update:month="updateMonth"
             @update:year="updateYear"
           >
@@ -186,6 +186,7 @@
   import { useApiStatusStore } from '@/stores/apiStatus'
 
   const apiStatus = useApiStatusStore()
+  const router = useRouter()
 
   // Detect if the device is mobile
   const dialog = ref(false)
@@ -315,49 +316,79 @@
   }
 
   async function moveForward () {
-    while (true) {
-      selectedDate.value = dayjs(selectedDate.value).endOf('day').add(1, 'day').toDate()
+    let current = dayjs(selectedDate.value)
+    const max = dayjs(maxDate.value)
+    let loadedYear = visibleYear.value ?? current.year()
+    let loadedMonth = visibleMonth.value ?? normalizeMonth(current.month())
 
-      if (dayjs(selectedDate.value).format('YYYY-MM-DD') >= dayjs(maxDate.value).format('YYYY-MM-DD')) {
-        selectedDate.value = dayjs(maxDate.value).endOf('day').toDate()
-        await selectDate(selectedDate.value)
-        break
+    while (true) {
+      current = current.add(1, 'day')
+
+      const reachedMax = !current.isBefore(max, 'day')
+      if (reachedMax) current = max
+
+      const yr = current.year()
+      const mo = normalizeMonth(current.month())
+
+      if (yr !== loadedYear || mo !== loadedMonth) {
+        loadedYear = yr
+        loadedMonth = mo
+        await refreshMarkedDays(yr, mo)
       }
 
-      await selectDate(selectedDate.value)
-
-      if (diaryEntries.value && diaryEntries.value.length > 0) {
-        break
+      if (reachedMax || markedDays.value.includes(current.date())) {
+        selectedDate.value = current.toDate()
+        calendarMonth.value = current.month()
+        calendarYear.value = current.year()
+        await selectDate(selectedDate.value)
+        setDateInUrl(selectedDate.value, true)
+        return
       }
     }
   }
 
   async function moveBackward () {
-    while (true) {
-      selectedDate.value = dayjs(selectedDate.value).startOf('day').subtract(1, 'day').toDate()
+    let current = dayjs(selectedDate.value)
+    const min = dayjs(minDate.value)
+    let loadedYear = visibleYear.value ?? current.year()
+    let loadedMonth = visibleMonth.value ?? normalizeMonth(current.month())
 
-      if (dayjs(selectedDate.value).format('YYYY-MM-DD') <= dayjs(minDate.value).format('YYYY-MM-DD')) {
-        selectedDate.value = dayjs(minDate.value).startOf('day').toDate()
-        await selectDate(selectedDate.value)
-        break
+    while (true) {
+      current = current.subtract(1, 'day')
+
+      const reachedMin = !current.isAfter(min, 'day')
+      if (reachedMin) current = min
+
+      const yr = current.year()
+      const mo = normalizeMonth(current.month())
+
+      if (yr !== loadedYear || mo !== loadedMonth) {
+        loadedYear = yr
+        loadedMonth = mo
+        await refreshMarkedDays(yr, mo)
       }
 
-      await selectDate(selectedDate.value)
-
-      if (diaryEntries.value && diaryEntries.value.length > 0) {
-        break
+      if (reachedMin || markedDays.value.includes(current.date())) {
+        selectedDate.value = current.toDate()
+        calendarMonth.value = current.month()
+        calendarYear.value = current.year()
+        await selectDate(selectedDate.value)
+        setDateInUrl(selectedDate.value, true)
+        return
       }
     }
   }
 
-  function moveStart () {
+  async function moveStart () {
     selectedDate.value = dayjs(minDate.value).startOf('day').toDate()
-    selectDate(selectedDate.value)
+    await selectDate(selectedDate.value)
+    setDateInUrl(selectedDate.value, true)
   }
 
-  function moveEnd () {
+  async function moveEnd () {
     selectedDate.value = dayjs(maxDate.value).endOf('day').toDate()
-    selectDate(selectedDate.value)
+    await selectDate(selectedDate.value)
+    setDateInUrl(selectedDate.value, true)
   }
 
   function closeDelete () {
@@ -379,8 +410,24 @@
     closeDelete()
   }
 
+  function setDateInUrl (date: Date, replace: boolean) {
+    const dateStr = dayjs(date).format('YYYY-MM-DD')
+    if (route.query.date === dateStr) return
+    const query = { ...route.query, date: dateStr }
+    if (replace) {
+      router.replace({ query })
+    } else {
+      router.push({ query })
+    }
+  }
+
   async function selectDate (date: any) {
     diaryEntries.value = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, date.getFullYear(), date.getMonth() + 1, date.getDate())
+  }
+
+  async function onCalendarSelectDate (date: any) {
+    await selectDate(date)
+    setDateInUrl(date, false)
   }
 
   async function updateMonth (month: number | string | undefined) {
@@ -418,13 +465,41 @@
     }
   })
 
+  watch(() => route.query.date, async (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return
+    const parsed = dayjs(dateStr, 'YYYY-MM-DD', true)
+    if (!parsed.isValid()) return
+    const newDate = parsed.toDate()
+    if (selectedDate.value && dayjs(newDate).isSame(dayjs(selectedDate.value), 'day')) return
+    selectedDate.value = newDate
+    calendarMonth.value = dayjs(newDate).month()
+    calendarYear.value = dayjs(newDate).year()
+    await selectDate(newDate)
+  })
+
   function loadDiaryData () {
     loadDiary(diaryId)
     loadCalendar(diaryId).then(async x => {
-      selectedDate.value = x
-      calendarMonth.value = dayjs(x).month()
-      calendarYear.value = dayjs(x).year()
+      let startDate = x
+      const dateParam = route.query.date
+      if (dateParam && typeof dateParam === 'string') {
+        const parsed = dayjs(dateParam, 'YYYY-MM-DD', true)
+        if (parsed.isValid()) {
+          const paramDate = parsed.toDate()
+          if (maxDate.value && paramDate > maxDate.value) {
+            startDate = maxDate.value
+          } else if (x && paramDate < x) {
+            startDate = x
+          } else {
+            startDate = paramDate
+          }
+        }
+      }
+      selectedDate.value = startDate
+      calendarMonth.value = dayjs(startDate).month()
+      calendarYear.value = dayjs(startDate).year()
       await selectDate(selectedDate.value)
+      setDateInUrl(selectedDate.value, true)
     })
   }
 

@@ -316,6 +316,26 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
+        public async Task SearchMonthUTCOffset60()
+        {
+            // Arrange — entry at UTC 23:00 May 23 is midnight local BST (UTC+1) = May 24
+            var diary = await CreateDiary();
+            await CreateDiaryEntry(diary.DiaryId, new DateTime(2020, 5, 23, 23, 0, 0, DateTimeKind.Utc));
+
+            // Act — request May with BST offset (+60 min)
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/5");
+            request.Headers.Add("x-utc-offset", "60");
+            var response = await _httpClient.SendAsync(request);
+
+            // Assert — should return local day 24, not UTC day 23
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<int>>();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.Count());
+            Assert.AreEqual(24, result.ElementAt(0));
+        }
+
+        [TestMethod]
         public async Task SearchDayMonthEnd()
         {
             // Arrange

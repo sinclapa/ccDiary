@@ -87,7 +87,11 @@ describe('DiaryEntry Service', () => {
     await diaryEntryAPI.searchDiaryEntry(diaryId, 2024, 9)
 
     // Assert
-    expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/DiaryEntry/Search/${diaryId}/2024/9/`, baseUrl))
+    const utcOffsetMinutes = dayjs(new Date(2024, 8, 1)).utcOffset()
+    expect(fetchSpy).toHaveBeenCalledWith(
+      new URL(`v1/DiaryEntry/Search/${diaryId}/2024/9/`, baseUrl),
+      { headers: { 'x-utc-offset': `${utcOffsetMinutes}` } }
+    )
   })
 
   it('Search Diary Entry for Year, Month and Day', async () => {

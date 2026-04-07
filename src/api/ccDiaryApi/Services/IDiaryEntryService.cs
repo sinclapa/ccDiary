@@ -8,7 +8,7 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryEntryService
     {
-        List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType);
+        List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0);
 
         List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId, DateTime from, DateTime until);
 

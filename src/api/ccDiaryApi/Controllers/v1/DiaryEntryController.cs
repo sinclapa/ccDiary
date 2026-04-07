@@ -52,11 +52,11 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}/{year:int}/{month:int}")]
         [AllowAnonymous]
         [HttpGet]
-        public ActionResult<List<int>> Search(Guid diaryId, int year, int month)
+        public ActionResult<List<int>> Search(Guid diaryId, int year, int month, [FromHeader(Name = "x-utc-offset")][DefaultValue(0)] int utcOffsetMinutes)
         {
-            var from = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var to = from.AddMonths(1).Subtract(new TimeSpan(1));
-            var days = _diaryEntryService.SearchDiaryEntries(diaryId, from, to, SearchType.Day);
+            var from = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(-1 * utcOffsetMinutes);
+            var to = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddMinutes(-1 * utcOffsetMinutes).Subtract(new TimeSpan(1));
+            var days = _diaryEntryService.SearchDiaryEntries(diaryId, from, to, SearchType.Day, utcOffsetMinutes);
             return Ok(days);
         }
 
