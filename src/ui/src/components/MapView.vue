@@ -1,7 +1,7 @@
 <template>
   <div class="map-wrapper">
     <div v-if="status === 'loading'" class="map-placeholder">
-      <v-progress-circular indeterminate color="red" />
+      <v-progress-circular color="red" indeterminate />
     </div>
     <div v-else-if="status === 'not-found'" class="map-placeholder map-not-found">
       <v-icon color="grey">mdi-map-marker-off</v-icon>
