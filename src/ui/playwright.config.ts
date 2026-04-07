@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false,
+  fullyParallel: true,
+  workers: process.env.CI ? 4 : undefined,
   retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
