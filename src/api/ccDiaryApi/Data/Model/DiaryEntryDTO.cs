@@ -33,7 +33,6 @@ namespace ccDiaryApi.Data.Model
         public string? ToLocation { get; set; }
 
         [Required]
-        [JsonRequired]
         public bool ShowJourney { get; set; }
 
         [ForeignKey(nameof(DiaryDTO))]
