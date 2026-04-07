@@ -28,8 +28,13 @@ export default class DiaryEntryAPIService {
     if (month !== undefined) {
       api = new URL(`${month}/`, api)
     }
+    let requestInit: RequestInit | undefined
+    if (year !== undefined && month !== undefined) {
+      const utcOffsetMinutes = dayjs(new Date(year, month - 1, 1)).utcOffset()
+      requestInit = { headers: { 'x-utc-offset': `${utcOffsetMinutes}` } }
+    }
     let output : number[] | null = null
-    await fetch(api)
+    await (requestInit !== undefined ? fetch(api, requestInit) : fetch(api))
       .then(response => response.json())
       .then(data => output = data as number[])
     return output

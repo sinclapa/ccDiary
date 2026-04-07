@@ -51,19 +51,19 @@ namespace ccDiaryApi.Services
             return new DiaryDateRange { MaxDateTime = maxDate, MinDateTime = minDate };
         }
 
-        public List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType)
+        public List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0)
         {
             Func<DiaryEntryDTO, int> func;
             switch (searchType)
             {
                 case SearchType.Year:
-                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().Year);
+                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().AddMinutes(utcOffsetMinutes).Year);
                     break;
                 case SearchType.Month:
-                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().Month);
+                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().AddMinutes(utcOffsetMinutes).Month);
                     break;
                 case SearchType.Day:
-                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().Day);
+                    func = new Func<DiaryEntryDTO, int>(x => x.Date.GetValueOrDefault().AddMinutes(utcOffsetMinutes).Day);
                     break;
                 default:
                     throw new ArgumentException($"Unhandled SearchType [{searchType}]");

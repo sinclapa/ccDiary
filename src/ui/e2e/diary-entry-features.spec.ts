@@ -70,13 +70,11 @@ test.describe('Map display on diary entries', () => {
     ww1DiaryId = await getWW1DiaryId(request)
   })
 
-  test('no map is shown for seeded diary entries where showMap is false', async ({ page }) => {
-    await gotoDiaryDetail(page, ww1DiaryId)
-
-    // Wait for at least one timeline entry to be present
+  test('no map is shown for diary entries where showMap is false', async ({ page }) => {
+    // Navigate to May 22 which has showMap=false entries (unlike May 21 which has showMap=true)
+    const dateNoMap = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY + 1).padStart(2, '0')}`
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoMap}`)
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
-
-    // Seeded WW1 diary entries have showMap=false (default) — no map containers should be rendered
     await expect(page.locator('.map-wrapper')).toHaveCount(0)
   })
 
@@ -131,14 +129,29 @@ test.describe('DiaryEntry API — mapLocation and showMap fields', () => {
     }
   })
 
-  test('seeded diary entries have showMap defaulting to false', async ({ request }) => {
+  test('seeded diary entries on May 22 have showMap=false', async ({ request }) => {
+    // May 22 entries have showMap=false; May 21 entries have showMap=true (seeded explicitly)
+    const response = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY + 1}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    const entries: Array<{ showMap: boolean }> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
+    for (const entry of entries) {
+      expect(entry.showMap).toBe(false)
+    }
+  })
+
+  test('seeded diary entries on May 21 have showMap=true with mapLocation set', async ({ request }) => {
     const response = await request.get(
       `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
       { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
     )
-    const entries: Array<{ showMap: boolean }> = await response.json()
+    const entries: Array<{ showMap: boolean; mapLocation: string }> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
     for (const entry of entries) {
-      expect(entry.showMap).toBe(false)
+      expect(entry.showMap).toBe(true)
+      expect(entry.mapLocation).toBeTruthy()
     }
   })
 
@@ -159,7 +172,8 @@ test.describe('DiaryEntry API — mapLocation and showMap fields', () => {
     const entry: Record<string, unknown> = await getResponse.json()
     expect(entry).toHaveProperty('mapLocation')
     expect(entry).toHaveProperty('showMap')
-    expect(entry.showMap).toBe(false)
+    // May 21 seeded entries have showMap=true
+    expect(typeof entry.showMap).toBe('boolean')
   })
 
   test('POST create with showMap and mapLocation requires authentication', async ({ request }) => {
@@ -191,6 +205,109 @@ test.describe('DiaryEntry API — mapLocation and showMap fields', () => {
       },
     })
     expect(response.status()).toBe(401)
+  })
+})
+
+// ─── URL date bookmarking ──────────────────────────────────────────────────────
+
+test.describe('URL date bookmarking', () => {
+  let ww1DiaryId: string
+
+  test.beforeAll(async ({ request }) => {
+    ww1DiaryId = await getWW1DiaryId(request)
+  })
+
+  test('URL contains date query param after diary page loads', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(page).toHaveURL(/[?&]date=\d{4}-\d{2}-\d{2}/, { timeout: 5000 })
+  })
+
+  test('navigating directly to URL with date param loads that date (bookmarkability)', async ({ page }) => {
+    const targetDate = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
+    await page.goto(`/diaries/${ww1DiaryId}?date=${targetDate}`)
+    await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    // Date picker header should reflect the bookmarked date
+    const header = page.locator('.v-date-picker-header').first()
+    await expect(header).toContainText('1918', { timeout: 10000 })
+    await expect(header).toContainText('May', { timeout: 10000 })
+    await expect(header).toContainText('21', { timeout: 10000 })
+  })
+
+  test('forward navigation updates the URL date', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+
+    const initialUrl = page.url()
+    const initialDateMatch = initialUrl.match(/[?&]date=(\d{4}-\d{2}-\d{2})/)
+    expect(initialDateMatch).not.toBeNull()
+    const initialDate = initialDateMatch![1]
+
+    const forwardBtn = page.locator('button:has(.mdi-fast-forward)').first()
+    await expect(forwardBtn).not.toBeDisabled()
+    await forwardBtn.click()
+
+    await expect.poll(() => {
+      const match = page.url().match(/[?&]date=(\d{4}-\d{2}-\d{2})/)
+      return match ? match[1] : null
+    }, { timeout: 8000 }).not.toBe(initialDate)
+  })
+
+  test('browser back and forward navigates between bookmarked dates and reloads entries', async ({ page }) => {
+    // Seed data has entries on May 21 and May 22, 1918
+    const dateA = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
+    const dateB = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY + 1).padStart(2, '0')}`
+
+    // Visit date A — adds to browser history
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateA}`)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+
+    // Visit date B — adds another history entry
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateB}`)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+
+    // Date picker header must reflect date B
+    const header = page.locator('.v-date-picker-header').first()
+    await expect(header).toContainText(String(SEEDED_ENTRY_DAY + 1), { timeout: 10000 })
+
+    // Browser back → should return to date A, entries must reload via the route watcher
+    await page.goBack()
+    await expect(page).toHaveURL(new RegExp(`date=${dateA}`), { timeout: 8000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(header).toContainText(String(SEEDED_ENTRY_DAY), { timeout: 10000 })
+
+    // Browser forward → should go back to date B
+    await page.goForward()
+    await expect(page).toHaveURL(new RegExp(`date=${dateB}`), { timeout: 8000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+  })
+
+  test('forward nav button uses replace — back skips over intermediate dates to the list', async ({ page }) => {
+    // Navigate from list so the list page is the history entry behind the diary
+    await page.goto('/diaries')
+    await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
+    await page.locator(`table a[href*="${ww1DiaryId}"]`).click()
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+
+    // Use forward navigation (router.replace — should not add a history entry)
+    const forwardBtn = page.locator('button:has(.mdi-fast-forward)').first()
+    await expect(forwardBtn).not.toBeDisabled()
+    await forwardBtn.click()
+    await expect.poll(() => page.url()).toMatch(/[?&]date=\d{4}-\d{2}-\d{2}/)
+
+    // Browser back should return to /diaries (the list), not to a skipped/intermediate date
+    await page.goBack()
+    await expect(page).toHaveURL(/\/diaries$/, { timeout: 8000 })
+  })
+
+  test('out-of-range date in URL is clamped to diary bounds', async ({ page }) => {
+    // A date far in the future — should be clamped to maxDate
+    await page.goto(`/diaries/${ww1DiaryId}?date=2099-01-01`)
+    await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    // URL date should be clamped to the diary's maxDate (within 1918–1919 range for WW1)
+    await expect(page).toHaveURL(/[?&]date=191[89]-/, { timeout: 5000 })
   })
 })
 

@@ -63,8 +63,8 @@ namespace ccDiaryApiTest.v1
             var searchType = SearchType.Day;
             diaryEntryServiceMock.Setup(h => h.GetDiaryDateRange(It.IsAny<Guid>()))
                 .Returns(new DiaryDateRange { MaxDateTime = DateTime.MaxValue, MinDateTime = DateTime.MinValue });
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>()))
-                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) =>
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+                .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     diaryId = d;
                     from = f;
@@ -99,8 +99,8 @@ namespace ccDiaryApiTest.v1
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>()))
-                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) =>
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+                .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     diaryId = d;
                     from = f;
@@ -135,8 +135,8 @@ namespace ccDiaryApiTest.v1
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>()))
-                .Callback<Guid, DateTime, DateTime, SearchType>((d, f, t, s) =>
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+                .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     diaryId = d;
                     from = f;
@@ -149,7 +149,7 @@ namespace ccDiaryApiTest.v1
 
             // Act
             var id = Guid.NewGuid();
-            var response = controller.Search(id, 2022, 5);
+            var response = controller.Search(id, 2022, 5, 0);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -159,6 +159,37 @@ namespace ccDiaryApiTest.v1
             Assert.AreEqual(new DateTime(2022, 5, 1), from);
             Assert.AreEqual(new DateTime(2022, 6, 1).Subtract(new TimeSpan(1)), to);
             Assert.AreEqual(SearchType.Day, searchType);
+        }
+
+        [TestMethod]
+        public void SearchByYearAndMonthWithUTCOffset()
+        {
+            // Arrange
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+
+            var from = DateTime.UtcNow;
+            var to = DateTime.UtcNow;
+            var capturedOffset = -1;
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+                .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
+                {
+                    from = f;
+                    to = t;
+                    capturedOffset = o;
+                })
+                .Returns([7, 13, 23, 24]);
+
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+
+            // Act — BST offset (+60 min): local May starts at UTC April 30 23:00
+            var id = Guid.NewGuid();
+            var response = controller.Search(id, 2022, 5, 60);
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            Assert.AreEqual(new DateTime(2022, 4, 30, 23, 0, 0, DateTimeKind.Utc), from);
+            Assert.AreEqual(new DateTime(2022, 5, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddMinutes(-60).Subtract(new TimeSpan(1)), to);
+            Assert.AreEqual(60, capturedOffset);
         }
 
         [TestMethod]
