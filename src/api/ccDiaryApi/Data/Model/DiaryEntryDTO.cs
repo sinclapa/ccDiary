@@ -28,6 +28,13 @@ namespace ccDiaryApi.Data.Model
         [JsonRequired]
         public bool ShowMap { get; set; }
 
+        public string? FromLocation { get; set; }
+
+        public string? ToLocation { get; set; }
+
+        [Required]
+        public bool ShowJourney { get; set; }
+
         [ForeignKey(nameof(DiaryDTO))]
         required public Guid DiaryId { get; set; }
 

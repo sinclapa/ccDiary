@@ -1,20 +1,20 @@
 <template>
-  <div class="map-wrapper">
-    <div v-if="status === 'loading'" class="map-placeholder">
+  <div class="journey-wrapper">
+    <div v-if="status === 'loading'" class="journey-placeholder">
       <v-progress-circular color="red" indeterminate />
     </div>
-    <div v-else-if="status === 'not-found'" class="map-placeholder map-not-found">
+    <div v-else-if="status === 'not-found'" class="journey-placeholder journey-not-found">
       <v-icon color="grey">mdi-map-marker-off</v-icon>
       <span class="text-caption text-grey">Location not found</span>
     </div>
-    <div v-else-if="status === 'error'" class="map-placeholder map-error">
+    <div v-else-if="status === 'error'" class="journey-placeholder journey-error">
       <v-icon color="grey">mdi-map-off</v-icon>
       <span class="text-caption text-grey">Map unavailable</span>
     </div>
     <div
       ref="mapContainer"
-      class="map-container"
-      :class="{ 'map-hidden': status !== 'ready' }"
+      class="journey-container"
+      :class="{ 'journey-hidden': status !== 'ready' }"
     />
   </div>
 </template>
@@ -35,7 +35,8 @@
   })
 
   const props = defineProps<{
-    location: string
+    fromLocation: string
+    toLocation: string
   }>()
 
   type MapStatus = 'loading' | 'ready' | 'not-found' | 'error'
@@ -44,28 +45,35 @@
   const status = ref<MapStatus>('loading')
   let leafletMap: L.Map | null = null
 
+  async function geocode (location: string): Promise<[number, number] | null> {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`
+    )
+    const results = await response.json()
+    if (!results || results.length === 0) return null
+    return [Number.parseFloat(results[0].lat), Number.parseFloat(results[0].lon)]
+  }
+
   async function initMap () {
-    if (!props.location) {
+    if (!props.fromLocation || !props.toLocation) {
       return
     }
 
     status.value = 'loading'
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(props.location)}&format=json&limit=1`
-      )
-      const results = await response.json()
+      const [fromCoords, toCoords] = await Promise.all([
+        geocode(props.fromLocation),
+        geocode(props.toLocation),
+      ])
 
-      if (!results || results.length === 0) {
+      if (!fromCoords || !toCoords) {
         status.value = 'not-found'
         return
       }
 
-      const { lat, lon } = results[0]
       status.value = 'ready'
 
-      // Wait for Vue to remove the map-hidden class before Leaflet measures dimensions
       await nextTick()
 
       if (leafletMap) {
@@ -73,11 +81,14 @@
         leafletMap = null
       }
 
-      leafletMap = L.map(mapContainer.value!).setView([Number.parseFloat(lat), Number.parseFloat(lon)], 13)
+      const bounds = L.latLngBounds([fromCoords, toCoords])
+      leafletMap = L.map(mapContainer.value!).fitBounds(bounds, { padding: [40, 40] })
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
-      L.marker([Number.parseFloat(lat), Number.parseFloat(lon)]).addTo(leafletMap)
+      L.marker(fromCoords).addTo(leafletMap)
+      L.marker(toCoords).addTo(leafletMap)
+      L.polyline([fromCoords, toCoords], { color: 'red', dashArray: '6 4' }).addTo(leafletMap)
     } catch {
       status.value = 'error'
     }
@@ -94,26 +105,30 @@
     }
   })
 
-  watch(() => props.location, () => {
+  watch(() => props.fromLocation, () => {
+    initMap()
+  })
+
+  watch(() => props.toLocation, () => {
     initMap()
   })
 </script>
 
 <style scoped>
-  .map-wrapper {
+  .journey-wrapper {
     width: 100%;
   }
 
-  .map-container {
+  .journey-container {
     width: 100%;
     height: 250px;
   }
 
-  .map-hidden {
+  .journey-hidden {
     display: none;
   }
 
-  .map-placeholder {
+  .journey-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;

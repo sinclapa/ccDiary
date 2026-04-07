@@ -523,5 +523,98 @@ namespace ccDiaryApiTest.Integration
             var result = await response.Content.ReadFromJsonAsync<DateTime>();
             Assert.AreEqual(DateTime.UtcNow.Date, result.Date);
         }
+
+        [TestMethod]
+        public async Task CreateWithShowJourney_PersistsJourneyFields()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+
+            var diaryEntry = new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Sandwich, UK",
+                Entry = "Left Sandwich for Southampton.",
+                ShowJourney = true,
+                FromLocation = "Sandwich, UK",
+                ToLocation = "Southampton, UK",
+            };
+
+            // Act
+            var createResponse = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
+
+            // Assert create
+            Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(created);
+            Assert.IsTrue(created.ShowJourney);
+            Assert.AreEqual("Sandwich, UK", created.FromLocation);
+            Assert.AreEqual("Southampton, UK", created.ToLocation);
+
+            // Verify roundtrip via GET
+            var getResponse = await _httpClient.GetAsync($"/api/v1/DiaryEntry/Get/{created.DiaryEntryId}");
+            Assert.AreEqual(HttpStatusCode.OK, getResponse.StatusCode);
+            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(fetched);
+            Assert.IsTrue(fetched.ShowJourney);
+            Assert.AreEqual("Sandwich, UK", fetched.FromLocation);
+            Assert.AreEqual("Southampton, UK", fetched.ToLocation);
+        }
+
+        [TestMethod]
+        public async Task UpdateShowJourney_PersistsChange()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            var created = await CreateDiaryEntry(diary.DiaryId);
+
+            // Act — update with ShowJourney enabled
+            var updateEntry = new DiaryEntryDTO
+            {
+                DiaryEntryId = created.DiaryEntryId,
+                Date = created.Date,
+                DiaryId = diary.DiaryId!.Value,
+                Location = created.Location,
+                Entry = created.Entry,
+                ShowJourney = true,
+                FromLocation = "London, UK",
+                ToLocation = "Paris, France",
+            };
+            var updateResponse = await _httpClient.PutAsJsonAsync("/api/v1/DiaryEntry/Update", updateEntry);
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, updateResponse.StatusCode);
+            var updated = await updateResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(updated);
+            Assert.IsTrue(updated.ShowJourney);
+            Assert.AreEqual("London, UK", updated.FromLocation);
+            Assert.AreEqual("Paris, France", updated.ToLocation);
+        }
+
+        [TestMethod]
+        public async Task CreateWithDefaultShowJourney_ShowJourneyIsFalse()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+
+            // Act — create without setting ShowJourney
+            var diaryEntry = new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Test",
+                Entry = "Test entry",
+            };
+            var createResponse = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>();
+            Assert.IsNotNull(created);
+            Assert.IsFalse(created.ShowJourney);
+            Assert.IsNull(created.FromLocation);
+            Assert.IsNull(created.ToLocation);
+        }
     }
 }

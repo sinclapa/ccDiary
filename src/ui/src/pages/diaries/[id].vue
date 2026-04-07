@@ -87,9 +87,12 @@
               <diary-entry-editor
                 :date="editedItem.date"
                 :entry="editedItem.entry"
+                :from-location="editedItem.fromLocation"
                 :location="editedItem.location"
                 :map-location="editedItem.mapLocation"
+                :show-journey="editedItem.showJourney"
                 :show-map="editedItem.showMap"
+                :to-location="editedItem.toLocation"
                 @close="close"
                 @submit="onSubmitDiaryEntry"
               />
@@ -167,7 +170,8 @@
               <div>
                 {{ diaryEntry.entry }}
               </div>
-              <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" :location="diaryEntry.mapLocation" class="mt-2" />
+              <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" class="mt-2" :location="diaryEntry.mapLocation" />
+              <journey-view v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation" class="mt-2" :from-location="diaryEntry.fromLocation" :to-location="diaryEntry.toLocation" />
             </div>
           </v-timeline-item>
         </v-timeline>
@@ -184,6 +188,7 @@
   import { state } from '@/services/authentication/msalConfig'
   import dayjs from 'dayjs'
   import { useApiStatusStore } from '@/stores/apiStatus'
+  import JourneyView from '@/components/JourneyView.vue'
 
   const apiStatus = useApiStatusStore()
   const router = useRouter()
@@ -291,12 +296,15 @@
     dialog.value = true
   }
 
-  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean}) {
+  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean}) {
     editedItem.value.date = payload.date
     editedItem.value.location = payload.location
     editedItem.value.entry = payload.entry
     editedItem.value.mapLocation = payload.mapLocation
     editedItem.value.showMap = payload.showMap
+    editedItem.value.fromLocation = payload.fromLocation
+    editedItem.value.toLocation = payload.toLocation
+    editedItem.value.showJourney = payload.showJourney
     if (editedItem.value.diaryEntryId === undefined) {
       await diaryEntryAPI.createDiaryEntry(editedItem.value)
     } else {
@@ -465,7 +473,7 @@
     }
   })
 
-  watch(() => route.query.date, async (dateStr) => {
+  watch(() => route.query.date, async dateStr => {
     if (!dateStr || typeof dateStr !== 'string') return
     const parsed = dayjs(dateStr, 'YYYY-MM-DD', true)
     if (!parsed.isValid()) return

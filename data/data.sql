@@ -194,3 +194,10 @@ USING (VALUES
 ON target.DiaryEntryId = source.DiaryEntryId
 WHEN MATCHED THEN UPDATE SET Date = source.Date, Location = source.Location, Entry = source.Entry, DiaryId = source.DiaryId
 WHEN NOT MATCHED THEN INSERT (DiaryEntryId, Date, Location, Entry, DiaryId) VALUES (source.DiaryEntryId, source.Date, source.Location, source.Entry, source.DiaryId);
+
+-- DiaryEntry: Set ShowMap and MapLocation for seeded entries
+UPDATE DiaryEntry SET ShowMap = 1, MapLocation = N'Sandwich, UK' WHERE DiaryEntryId = 'B712F351-EFC2-4424-1A5C-08DE012FB313';
+UPDATE DiaryEntry SET ShowMap = 1, MapLocation = N'Southampton, UK' WHERE DiaryEntryId = '1E5128FE-F162-4D8B-1A5D-08DE012FB313';
+
+-- DiaryEntry: Set ShowJourney, FromLocation, ToLocation for seeded entries
+UPDATE DiaryEntry SET ShowJourney = 1, FromLocation = N'Sandwich, UK', ToLocation = N'Southampton, UK' WHERE DiaryEntryId = 'B712F351-EFC2-4424-1A5C-08DE012FB313';

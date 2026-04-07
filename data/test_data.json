@@ -13,6 +13,9 @@
       "entry": "May 21st 1918, I left Sandwich for Southampton at 8.20 AM.",
       "mapLocation": "Sandwich, UK",
       "showMap": true,
+      "fromLocation": "Sandwich, UK",
+      "toLocation": "Southampton, UK",
+      "showJourney": true,
       "diaryId": "61625950-9c26-46ef-1b98-08dd14bc2509"
     },
     {

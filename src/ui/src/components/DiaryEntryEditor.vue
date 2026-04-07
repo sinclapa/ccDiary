@@ -38,18 +38,45 @@
           <v-switch
             id="show-map"
             v-model="showMap"
-            color="primary"
-            label="Show Map"
-            hide-details
             class="mb-2"
+            color="primary"
+            hide-details
+            label="Show Map"
           />
 
           <v-text-field
             v-if="showMap"
             id="map-location"
             v-model="mapLocation"
-            label="Map Location"
             hint="Enter a place name to display on the map"
+            label="Map Location"
+            persistent-hint
+          />
+
+          <v-switch
+            id="show-journey"
+            v-model="showJourney"
+            class="mb-2 mt-4"
+            color="primary"
+            hide-details
+            label="Show Journey"
+          />
+
+          <v-text-field
+            v-if="showJourney"
+            id="from-location"
+            v-model="fromLocation"
+            hint="Enter the starting place name"
+            label="From Location"
+            persistent-hint
+          />
+
+          <v-text-field
+            v-if="showJourney"
+            id="to-location"
+            v-model="toLocation"
+            hint="Enter the destination place name"
+            label="To Location"
             persistent-hint
           />
         </v-card-text>
@@ -90,15 +117,18 @@
   import { VDateInput } from 'vuetify/labs/VDateInput'
   import { watch } from 'vue'
 
-  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean}>()
+  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const location = ref<string>(props.location)
   const entry = ref<string>(props.entry)
   const mapLocation = ref<string>(props.mapLocation)
   const showMap = ref<boolean>(props.showMap)
+  const fromLocation = ref<string>(props.fromLocation)
+  const toLocation = ref<string>(props.toLocation)
+  const showJourney = ref<boolean>(props.showJourney)
   const emit = defineEmits({
-    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean }) {
+    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean }) {
       return payload
     },
     close () {
@@ -121,6 +151,9 @@
         entry: entry.value,
         mapLocation: mapLocation.value,
         showMap: showMap.value,
+        fromLocation: fromLocation.value,
+        toLocation: toLocation.value,
+        showJourney: showJourney.value,
       })
     }
   }
@@ -144,6 +177,20 @@
   watch(showMap, newVal => {
     if (newVal && !mapLocation.value) {
       mapLocation.value = location.value
+    }
+  })
+  watch(() => props.fromLocation, newVal => {
+    fromLocation.value = newVal
+  })
+  watch(() => props.toLocation, newVal => {
+    toLocation.value = newVal
+  })
+  watch(() => props.showJourney, newVal => {
+    showJourney.value = newVal
+  })
+  watch(showJourney, newVal => {
+    if (newVal && !fromLocation.value) {
+      fromLocation.value = location.value
     }
   })
 </script>

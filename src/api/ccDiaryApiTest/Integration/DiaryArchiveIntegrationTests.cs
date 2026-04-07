@@ -109,6 +109,32 @@ namespace ccDiaryApiTest.Integration
             Assert.AreEqual("London, UK", updatedEntry.MapLocation);
         }
 
+        [TestMethod]
+        public async Task ImportUpdateShowJourneyAndLocations()
+        {
+            // Arrange — import with showJourney=false and no locations
+            var archiveDiary = CreateArchiveDiary();
+            await _httpClient.PostAsJsonAsync($"api/v1/DiaryArchive/Import", archiveDiary);
+
+            // Update showJourney, fromLocation, toLocation on one entry and reimport
+            archiveDiary.DiaryEntries[0].ShowJourney = true;
+            archiveDiary.DiaryEntries[0].FromLocation = "Glasgow, UK";
+            archiveDiary.DiaryEntries[0].ToLocation = "Edinburgh, UK";
+
+            // Act
+            var response = await _httpClient.PostAsJsonAsync($"api/v1/DiaryArchive/Import", archiveDiary);
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var responeEntries = await _httpClient.GetAsync($"api/v1/DiaryEntry/GetDiaryEntries/{archiveDiary.Diary.DiaryId}");
+            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
+            Assert.IsNotNull(resultEntries);
+            var updatedEntry = resultEntries.First(e => e.DiaryEntryId == archiveDiary.DiaryEntries[0].DiaryEntryId);
+            Assert.AreEqual(true, updatedEntry.ShowJourney);
+            Assert.AreEqual("Glasgow, UK", updatedEntry.FromLocation);
+            Assert.AreEqual("Edinburgh, UK", updatedEntry.ToLocation);
+        }
+
         private static DiaryArchiveDTO CreateArchiveDiary()
         {
             var diary = new DiaryDTO { Author = "Paul John", Title = "History of computers", Description = "Computers from ancient time to digital era", DiaryId = Guid.NewGuid() };
