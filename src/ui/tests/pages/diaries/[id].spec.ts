@@ -159,10 +159,16 @@ describe('[id].vue', () => {
       entry: 'New Entry',
       mapLocation: 'London, UK',
       showMap: true,
+      fromLocation: 'Sandwich, UK',
+      toLocation: 'Southampton, UK',
+      showJourney: true,
     })
     expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
     expect((wrapper.vm as any).editedItem.mapLocation).toBe('London, UK')
     expect((wrapper.vm as any).editedItem.showMap).toBe(true)
+    expect((wrapper.vm as any).editedItem.fromLocation).toBe('Sandwich, UK')
+    expect((wrapper.vm as any).editedItem.toLocation).toBe('Southampton, UK')
+    expect((wrapper.vm as any).editedItem.showJourney).toBe(true)
   })
 
   it('calls onSubmitDiaryEntry for update', async () => {
@@ -177,10 +183,14 @@ describe('[id].vue', () => {
       entry: entry.entry,
       mapLocation: 'Berlin, Germany',
       showMap: false,
+      fromLocation: '',
+      toLocation: '',
+      showJourney: false,
     })
     expect(diaryEntryAPI.updateDiaryEntry).toHaveBeenCalled()
     expect((wrapper.vm as any).editedItem.mapLocation).toBe('Berlin, Germany')
     expect((wrapper.vm as any).editedItem.showMap).toBe(false)
+    expect((wrapper.vm as any).editedItem.showJourney).toBe(false)
   })
 
   it('should toggle isDatePickerExpanded from false to true', async () => {
@@ -212,6 +222,9 @@ describe('[id].vue', () => {
       entry: 'Updated Entry',
       mapLocation: '',
       showMap: false,
+      fromLocation: '',
+      toLocation: '',
+      showJourney: false,
     })
 
     // Verify selectDate was called because dates match
@@ -381,6 +394,9 @@ describe('[id].vue', () => {
       entry: 'Updated Entry',
       mapLocation: '',
       showMap: false,
+      fromLocation: '',
+      toLocation: '',
+      showJourney: false,
     })
     expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls)
 

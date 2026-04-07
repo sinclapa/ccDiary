@@ -14,6 +14,9 @@ describe('DiaryEntryEditor.vue', () => {
     entry: 'Cooked pasta',
     mapLocation: 'London, UK',
     showMap: false,
+    fromLocation: '',
+    toLocation: '',
+    showJourney: false,
   }
 
   it('renders form fields with initial props', () => {
@@ -150,5 +153,128 @@ describe('DiaryEntryEditor.vue', () => {
     ;(wrapper.vm as any).showMap = true
     await wrapper.vm.$nextTick()
     expect((wrapper.vm as any).mapLocation).toBe('Paris, France')
+  })
+
+  it('does not show from-location field when showJourney is false', () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: false },
+      global: { plugins: [vuetify] },
+    })
+    expect(wrapper.find('#from-location').exists()).toBe(false)
+    expect(wrapper.find('#to-location').exists()).toBe(false)
+  })
+
+  it('shows from-location and to-location fields when showJourney is true', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, fromLocation: 'Sandwich, UK', toLocation: 'Southampton, UK' },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#from-location').exists()).toBe(true)
+    expect(wrapper.find('#to-location').exists()).toBe(true)
+  })
+
+  it('emits submit with showJourney, fromLocation, toLocation in payload', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, fromLocation: 'Sandwich, UK', toLocation: 'Southampton, UK' },
+      global: { plugins: [vuetify] },
+    })
+    const submitEventPromise = Promise.resolve({ valid: true })
+    await (wrapper.vm as any).submit(submitEventPromise)
+    await submitEventPromise
+    const emitted = wrapper.emitted('submit')
+    expect(emitted).toBeTruthy()
+    const payload = emitted![0][0] as { showJourney: boolean; fromLocation: string; toLocation: string }
+    expect(payload.showJourney).toBe(true)
+    expect(payload.fromLocation).toBe('Sandwich, UK')
+    expect(payload.toLocation).toBe('Southampton, UK')
+  })
+
+  it('emits submit with showJourney false and empty locations by default', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: false, fromLocation: '', toLocation: '' },
+      global: { plugins: [vuetify] },
+    })
+    const submitEventPromise = Promise.resolve({ valid: true })
+    await (wrapper.vm as any).submit(submitEventPromise)
+    await submitEventPromise
+    const emitted = wrapper.emitted('submit')
+    expect(emitted).toBeTruthy()
+    const payload = emitted![0][0] as { showJourney: boolean; fromLocation: string; toLocation: string }
+    expect(payload.showJourney).toBe(false)
+    expect(payload.fromLocation).toBe('')
+    expect(payload.toLocation).toBe('')
+  })
+
+  it('defaults fromLocation to location when showJourney is toggled on with empty fromLocation', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, location: 'Kitchen', fromLocation: '', showJourney: false },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showJourney = true
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as any).fromLocation).toBe('Kitchen')
+  })
+
+  it('does not overwrite fromLocation when showJourney is toggled on with an existing fromLocation', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, location: 'Kitchen', fromLocation: 'Sandwich, UK', showJourney: false },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showJourney = true
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as any).fromLocation).toBe('Sandwich, UK')
+  })
+
+  it('updates fromLocation when prop changes', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, fromLocation: 'Sandwich, UK', toLocation: 'Southampton, UK' },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.setProps({ fromLocation: 'London, UK' })
+    await wrapper.vm.$nextTick()
+    expect((wrapper.find('#from-location').element as HTMLInputElement).value).toBe('London, UK')
+  })
+
+  it('updates toLocation when prop changes', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, fromLocation: 'Sandwich, UK', toLocation: 'Southampton, UK' },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.setProps({ toLocation: 'Paris, France' })
+    await wrapper.vm.$nextTick()
+    expect((wrapper.find('#to-location').element as HTMLInputElement).value).toBe('Paris, France')
+  })
+
+  it('updates showJourney when prop changes', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: false },
+      global: { plugins: [vuetify] },
+    })
+    expect(wrapper.find('#from-location').exists()).toBe(false)
+    await wrapper.setProps({ showJourney: true })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#from-location').exists()).toBe(true)
+  })
+
+  it('does not default fromLocation when showJourney is toggled off', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, location: 'Kitchen', fromLocation: '', showJourney: true },
+      global: { plugins: [vuetify] },
+    })
+    // Toggle showJourney off — watcher fires with newVal=false, condition short-circuits
+    ;(wrapper.vm as any).showJourney = false
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as any).fromLocation).toBe('')
+  })
+
+  it('does not default mapLocation when showMap is toggled off', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, location: 'Kitchen', mapLocation: '', showMap: true },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showMap = false
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as any).mapLocation).toBe('')
   })
 })

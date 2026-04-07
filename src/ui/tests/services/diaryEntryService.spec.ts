@@ -220,6 +220,9 @@ describe('DiaryEntry Service', () => {
       entry: 'TestEntry',
       mapLocation: '',
       showMap: false,
+      fromLocation: '',
+      toLocation: '',
+      showJourney: false,
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -234,6 +237,36 @@ describe('DiaryEntry Service', () => {
         method: 'POST',
       }
     )
+  })
+
+  it('createDiaryEntry serializes showJourney, fromLocation, toLocation', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diaryId = crypto.randomUUID()
+    const diaryEntry : DiaryEntry = {
+      date: new Date(),
+      diaryId,
+      location: 'Sandwich, UK',
+      entry: 'Left Sandwich.',
+      mapLocation: '',
+      showMap: false,
+      fromLocation: 'Sandwich, UK',
+      toLocation: 'Southampton, UK',
+      showJourney: true,
+    }
+    await diaryEntryAPI.createDiaryEntry(diaryEntry)
+
+    // Assert
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(body.showJourney).toBe(true)
+    expect(body.fromLocation).toBe('Sandwich, UK')
+    expect(body.toLocation).toBe('Southampton, UK')
   })
 
   it('Update  Diary', async () => {
@@ -253,6 +286,9 @@ describe('DiaryEntry Service', () => {
       entry: 'TestEntry',
       mapLocation: '',
       showMap: false,
+      fromLocation: '',
+      toLocation: '',
+      showJourney: false,
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 
@@ -267,5 +303,95 @@ describe('DiaryEntry Service', () => {
         method: 'PUT',
       }
     )
+  })
+
+  it('updateDiaryEntry serializes showJourney, fromLocation, toLocation', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as Response)
+
+    // Act
+    const diaryId = crypto.randomUUID()
+    const diaryEntry : DiaryEntry = {
+      date: new Date(),
+      diaryId,
+      location: 'London, UK',
+      entry: 'Journey entry.',
+      mapLocation: '',
+      showMap: false,
+      fromLocation: 'London, UK',
+      toLocation: 'Paris, France',
+      showJourney: true,
+    }
+    await diaryEntryAPI.updateDiaryEntry(diaryEntry)
+
+    // Assert
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)
+    expect(body.showJourney).toBe(true)
+    expect(body.fromLocation).toBe('London, UK')
+    expect(body.toLocation).toBe('Paris, France')
+  })
+
+  it('searchDiaryEntryForDay maps showJourney, fromLocation, toLocation from API response', async () => {
+    // Arrange
+    const diaryId = crypto.randomUUID()
+    const entryId = crypto.randomUUID()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ([{
+        diaryId,
+        diaryEntryId: entryId,
+        date: new Date(2024, 8, 17).toISOString(),
+        location: 'Sandwich, UK',
+        entry: 'Left Sandwich.',
+        mapLocation: '',
+        showMap: false,
+        fromLocation: 'Sandwich, UK',
+        toLocation: 'Southampton, UK',
+        showJourney: true,
+      }]),
+    } as Response)
+
+    // Act
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    // Assert
+    expect(results).toHaveLength(1)
+    expect(results[0].showJourney).toBe(true)
+    expect(results[0].fromLocation).toBe('Sandwich, UK')
+    expect(results[0].toLocation).toBe('Southampton, UK')
+  })
+
+  it('searchDiaryEntryForDay defaults fromLocation and toLocation to empty string when null', async () => {
+    // Arrange
+    const diaryId = crypto.randomUUID()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ([{
+        diaryId,
+        diaryEntryId: crypto.randomUUID(),
+        date: new Date(2024, 8, 17).toISOString(),
+        location: 'Home',
+        entry: 'A note',
+        mapLocation: null,
+        showMap: false,
+        fromLocation: null,
+        toLocation: null,
+        showJourney: false,
+      }]),
+    } as Response)
+
+    // Act
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    // Assert
+    expect(results[0].fromLocation).toBe('')
+    expect(results[0].toLocation).toBe('')
+    expect(results[0].showJourney).toBe(false)
   })
 })

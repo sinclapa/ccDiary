@@ -208,6 +208,112 @@ test.describe('DiaryEntry API — mapLocation and showMap fields', () => {
   })
 })
 
+// ─── API: showJourney, fromLocation, toLocation fields ────────────────────────
+
+test.describe('DiaryEntry API — showJourney, fromLocation, toLocation fields', () => {
+  let ww1DiaryId: string
+
+  test.beforeAll(async ({ request }) => {
+    ww1DiaryId = await getWW1DiaryId(request)
+  })
+
+  test('GET search for day returns entries that include showJourney, fromLocation, toLocation fields', async ({ request }) => {
+    const response = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    expect(response.ok()).toBeTruthy()
+    const entries: Array<Record<string, unknown>> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
+
+    for (const entry of entries) {
+      expect(entry).toHaveProperty('showJourney')
+      expect(entry).toHaveProperty('fromLocation')
+      expect(entry).toHaveProperty('toLocation')
+    }
+  })
+
+  test('seeded May 21 entry has showJourney=true with fromLocation and toLocation set', async ({ request }) => {
+    const response = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    const entries: Array<{ showJourney: boolean; fromLocation: string; toLocation: string }> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
+    const journeyEntry = entries.find(e => e.showJourney)
+    expect(journeyEntry).toBeDefined()
+    expect(journeyEntry?.fromLocation).toBeTruthy()
+    expect(journeyEntry?.toLocation).toBeTruthy()
+  })
+
+  test('seeded May 22 entries have showJourney=false', async ({ request }) => {
+    const response = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY + 1}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    const entries: Array<{ showJourney: boolean }> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
+    for (const entry of entries) {
+      expect(entry.showJourney).toBe(false)
+    }
+  })
+
+  test('POST create with showJourney requires authentication', async ({ request }) => {
+    const response = await request.post(`${API_BASE}/api/v1/DiaryEntry/Create`, {
+      ignoreHTTPSErrors: true,
+      data: {
+        diaryId: ww1DiaryId,
+        date: new Date().toISOString(),
+        location: 'Test Location',
+        entry: 'E2E test entry',
+        showJourney: true,
+        fromLocation: 'London, UK',
+        toLocation: 'Paris, France',
+      },
+    })
+    expect(response.status()).toBe(401)
+  })
+})
+
+// ─── Journey map display ───────────────────────────────────────────────────────
+
+test.describe('Journey map display on diary entries', () => {
+  let ww1DiaryId: string
+
+  test.beforeAll(async ({ request }) => {
+    ww1DiaryId = await getWW1DiaryId(request)
+  })
+
+  test('no journey-wrapper shown when showJourney is false', async ({ page }) => {
+    const dateNoJourney = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY + 1).padStart(2, '0')}`
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoJourney}`)
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(page.locator('.journey-wrapper')).toHaveCount(0)
+  })
+
+  test('journey-wrapper renders in timeline when entry has showJourney enabled', async ({ page, request }) => {
+    const searchResponse = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    expect(searchResponse.ok()).toBeTruthy()
+    const entries: Array<{ diaryEntryId: string; showJourney: boolean; fromLocation: string; toLocation: string }> = await searchResponse.json()
+    expect(entries.length).toBeGreaterThan(0)
+
+    const journeyEntry = entries.find(e => e.showJourney && e.fromLocation && e.toLocation)
+    if (!journeyEntry) {
+      await gotoDiaryDetail(page, ww1DiaryId)
+      await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+      await expect(page.locator('.journey-wrapper')).toHaveCount(0)
+      return
+    }
+
+    const dateStr = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateStr}`)
+    await expect(page.locator('.journey-wrapper').first()).toBeVisible({ timeout: 15000 })
+  })
+})
+
 // ─── URL date bookmarking ──────────────────────────────────────────────────────
 
 test.describe('URL date bookmarking', () => {
@@ -338,5 +444,17 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
     await expect(page.locator('button:has(.mdi-pencil)')).toHaveCount(0)
     await expect(page.locator('button:has(.mdi-delete)')).toHaveCount(0)
+  })
+
+  test('Show Journey toggle is not visible without authentication', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(page.locator('#show-journey')).toHaveCount(0)
+  })
+
+  test('From/To Location fields are not visible without authentication', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('#from-location')).toHaveCount(0)
+    await expect(page.locator('#to-location')).toHaveCount(0)
   })
 })

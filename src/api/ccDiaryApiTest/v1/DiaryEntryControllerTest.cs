@@ -232,5 +232,77 @@ namespace ccDiaryApiTest.v1
             Assert.AreEqual(new DateTime(2022, 5, 23, 0, 0, 0, DateTimeKind.Utc).ToUniversalTime(), from);
             Assert.AreEqual(new DateTime(2022, 5, 24, 0, 0, 0, DateTimeKind.Utc).Subtract(new TimeSpan(1)).ToUniversalTime(), to);
         }
+
+        [TestMethod]
+        public void CreatePassesThroughShowJourneyFields()
+        {
+            // Arrange
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+
+            DiaryEntryDTO? captured = null;
+            var diaryEntry = new DiaryEntryDTO
+            {
+                DiaryEntryId = Guid.NewGuid(),
+                DiaryId = Guid.NewGuid(),
+                Date = DateTime.UtcNow,
+                Location = "Sandwich, UK",
+                Entry = "Left Sandwich.",
+                ShowJourney = true,
+                FromLocation = "Sandwich, UK",
+                ToLocation = "Southampton, UK",
+            };
+            diaryEntryServiceMock
+                .Setup(x => x.CreateDiaryEntry(It.IsAny<DiaryEntryDTO>()))
+                .Callback<DiaryEntryDTO>(d => captured = d)
+                .Returns(diaryEntry);
+
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+
+            // Act
+            var response = controller.Create(diaryEntry);
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
+            Assert.IsNotNull(captured);
+            Assert.IsTrue(captured.ShowJourney);
+            Assert.AreEqual("Sandwich, UK", captured.FromLocation);
+            Assert.AreEqual("Southampton, UK", captured.ToLocation);
+        }
+
+        [TestMethod]
+        public void UpdatePassesThroughShowJourneyFields()
+        {
+            // Arrange
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+
+            DiaryEntryDTO? captured = null;
+            var diaryEntry = new DiaryEntryDTO
+            {
+                DiaryEntryId = Guid.NewGuid(),
+                DiaryId = Guid.NewGuid(),
+                Date = DateTime.UtcNow,
+                Location = "London, UK",
+                Entry = "Journey entry.",
+                ShowJourney = true,
+                FromLocation = "London, UK",
+                ToLocation = "Paris, France",
+            };
+            diaryEntryServiceMock
+                .Setup(x => x.UpdateDiaryEntry(It.IsAny<DiaryEntryDTO>()))
+                .Callback<DiaryEntryDTO>(d => captured = d)
+                .Returns(diaryEntry);
+
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+
+            // Act
+            var response = controller.Update(diaryEntry);
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            Assert.IsNotNull(captured);
+            Assert.IsTrue(captured.ShowJourney);
+            Assert.AreEqual("London, UK", captured.FromLocation);
+            Assert.AreEqual("Paris, France", captured.ToLocation);
+        }
     }
 }
