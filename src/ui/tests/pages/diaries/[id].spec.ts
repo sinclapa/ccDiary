@@ -162,6 +162,8 @@ describe('[id].vue', () => {
       fromLocation: 'Sandwich, UK',
       toLocation: 'Southampton, UK',
       showJourney: true,
+      imageData: undefined,
+      imageContentType: undefined,
     })
     expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
     expect((wrapper.vm as any).editedItem.mapLocation).toBe('London, UK')
@@ -169,6 +171,37 @@ describe('[id].vue', () => {
     expect((wrapper.vm as any).editedItem.fromLocation).toBe('Sandwich, UK')
     expect((wrapper.vm as any).editedItem.toLocation).toBe('Southampton, UK')
     expect((wrapper.vm as any).editedItem.showJourney).toBe(true)
+  })
+
+  it('onSubmitDiaryEntry stores imageData and imageContentType on editedItem', async () => {
+    state.isAuthenticated = true
+    await flushPromises()
+    await (wrapper.vm as any).editItem()
+    await (wrapper.vm as any).onSubmitDiaryEntry({
+      date: new Date(),
+      location: 'Test',
+      entry: 'Test entry',
+      mapLocation: '',
+      showMap: false,
+      fromLocation: '',
+      toLocation: '',
+      showJourney: false,
+      imageData: 'abc123',
+      imageContentType: 'image/jpeg',
+    })
+    expect((wrapper.vm as any).editedItem.imageData).toBe('abc123')
+    expect((wrapper.vm as any).editedItem.imageContentType).toBe('image/jpeg')
+  })
+
+  it('renders image in timeline when entry has imageData and imageContentType', async () => {
+    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', 'img-entry-id', '', false, '', '', false, 'abc123', 'image/jpeg')
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithImage])
+    await flushPromises()
+    await (wrapper.vm as any).selectDate(new Date())
+    await flushPromises()
+    const vImgs = wrapper.findAllComponents({ name: 'VImg' })
+    const imageComponent = vImgs.find(c => c.props('src') === 'data:image/jpeg;base64,abc123')
+    expect(imageComponent).toBeDefined()
   })
 
   it('calls onSubmitDiaryEntry for update', async () => {
