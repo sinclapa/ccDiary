@@ -381,6 +381,19 @@ describe('DiaryEntryEditor.vue', () => {
     expect(clickSpy).toHaveBeenCalled()
   })
 
+  it('Enter key on drop zone triggers file input', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showImage = true
+    await wrapper.vm.$nextTick()
+    const clickSpy = vi.fn()
+    ;(wrapper.vm as any).fileInputRef = { click: clickSpy }
+    await wrapper.find('#image-drop-zone').trigger('keydown.enter')
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
   it('processFile reads file and sets imageData and imageContentType', async () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: { ...defaultProps },

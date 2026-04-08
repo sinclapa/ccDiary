@@ -97,6 +97,7 @@
               role="button"
               tabindex="0"
               @click="triggerFileInput"
+              @keydown.enter="triggerFileInput"
               @dragleave.prevent="isDragging = false"
               @dragover.prevent="isDragging = true"
               @drop.prevent="handleDrop"
