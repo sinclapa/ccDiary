@@ -387,7 +387,7 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'test.jpg', { type: 'image/jpeg' })
@@ -405,7 +405,7 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'test.png', { type: 'image/png' })
@@ -435,7 +435,7 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'selected.jpg', { type: 'image/jpeg' })
@@ -453,7 +453,7 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'pasted.jpg', { type: 'image/jpeg' })
