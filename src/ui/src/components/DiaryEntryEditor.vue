@@ -96,14 +96,14 @@
               :class="{ 'drag-over': isDragging }"
               tabindex="0"
               @click="triggerFileInput"
-              @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
+              @dragover.prevent="isDragging = true"
               @drop.prevent="handleDrop"
             >
               <v-img
                 v-if="imagePreview"
-                :src="imagePreview"
                 max-height="200"
+                :src="imagePreview"
               />
               <div
                 v-else

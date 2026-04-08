@@ -33,6 +33,7 @@ namespace ccDiaryApiTest
         /// Removes all diary entries and diaries from the database.
         /// Call from [TestInitialize] to ensure a clean state before each test.
         /// </summary>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public async Task ClearDatabaseAsync()
         {
             using var scope = Services.CreateScope();

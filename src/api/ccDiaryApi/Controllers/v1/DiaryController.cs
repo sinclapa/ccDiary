@@ -48,7 +48,7 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Create([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Create(diary);
-            var diaryIdForLog = retDiary.DiaryId.ToString()
+            var diaryIdForLog = (retDiary.DiaryId?.ToString() ?? string.Empty)
                 .Replace(Environment.NewLine, string.Empty)
                 .Replace("\r", string.Empty)
                 .Replace("\n", string.Empty);
@@ -60,7 +60,7 @@ namespace ccDiaryApi.Controllers.v1
         public ActionResult<DiaryDTO> Update([FromBody] DiaryDTO diary)
         {
             var retDiary = _diaryService.Update(diary);
-            var diaryIdForLog = retDiary.DiaryId.ToString()
+            var diaryIdForLog = (retDiary.DiaryId?.ToString() ?? string.Empty)
                 .Replace(Environment.NewLine, string.Empty)
                 .Replace("\r", string.Empty)
                 .Replace("\n", string.Empty);
