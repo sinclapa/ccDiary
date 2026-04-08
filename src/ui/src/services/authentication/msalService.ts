@@ -97,7 +97,7 @@ export function msalService (
           }
 
           options = {
-            ...(options ?? {}),
+            ...options,
             headers,
           }
         }

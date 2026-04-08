@@ -173,7 +173,7 @@ describe('initFaro', () => {
         ['uppercases the HTTP method', 'https://api.example.com/v1/DiaryEntry/Update', undefined, 'put', 'PUT /v1/DiaryEntry/Update'],
       ])('%s', (_, urlFull, httpUrl, method, expected) => {
         const span = makeSpan(urlFull, httpUrl)
-        cb(span, method !== undefined ? { method } : {}, {} as Response)
+        cb(span, method === undefined ? {} : { method }, {} as Response)
         expect(span.updateName).toHaveBeenCalledWith(expected)
       })
 
@@ -188,7 +188,7 @@ describe('initFaro', () => {
         ['url attributes are empty string', '', ''],
         ['url is malformed', 'not-a-valid-url', undefined],
       ])('does not rename span when %s', (_, urlFull, httpUrl) => {
-        const span = makeSpan(urlFull as string, httpUrl as string | undefined)
+        const span = makeSpan(urlFull, httpUrl)
         cb(span, { method: 'GET' }, {} as Response)
         expect(span.updateName).not.toHaveBeenCalled()
       })

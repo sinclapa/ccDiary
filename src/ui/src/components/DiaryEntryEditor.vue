@@ -94,6 +94,7 @@
               id="image-drop-zone"
               class="image-drop-zone mt-2"
               :class="{ 'drag-over': isDragging }"
+              role="button"
               tabindex="0"
               @click="triggerFileInput"
               @dragleave.prevent="isDragging = false"
@@ -271,8 +272,7 @@
   function handleWindowPaste (event: ClipboardEvent) {
     const items = event.clipboardData?.items
     if (!items) return
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
+    for (const item of Array.from(items)) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile()
         if (file) {
@@ -285,11 +285,11 @@
   }
 
   onMounted(() => {
-    window.addEventListener('paste', handleWindowPaste)
+    globalThis.addEventListener('paste', handleWindowPaste)
   })
 
   onUnmounted(() => {
-    window.removeEventListener('paste', handleWindowPaste)
+    globalThis.removeEventListener('paste', handleWindowPaste)
   })
 
   watch(() => props.location, newVal => {

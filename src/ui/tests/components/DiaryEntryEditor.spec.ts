@@ -457,7 +457,7 @@ describe('DiaryEntryEditor.vue', () => {
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'pasted.jpg', { type: 'image/jpeg' })
-    const mockItems = { length: 1, 0: { type: 'image/jpeg', getAsFile: () => file } }
+    const mockItems = [{ type: 'image/jpeg', getAsFile: () => file }]
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
     capturedOnload?.({ target: { result: 'data:image/jpeg;base64,pasteddata' } })
     await wrapper.vm.$nextTick()
@@ -471,7 +471,7 @@ describe('DiaryEntryEditor.vue', () => {
       props: { ...defaultProps },
       global: { plugins: [vuetify] },
     })
-    const mockItems = { length: 1, 0: { type: 'text/plain', getAsFile: () => null } }
+    const mockItems = [{ type: 'text/plain', getAsFile: () => null }]
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
     await wrapper.vm.$nextTick()
     expect((wrapper.vm as any).imageData).toBeUndefined()

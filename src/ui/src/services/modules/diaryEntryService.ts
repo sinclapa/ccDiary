@@ -34,7 +34,7 @@ export default class DiaryEntryAPIService {
       requestInit = { headers: { 'x-utc-offset': `${utcOffsetMinutes}` } }
     }
     let output : number[] | null = null
-    await (requestInit !== undefined ? fetch(api, requestInit) : fetch(api))
+    await (requestInit === undefined ? fetch(api) : fetch(api, requestInit))
       .then(response => response.json())
       .then(data => output = data as number[])
     return output
@@ -52,7 +52,16 @@ export default class DiaryEntryAPIService {
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry[])
-    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, x.diaryEntryId, x.mapLocation ?? '', x.showMap ?? false, x.fromLocation ?? '', x.toLocation ?? '', x.showJourney ?? false, x.imageData, x.imageContentType))
+    return output.map(x => new DiaryEntry(x.diaryId, new Date(x.date), x.location, x.entry, {
+      diaryEntryId: x.diaryEntryId,
+      mapLocation: x.mapLocation ?? '',
+      showMap: x.showMap ?? false,
+      fromLocation: x.fromLocation ?? '',
+      toLocation: x.toLocation ?? '',
+      showJourney: x.showJourney ?? false,
+      imageData: x.imageData,
+      imageContentType: x.imageContentType,
+    }))
   }
 
   async getMinDate (diaryId: string) : Promise<Date> {

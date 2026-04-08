@@ -6,6 +6,7 @@ namespace ccDiaryApiTest.v1
 {
     using System.Diagnostics;
     using System.Security.Claims;
+    using System.Text.RegularExpressions;
     using ccDiaryApi.Extensions;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace ccDiaryApiTest.v1
     /// Unit tests for <see cref="ObservabilityUserContextExtensions"/>.
     /// </summary>
     [TestClass]
-    public class ObservabilityUserContextExtensionsTest
+    public partial class ObservabilityUserContextExtensionsTest
     {
         [TestMethod]
         public void ResolveUserIdentifier_ReturnsOid_WhenPresent()
@@ -109,7 +110,7 @@ namespace ccDiaryApiTest.v1
             // Assert
             Assert.AreEqual(first, second);
             Assert.AreEqual(24, first.Length);
-            StringAssert.Matches(first, new System.Text.RegularExpressions.Regex("^[0-9a-f]{24}$"));
+            StringAssert.Matches(first, HexPseudonymPattern());
         }
 
         [TestMethod]
@@ -207,5 +208,8 @@ namespace ccDiaryApiTest.v1
                 ApplicationServices = serviceProvider,
             };
         }
+
+        [GeneratedRegex("^[0-9a-f]{24}$")]
+        private static partial Regex HexPseudonymPattern();
     }
 }
