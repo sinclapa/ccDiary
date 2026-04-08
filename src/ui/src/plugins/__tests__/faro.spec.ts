@@ -152,7 +152,7 @@ describe('initFaro', () => {
 
     describe('applyCustomAttributesOnSpan', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let cb: (span: any, init: RequestInit, response: Response) => void
+      let cb: (span: any, init: RequestInit, response?: unknown) => void
       const GUID = '550e8400-e29b-41d4-a716-446655440000'
 
       beforeEach(() => {
@@ -173,14 +173,14 @@ describe('initFaro', () => {
         ['uppercases the HTTP method', 'https://api.example.com/v1/DiaryEntry/Update', undefined, 'put', 'PUT /v1/DiaryEntry/Update'],
       ])('%s', (_, urlFull, httpUrl, method, expected) => {
         const span = makeSpan(urlFull, httpUrl)
-        cb(span, method !== undefined ? { method } : {}, {} as Response)
+        cb(span, method !== undefined ? { method } : {}, {})
         expect(span.updateName).toHaveBeenCalledWith(expected)
       })
 
       it('does not rename span when attributes object is absent', () => {
         const span = { updateName: vi.fn() }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        cb(span as any, { method: 'GET' }, {} as Response)
+        cb(span as any, { method: 'GET' }, {})
         expect(span.updateName).not.toHaveBeenCalled()
       })
 
@@ -188,8 +188,8 @@ describe('initFaro', () => {
         ['url attributes are empty string', '', ''],
         ['url is malformed', 'not-a-valid-url', undefined],
       ])('does not rename span when %s', (_, urlFull, httpUrl) => {
-        const span = makeSpan(urlFull as string, httpUrl as string | undefined)
-        cb(span, { method: 'GET' }, {} as Response)
+        const span = makeSpan(urlFull, httpUrl)
+        cb(span, { method: 'GET' }, {})
         expect(span.updateName).not.toHaveBeenCalled()
       })
     })

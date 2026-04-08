@@ -14,7 +14,7 @@
     <!--
     CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
     -->
-    <NoWarn>$(NoWarn),1591</NoWarn>
+    <NoWarn>$(NoWarn),1591,NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

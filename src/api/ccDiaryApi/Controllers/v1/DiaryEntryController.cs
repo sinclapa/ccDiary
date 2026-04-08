@@ -151,7 +151,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(date);
         }
 
-        private static string SanitizeForLog(object value)
+        private static string SanitizeForLog(object? value)
         {
             var s = value?.ToString() ?? string.Empty;
             return s.Replace("\r", string.Empty)

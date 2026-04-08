@@ -12,10 +12,10 @@ export function initFaro () {
   const apiUrl = getAppConfigField('VITE_API')
   const propagateUrls =
     apiUrl && apiUrl !== 'NOT_SET'
-      ? [new RegExp(apiUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))]
+      ? [new RegExp(apiUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`))]
       : []
 
-  const collectorUrlPattern = new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const collectorUrlPattern = new RegExp(url.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`))
 
   initializeFaro({
     url,

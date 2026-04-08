@@ -381,13 +381,26 @@ describe('DiaryEntryEditor.vue', () => {
     expect(clickSpy).toHaveBeenCalled()
   })
 
+  it('Enter key on drop zone triggers file input', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps },
+      global: { plugins: [vuetify] },
+    })
+    ;(wrapper.vm as any).showImage = true
+    await wrapper.vm.$nextTick()
+    const clickSpy = vi.fn()
+    ;(wrapper.vm as any).fileInputRef = { click: clickSpy }
+    await wrapper.find('#image-drop-zone').trigger('keydown.enter')
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
   it('processFile reads file and sets imageData and imageContentType', async () => {
     const wrapper = mount(DiaryEntryEditor, {
       props: { ...defaultProps },
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'test.jpg', { type: 'image/jpeg' })
@@ -405,7 +418,7 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'test.png', { type: 'image/png' })
@@ -435,7 +448,7 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'selected.jpg', { type: 'image/jpeg' })
@@ -453,11 +466,11 @@ describe('DiaryEntryEditor.vue', () => {
       global: { plugins: [vuetify] },
     })
     let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), set onload (cb: (e: any) => void) { capturedOnload = cb } }
+    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
     vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
 
     const file = new File(['dummy'], 'pasted.jpg', { type: 'image/jpeg' })
-    const mockItems = { length: 1, 0: { type: 'image/jpeg', getAsFile: () => file } }
+    const mockItems = [{ type: 'image/jpeg', getAsFile: () => file }]
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
     capturedOnload?.({ target: { result: 'data:image/jpeg;base64,pasteddata' } })
     await wrapper.vm.$nextTick()
@@ -471,7 +484,7 @@ describe('DiaryEntryEditor.vue', () => {
       props: { ...defaultProps },
       global: { plugins: [vuetify] },
     })
-    const mockItems = { length: 1, 0: { type: 'text/plain', getAsFile: () => null } }
+    const mockItems = [{ type: 'text/plain', getAsFile: () => null }]
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
     await wrapper.vm.$nextTick()
     expect((wrapper.vm as any).imageData).toBeUndefined()

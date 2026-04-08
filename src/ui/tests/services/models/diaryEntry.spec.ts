@@ -13,7 +13,7 @@ describe('DiaryEntry Model', () => {
     const showMap : boolean = true
 
     // Act
-    const diaryEntry : DiaryEntry = new DiaryEntry(diaryId, date, location, entry, diaryEntryId, mapLocation, showMap)
+    const diaryEntry : DiaryEntry = new DiaryEntry(diaryId, date, location, entry, { diaryEntryId, mapLocation, showMap })
 
     // Assert
     expect(diaryEntry.date).equal(date)
@@ -45,7 +45,7 @@ describe('DiaryEntry Model', () => {
     const location : string = 'My Diary Location'
     const entry : string = 'My Diary Entry'
     const diaryEntryId : string = crypto.randomUUID()
-    const diaryEntry : DiaryEntry = new DiaryEntry(diaryId, date, location, entry, diaryEntryId)
+    const diaryEntry : DiaryEntry = new DiaryEntry(diaryId, date, location, entry, { diaryEntryId })
 
     // Act
     const newDiaryId : string = crypto.randomUUID()

@@ -27,18 +27,27 @@ export default class DiaryEntry implements DiaryEntryInterface {
   imageData?: string
   imageContentType?: string
 
-  constructor (diaryId: string, date: Date, location: string, entry: string, diaryEntryId?: string, mapLocation = '', showMap = false, fromLocation = '', toLocation = '', showJourney = false, imageData?: string, imageContentType?: string) {
-    this.diaryEntryId = diaryEntryId
+  constructor (diaryId: string, date: Date, location: string, entry: string, options?: {
+    diaryEntryId?: string
+    mapLocation?: string
+    showMap?: boolean
+    fromLocation?: string
+    toLocation?: string
+    showJourney?: boolean
+    imageData?: string
+    imageContentType?: string
+  }) {
+    this.diaryEntryId = options?.diaryEntryId
     this.diaryId = diaryId
     this.date = date
     this.location = location
     this.entry = entry
-    this.mapLocation = mapLocation
-    this.showMap = showMap
-    this.fromLocation = fromLocation
-    this.toLocation = toLocation
-    this.showJourney = showJourney
-    this.imageData = imageData
-    this.imageContentType = imageContentType
+    this.mapLocation = options?.mapLocation ?? ''
+    this.showMap = options?.showMap ?? false
+    this.fromLocation = options?.fromLocation ?? ''
+    this.toLocation = options?.toLocation ?? ''
+    this.showJourney = options?.showJourney ?? false
+    this.imageData = options?.imageData
+    this.imageContentType = options?.imageContentType
   }
 }

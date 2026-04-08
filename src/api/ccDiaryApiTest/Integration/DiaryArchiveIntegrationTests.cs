@@ -105,7 +105,7 @@ namespace ccDiaryApiTest.Integration
             var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
             Assert.IsNotNull(resultEntries);
             var updatedEntry = resultEntries.First(e => e.DiaryEntryId == archiveDiary.DiaryEntries[0].DiaryEntryId);
-            Assert.AreEqual(true, updatedEntry.ShowMap);
+            Assert.IsTrue(updatedEntry.ShowMap);
             Assert.AreEqual("London, UK", updatedEntry.MapLocation);
         }
 
@@ -130,7 +130,7 @@ namespace ccDiaryApiTest.Integration
             var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
             Assert.IsNotNull(resultEntries);
             var updatedEntry = resultEntries.First(e => e.DiaryEntryId == archiveDiary.DiaryEntries[0].DiaryEntryId);
-            Assert.AreEqual(true, updatedEntry.ShowJourney);
+            Assert.IsTrue(updatedEntry.ShowJourney);
             Assert.AreEqual("Glasgow, UK", updatedEntry.FromLocation);
             Assert.AreEqual("Edinburgh, UK", updatedEntry.ToLocation);
         }

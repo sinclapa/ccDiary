@@ -45,7 +45,7 @@ globalThis.ResizeObserver = require('resize-observer-polyfill')
 describe('[id].vue', () => {
   const diaryId = 'test-diary-id'
   const diary = new Diary('Test Diary', 'Test Author', 'Test Desc', diaryId)
-  const diaryEntry = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id')
+  const diaryEntry = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', { diaryEntryId: 'entry-id' })
   const minDate = new Date(2020, 0, 1)
   const maxDate = new Date(2020, 11, 31)
 
@@ -194,7 +194,7 @@ describe('[id].vue', () => {
   })
 
   it('renders image in timeline when entry has imageData and imageContentType', async () => {
-    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', 'img-entry-id', '', false, '', '', false, 'abc123', 'image/jpeg')
+    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', { diaryEntryId: 'img-entry-id', imageData: 'abc123', imageContentType: 'image/jpeg' })
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithImage])
     await flushPromises()
     await (wrapper.vm as any).selectDate(new Date())
@@ -208,7 +208,7 @@ describe('[id].vue', () => {
     state.isAuthenticated = true
     await flushPromises()
     // Simulate editing an existing entry
-    const entry = new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', 'existing-id')
+    const entry = new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', { diaryEntryId: 'existing-id' })
     await (wrapper.vm as any).editItem(entry)
     await (wrapper.vm as any).onSubmitDiaryEntry({
       date: entry.date,
@@ -273,7 +273,7 @@ describe('[id].vue', () => {
     (wrapper.vm as any).selectedDate = testDate;
 
     // Setup editedItem with matching date and diaryEntryId
-    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry', 'test-entry-id')
+    (wrapper.vm as any).editedItem = new DiaryEntry(diaryId, testDate, 'Test Location', 'Test Entry', { diaryEntryId: 'test-entry-id' })
 
     // Call deleteItemConfirm
     await (wrapper.vm as any).deleteItemConfirm()
@@ -320,7 +320,7 @@ describe('[id].vue', () => {
     state.isAuthenticated = true
     await flushPromises()
     // Simulate editing an entry with diaryEntryId
-    const entry = new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', 'existing-id')
+    const entry = new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', { diaryEntryId: 'existing-id' })
     await (wrapper.vm as any).editItem(entry)
     await (wrapper.vm as any).deleteItemConfirm()
     expect(diaryEntryAPI.deleteDiaryEntry).toHaveBeenCalledWith('existing-id')
@@ -362,14 +362,14 @@ describe('[id].vue', () => {
   })
 
   it('resets editedItem after close', async () => {
-    await (wrapper.vm as any).editItem(new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', 'id'))
+    await (wrapper.vm as any).editItem(new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', { diaryEntryId: 'id' }))
     await (wrapper.vm as any).close()
     await nextTick() // <-- Wait for Vue to update
     expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
   })
 
   it('resets editedItem after closeDelete', async () => {
-    await (wrapper.vm as any).editItem(new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', 'id'))
+    await (wrapper.vm as any).editItem(new DiaryEntry(diaryId, new Date(), 'Loc', 'Entry', { diaryEntryId: 'id' }))
     await (wrapper.vm as any).closeDelete()
     await nextTick() // <-- Wait for Vue to update
     expect((wrapper.vm as any).editedItem.location).toBe((wrapper.vm as any).defaultItem.location)
@@ -433,7 +433,7 @@ describe('[id].vue', () => {
     })
     expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls)
 
-    ;(wrapper.vm as any).editedItem = new DiaryEntry(diaryId, new Date(2024, 5, 10), 'Loc', 'Entry', 'existing-id')
+    ;(wrapper.vm as any).editedItem = new DiaryEntry(diaryId, new Date(2024, 5, 10), 'Loc', 'Entry', { diaryEntryId: 'existing-id' })
     await (wrapper.vm as any).deleteItemConfirm()
     expect(searchSpy.mock.calls.length).toBeGreaterThan(baselineCalls + 1)
   })
@@ -567,7 +567,7 @@ describe('[id].vue', () => {
   })
 
   it('does not show MapView when showMap is false on diaryEntry', async () => {
-    const entryNoMap = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id', 'London, UK', false)
+    const entryNoMap = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', { diaryEntryId: 'entry-id', mapLocation: 'London, UK', showMap: false })
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryNoMap])
     await flushPromises()
     await (wrapper.vm as any).selectDate(new Date())
@@ -577,7 +577,7 @@ describe('[id].vue', () => {
   })
 
   it('does not show MapView when showMap is true but mapLocation is empty', async () => {
-    const entryNoMapLoc = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id', '', true)
+    const entryNoMapLoc = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', { diaryEntryId: 'entry-id', showMap: true })
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryNoMapLoc])
     await flushPromises()
     await (wrapper.vm as any).selectDate(new Date())
@@ -587,7 +587,7 @@ describe('[id].vue', () => {
   })
 
   it('shows MapView when showMap is true and mapLocation is set', async () => {
-    const entryWithMap = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', 'entry-id', 'London, UK', true)
+    const entryWithMap = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', { diaryEntryId: 'entry-id', mapLocation: 'London, UK', showMap: true })
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithMap])
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       json: vi.fn().mockResolvedValue([{ lat: '51.5074', lon: '-0.1278' }]),

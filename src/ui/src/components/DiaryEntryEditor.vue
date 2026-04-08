@@ -90,20 +90,21 @@
           />
 
           <template v-if="showImage">
-            <div
+            <button
               id="image-drop-zone"
               class="image-drop-zone mt-2"
+              type="button"
               :class="{ 'drag-over': isDragging }"
-              tabindex="0"
               @click="triggerFileInput"
-              @dragover.prevent="isDragging = true"
+              @keydown.enter="triggerFileInput"
               @dragleave.prevent="isDragging = false"
+              @dragover.prevent="isDragging = true"
               @drop.prevent="handleDrop"
             >
               <v-img
                 v-if="imagePreview"
-                :src="imagePreview"
                 max-height="200"
+                :src="imagePreview"
               />
               <div
                 v-else
@@ -119,7 +120,7 @@
                   Click, drag & drop, or paste an image
                 </div>
               </div>
-            </div>
+            </button>
             <v-btn
               v-if="imagePreview"
               class="mt-2"
@@ -271,8 +272,7 @@
   function handleWindowPaste (event: ClipboardEvent) {
     const items = event.clipboardData?.items
     if (!items) return
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
+    for (const item of Array.from(items)) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile()
         if (file) {
@@ -285,11 +285,11 @@
   }
 
   onMounted(() => {
-    window.addEventListener('paste', handleWindowPaste)
+    globalThis.addEventListener('paste', handleWindowPaste)
   })
 
   onUnmounted(() => {
-    window.removeEventListener('paste', handleWindowPaste)
+    globalThis.removeEventListener('paste', handleWindowPaste)
   })
 
   watch(() => props.location, newVal => {
@@ -343,10 +343,15 @@
 
 <style scoped>
   .image-drop-zone {
+    background: none;
     border: 2px dashed rgba(var(--v-border-color), var(--v-border-opacity));
     border-radius: 8px;
     cursor: pointer;
+    font: inherit;
     min-height: 120px;
+    padding: 0;
+    text-align: inherit;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;

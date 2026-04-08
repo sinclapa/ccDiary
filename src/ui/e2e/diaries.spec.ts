@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { API_BASE } from './config'
 
 // The WW1 diary with the most complete seed data
-const SEEDED_DIARY_TITLE = 'Local: WW1 Diary'
+const SEEDED_DIARY_TITLE = 'WW1 Diary'
 
 async function getWW1DiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
