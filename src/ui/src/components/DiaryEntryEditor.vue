@@ -90,12 +90,11 @@
           />
 
           <template v-if="showImage">
-            <div
+            <button
               id="image-drop-zone"
               class="image-drop-zone mt-2"
+              type="button"
               :class="{ 'drag-over': isDragging }"
-              role="button"
-              tabindex="0"
               @click="triggerFileInput"
               @keydown.enter="triggerFileInput"
               @dragleave.prevent="isDragging = false"
@@ -121,7 +120,7 @@
                   Click, drag & drop, or paste an image
                 </div>
               </div>
-            </div>
+            </button>
             <v-btn
               v-if="imagePreview"
               class="mt-2"
@@ -344,10 +343,15 @@
 
 <style scoped>
   .image-drop-zone {
+    background: none;
     border: 2px dashed rgba(var(--v-border-color), var(--v-border-opacity));
     border-radius: 8px;
     cursor: pointer;
+    font: inherit;
     min-height: 120px;
+    padding: 0;
+    text-align: inherit;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
