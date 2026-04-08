@@ -36,7 +36,7 @@ export function msalService (
         throw new Error('MSAL not initialized. Call initializeMsal() before using MSAL API.')
       }
 
-      await msalInstance.logoutRedirect()
+      await msalInstance.logoutRedirect({ postLogoutRedirectUri: globalThis.location.href })
       state.isAuthenticated = false
       console.log('Logged out')
     } catch (error) {

@@ -65,10 +65,10 @@ describe('msalService', () => {
     spyLogin.mockRestore()
   })
 
-  it('logout: calls logoutRedirect and sets state', async () => {
+  it('logout: calls logoutRedirect with current page as postLogoutRedirectUri and sets state', async () => {
     const spy = vi.spyOn(msalInstance, 'logoutRedirect').mockResolvedValue(undefined)
     await service.logout()
-    expect(spy).toHaveBeenCalled()
+    expect(spy).toHaveBeenCalledWith({ postLogoutRedirectUri: globalThis.location.href })
     expect(state.isAuthenticated).toBe(false)
     spy.mockRestore()
   })
