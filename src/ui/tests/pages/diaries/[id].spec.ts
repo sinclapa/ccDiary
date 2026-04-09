@@ -31,6 +31,12 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
+vi.mock('@grafana/faro-web-sdk', () => ({
+  getWebInstrumentations: vi.fn(() => []),
+  initializeFaro: vi.fn(() => ({ api: { pushEvent: vi.fn(), startUserAction: vi.fn(() => ({ end: vi.fn() })) } })),
+  TransportItemType: { LOG: 'log' },
+}))
+
 vi.mock('leaflet', () => ({
   default: {
     map: vi.fn(() => ({ setView: vi.fn().mockReturnThis(), remove: vi.fn() })),

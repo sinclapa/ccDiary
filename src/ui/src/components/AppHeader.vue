@@ -1,9 +1,8 @@
 <template>
   <v-app-bar app>
     <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
-    <v-app-bar-title>Cooking Code Diary</v-app-bar-title>
-    <v-spacer />
-    <div v-if="state.isAuthenticated" id="username" class="text-no-wrap text-truncate mr-2 d-none d-sm-block">{{ state.user?.name }}</div>
+    <v-app-bar-title style="flex-shrink: 0">Cooking Code Diary</v-app-bar-title>
+    <div v-if="state.isAuthenticated" id="username" class="text-truncate mr-2 d-none d-sm-block" style="min-width: 0">{{ state.user?.name }}</div>
     <v-btn
       v-if="state.isAuthenticated"
       id="logout"

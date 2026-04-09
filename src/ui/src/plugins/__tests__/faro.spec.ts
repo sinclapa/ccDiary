@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { initFaro } from '../faro'
+import { initFaro, pushFaroEvent, startFaroUserAction, endFaroUserAction } from '../faro'
 import { getAppConfigField } from '@/utils/appConfig'
+
+const mockPushEvent = vi.fn()
+const mockStartUserAction = vi.fn()
+const mockEndUserAction = vi.fn()
 
 const { mockInitializeFaro, mockGetWebInstrumentations, MockTracingInstrumentation, mockGetDefaultOTELInstrumentations } = vi.hoisted(() => ({
   mockInitializeFaro: vi.fn(),
@@ -150,6 +154,13 @@ describe('initFaro', () => {
       })
     })
 
+    it('enables persistent session tracking', () => {
+      setupMocks()
+      initFaro()
+      const config = mockInitializeFaro.mock.calls[0][0]
+      expect(config.sessionTracking).toMatchObject({ enabled: true, persistent: true })
+    })
+
     describe('applyCustomAttributesOnSpan', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let cb: (span: any, init: RequestInit, response?: unknown) => void
@@ -193,5 +204,86 @@ describe('initFaro', () => {
         expect(span.updateName).not.toHaveBeenCalled()
       })
     })
+  })
+})
+
+describe('pushFaroEvent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls faro.api.pushEvent with the given name and attributes', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
+    mockInitializeFaro.mockReturnValue({ api: { pushEvent: mockPushEvent } })
+    initFaro()
+    pushFaroEvent('diary.navigation.forward', { diaryId: 'abc' })
+    expect(mockPushEvent).toHaveBeenCalledWith('diary.navigation.forward', { diaryId: 'abc' })
+  })
+
+  it('calls faro.api.pushEvent with no attributes when omitted', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
+    mockInitializeFaro.mockReturnValue({ api: { pushEvent: mockPushEvent } })
+    initFaro()
+    pushFaroEvent('diary.navigation.start')
+    expect(mockPushEvent).toHaveBeenCalledWith('diary.navigation.start', undefined)
+  })
+
+  it('does nothing when faro is not initialized', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('NOT_SET')
+    initFaro()
+    expect(() => pushFaroEvent('diary.navigation.forward')).not.toThrow()
+    expect(mockPushEvent).not.toHaveBeenCalled()
+  })
+})
+
+describe('startFaroUserAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls faro.api.startUserAction with name and attributes', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
+    mockInitializeFaro.mockReturnValue({ api: { startUserAction: mockStartUserAction } })
+    initFaro()
+    startFaroUserAction('diary-navigation-forward', { diaryId: 'abc' })
+    expect(mockStartUserAction).toHaveBeenCalledWith('diary-navigation-forward', { diaryId: 'abc' })
+  })
+
+  it('calls faro.api.startUserAction with empty attributes when omitted', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
+    mockInitializeFaro.mockReturnValue({ api: { startUserAction: mockStartUserAction } })
+    initFaro()
+    startFaroUserAction('diary-navigation-start')
+    expect(mockStartUserAction).toHaveBeenCalledWith('diary-navigation-start', {})
+  })
+
+  it('does nothing when faro is not initialized', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('NOT_SET')
+    initFaro()
+    expect(() => startFaroUserAction('diary-navigation-forward')).not.toThrow()
+    expect(mockStartUserAction).not.toHaveBeenCalled()
+  })
+})
+
+describe('endFaroUserAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls end() on the action returned by startUserAction', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
+    mockStartUserAction.mockReturnValue({ end: mockEndUserAction })
+    mockInitializeFaro.mockReturnValue({ api: { startUserAction: mockStartUserAction } })
+    initFaro()
+    startFaroUserAction('diary-navigation-forward')
+    endFaroUserAction()
+    expect(mockEndUserAction).toHaveBeenCalledOnce()
+  })
+
+  it('does nothing when no action was started', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('NOT_SET')
+    initFaro()
+    expect(() => endFaroUserAction()).not.toThrow()
+    expect(mockEndUserAction).not.toHaveBeenCalled()
   })
 })
