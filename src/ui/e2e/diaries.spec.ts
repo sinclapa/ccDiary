@@ -20,8 +20,8 @@ async function gotoDiaries (page: import('@playwright/test').Page): Promise<void
 }
 
 async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
-  await page.goto(`/diaries/${diaryId}`)
-  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
+  await page.goto(`/diaries/${diaryId}`, { waitUntil: 'networkidle', timeout: 25000 })
+  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 5000 })
 }
 
 test.describe('Diaries list', () => {

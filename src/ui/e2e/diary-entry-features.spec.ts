@@ -18,8 +18,8 @@ async function getWW1DiaryId (request: import('@playwright/test').APIRequestCont
 }
 
 async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
-  await page.goto(`/diaries/${diaryId}`)
-  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
+  await page.goto(`/diaries/${diaryId}`, { waitUntil: 'networkidle', timeout: 25000 })
+  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 5000 })
 }
 
 // ─── Date picker header year format ────────────────────────────────────────────
@@ -286,8 +286,8 @@ test.describe('Journey map display on diary entries', () => {
   test('no journey-wrapper shown when showJourney is false', async ({ page }) => {
     // May 25 (SEEDED_ENTRY_DAY + 4) has a single entry with showJourney=false
     const dateNoJourney = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY + 4).padStart(2, '0')}`
-    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoJourney}`)
-    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoJourney}`, { waitUntil: 'networkidle', timeout: 25000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 5000 })
     await expect(page.locator('.journey-wrapper')).toHaveCount(0)
   })
 
@@ -309,8 +309,8 @@ test.describe('Journey map display on diary entries', () => {
     }
 
     const dateStr = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
-    await page.goto(`/diaries/${ww1DiaryId}?date=${dateStr}`)
-    await expect(page.locator('.journey-wrapper').first()).toBeVisible({ timeout: 15000 })
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateStr}`, { waitUntil: 'networkidle', timeout: 25000 })
+    await expect(page.locator('.journey-wrapper').first()).toBeVisible({ timeout: 5000 })
   })
 })
 
