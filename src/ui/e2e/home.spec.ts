@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('Home page', () => {
   test('loads and shows navigation', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/', { waitUntil: 'networkidle' })
     await expect(page).toHaveTitle(/ccDiary|Cooking Code Diary|Diary/)
     await expect(page.locator('header, [role="banner"]').first()).toBeVisible()
   })
