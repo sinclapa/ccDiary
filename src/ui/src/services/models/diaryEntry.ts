@@ -1,3 +1,5 @@
+export type JourneyMode = 'crow-flies' | 'walking' | 'car' | 'train' | 'boat'
+
 export interface DiaryEntryInterface {
   diaryEntryId?: string;
   diaryId: string;
@@ -9,6 +11,7 @@ export interface DiaryEntryInterface {
   fromLocation: string;
   toLocation: string;
   showJourney: boolean;
+  journeyMode: JourneyMode;
   imageData?: string;
   imageContentType?: string;
 }
@@ -24,6 +27,7 @@ export default class DiaryEntry implements DiaryEntryInterface {
   fromLocation: string
   toLocation: string
   showJourney: boolean
+  journeyMode: JourneyMode
   imageData?: string
   imageContentType?: string
 
@@ -34,6 +38,7 @@ export default class DiaryEntry implements DiaryEntryInterface {
     fromLocation?: string
     toLocation?: string
     showJourney?: boolean
+    journeyMode?: JourneyMode
     imageData?: string
     imageContentType?: string
   }) {
@@ -47,6 +52,7 @@ export default class DiaryEntry implements DiaryEntryInterface {
     this.fromLocation = options?.fromLocation ?? ''
     this.toLocation = options?.toLocation ?? ''
     this.showJourney = options?.showJourney ?? false
+    this.journeyMode = options?.journeyMode ?? 'crow-flies'
     this.imageData = options?.imageData
     this.imageContentType = options?.imageContentType
   }

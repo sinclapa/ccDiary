@@ -223,6 +223,7 @@ describe('DiaryEntry Service', () => {
       fromLocation: '',
       toLocation: '',
       showJourney: false,
+      journeyMode: 'crow-flies',
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -259,6 +260,7 @@ describe('DiaryEntry Service', () => {
       fromLocation: 'Sandwich, UK',
       toLocation: 'Southampton, UK',
       showJourney: true,
+      journeyMode: 'crow-flies',
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -289,6 +291,7 @@ describe('DiaryEntry Service', () => {
       fromLocation: '',
       toLocation: '',
       showJourney: false,
+      journeyMode: 'crow-flies',
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 
@@ -325,6 +328,7 @@ describe('DiaryEntry Service', () => {
       fromLocation: 'London, UK',
       toLocation: 'Paris, France',
       showJourney: true,
+      journeyMode: 'crow-flies',
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 
