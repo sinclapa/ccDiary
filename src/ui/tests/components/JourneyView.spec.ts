@@ -4,6 +4,7 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import JourneyView from '@/components/JourneyView.vue'
+import type { JourneyMode } from '@/services/models/diaryEntry'
 
 const mockMapInstance = {
   setView: vi.fn().mockReturnThis(),
@@ -43,7 +44,7 @@ vi.mock('leaflet', () => ({
 
 const vuetify = createVuetify({ components, directives })
 
-function mountJourneyView (fromLocation: string, toLocation: string, journeyMode?: string) {
+function mountJourneyView (fromLocation: string, toLocation: string, journeyMode?: JourneyMode) {
   return mount(JourneyView, {
     props: { fromLocation, toLocation, ...(journeyMode ? { journeyMode } : {}) },
     global: { plugins: [vuetify] },
