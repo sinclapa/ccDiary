@@ -91,6 +91,7 @@
                 :from-location="editedItem.fromLocation"
                 :image-content-type="editedItem.imageContentType"
                 :image-data="editedItem.imageData"
+                :journey-mode="editedItem.journeyMode"
                 :location="editedItem.location"
                 :map-location="editedItem.mapLocation"
                 :show-journey="editedItem.showJourney"
@@ -174,7 +175,7 @@
                 {{ diaryEntry.entry }}
               </div>
               <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" class="mt-2" :location="diaryEntry.mapLocation" />
-              <journey-view v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation" class="mt-2" :from-location="diaryEntry.fromLocation" :to-location="diaryEntry.toLocation" />
+              <journey-view v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation" class="mt-2" :from-location="diaryEntry.fromLocation" :journey-mode="diaryEntry.journeyMode" :to-location="diaryEntry.toLocation" />
               <v-img
                 v-if="diaryEntry.imageData && diaryEntry.imageContentType"
                 class="mt-2"
@@ -388,7 +389,7 @@
     dialog.value = true
   }
 
-  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, imageData: string | undefined, imageContentType: string | undefined}) {
+  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: DiaryEntry['journeyMode'], imageData: string | undefined, imageContentType: string | undefined}) {
     editedItem.value.date = payload.date
     editedItem.value.location = payload.location
     editedItem.value.entry = payload.entry
@@ -397,6 +398,7 @@
     editedItem.value.fromLocation = payload.fromLocation
     editedItem.value.toLocation = payload.toLocation
     editedItem.value.showJourney = payload.showJourney
+    editedItem.value.journeyMode = payload.journeyMode
     editedItem.value.imageData = payload.imageData
     editedItem.value.imageContentType = payload.imageContentType
     if (editedItem.value.diaryEntryId === undefined) {

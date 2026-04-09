@@ -59,6 +59,7 @@ export default class DiaryEntryAPIService {
       fromLocation: x.fromLocation ?? '',
       toLocation: x.toLocation ?? '',
       showJourney: x.showJourney ?? false,
+      journeyMode: x.journeyMode ?? 'crow-flies',
       imageData: x.imageData,
       imageContentType: x.imageContentType,
     }))

@@ -36,6 +36,8 @@ namespace ccDiaryApi.Data.Model
         [JsonRequired]
         public bool ShowJourney { get; set; }
 
+        public JourneyMode JourneyMode { get; set; } = JourneyMode.CrowFlies;
+
         public string? ImageData { get; set; }
 
         public string? ImageContentType { get; set; }

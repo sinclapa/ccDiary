@@ -80,6 +80,17 @@
             persistent-hint
           />
 
+          <v-select
+            v-if="showJourney"
+            id="journey-mode"
+            v-model="journeyMode"
+            class="mt-4"
+            :items="journeyModeItems"
+            item-title="label"
+            item-value="value"
+            label="Travel Mode"
+          />
+
           <v-switch
             id="show-image"
             v-model="showImage"
@@ -176,8 +187,17 @@
   import { SubmitEventPromise } from 'vuetify'
   import { VDateInput } from 'vuetify/labs/VDateInput'
   import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+  import type { JourneyMode } from '@/services/models/diaryEntry'
 
-  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, imageData?: string, imageContentType?: string}>()
+  const journeyModeItems: { label: string; value: JourneyMode }[] = [
+    { label: 'As the Crow Flies', value: 'crow-flies' },
+    { label: 'Walking', value: 'walking' },
+    { label: 'Car', value: 'car' },
+    { label: 'Train', value: 'train' },
+    { label: 'Boat', value: 'boat' },
+  ]
+
+  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const location = ref<string>(props.location)
@@ -187,6 +207,7 @@
   const fromLocation = ref<string>(props.fromLocation)
   const toLocation = ref<string>(props.toLocation)
   const showJourney = ref<boolean>(props.showJourney)
+  const journeyMode = ref<JourneyMode>(props.journeyMode)
   const imageData = ref<string | undefined>(props.imageData)
   const imageContentType = ref<string | undefined>(props.imageContentType)
   const showImage = ref<boolean>(!!props.imageData)
@@ -201,7 +222,7 @@
   })
 
   const emit = defineEmits({
-    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, imageData: string | undefined, imageContentType: string | undefined }) {
+    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData: string | undefined, imageContentType: string | undefined }) {
       return payload
     },
     close () {
@@ -227,6 +248,7 @@
         fromLocation: fromLocation.value,
         toLocation: toLocation.value,
         showJourney: showJourney.value,
+        journeyMode: journeyMode.value,
         imageData: imageData.value,
         imageContentType: imageContentType.value,
       })
@@ -321,6 +343,9 @@
   })
   watch(() => props.showJourney, newVal => {
     showJourney.value = newVal
+  })
+  watch(() => props.journeyMode, newVal => {
+    journeyMode.value = newVal
   })
   watch(showJourney, newVal => {
     if (newVal && !fromLocation.value) {

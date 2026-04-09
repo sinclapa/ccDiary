@@ -43,9 +43,9 @@ vi.mock('leaflet', () => ({
 
 const vuetify = createVuetify({ components, directives })
 
-function mountJourneyView (fromLocation: string, toLocation: string) {
+function mountJourneyView (fromLocation: string, toLocation: string, journeyMode?: string) {
   return mount(JourneyView, {
-    props: { fromLocation, toLocation },
+    props: { fromLocation, toLocation, ...(journeyMode ? { journeyMode } : {}) },
     global: { plugins: [vuetify] },
   })
 }
@@ -206,5 +206,72 @@ describe('JourneyView.vue', () => {
     await flushPromises()
     wrapper.unmount()
     expect(mockMapInstance.remove).not.toHaveBeenCalled()
+  })
+
+  it('uses crow-flies style (red dashed) by default', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Sandwich, UK', 'Southampton, UK')
+    await flushPromises()
+    expect(L.polyline).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ color: 'red', dashArray: '6 4' }),
+    )
+  })
+
+  it('uses car style (blue solid) when journeyMode is car', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Sandwich, UK', 'Southampton, UK', 'car')
+    await flushPromises()
+    expect(L.polyline).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ color: '#1565c0' }),
+    )
+  })
+
+  it('uses walking style (green dotted) when journeyMode is walking', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Sandwich, UK', 'Southampton, UK', 'walking')
+    await flushPromises()
+    expect(L.polyline).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ color: '#2e7d32' }),
+    )
+  })
+
+  it('uses train style (orange dashed) when journeyMode is train', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Sandwich, UK', 'Southampton, UK', 'train')
+    await flushPromises()
+    expect(L.polyline).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ color: '#e65100' }),
+    )
+  })
+
+  it('uses boat style (teal dashed) when journeyMode is boat', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Sandwich, UK', 'Southampton, UK', 'boat')
+    await flushPromises()
+    expect(L.polyline).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ color: '#00838f' }),
+    )
+  })
+
+  it('re-renders map when journeyMode prop changes', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    const wrapper = mountJourneyView('Sandwich, UK', 'Southampton, UK', 'crow-flies')
+    await flushPromises()
+    expect(L.map).toHaveBeenCalledTimes(1)
+
+    await wrapper.setProps({ journeyMode: 'car' })
+    await flushPromises()
+    expect(L.map).toHaveBeenCalledTimes(2)
   })
 })

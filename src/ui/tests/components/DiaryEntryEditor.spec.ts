@@ -17,6 +17,7 @@ describe('DiaryEntryEditor.vue', () => {
     fromLocation: '',
     toLocation: '',
     showJourney: false,
+    journeyMode: 'crow-flies' as const,
   }
 
   it('renders form fields with initial props', () => {
@@ -184,10 +185,11 @@ describe('DiaryEntryEditor.vue', () => {
     await submitEventPromise
     const emitted = wrapper.emitted('submit')
     expect(emitted).toBeTruthy()
-    const payload = emitted![0][0] as { showJourney: boolean; fromLocation: string; toLocation: string }
+    const payload = emitted![0][0] as { showJourney: boolean; fromLocation: string; toLocation: string; journeyMode: string }
     expect(payload.showJourney).toBe(true)
     expect(payload.fromLocation).toBe('Sandwich, UK')
     expect(payload.toLocation).toBe('Southampton, UK')
+    expect(payload.journeyMode).toBe('crow-flies')
   })
 
   it('emits submit with showJourney false and empty locations by default', async () => {
@@ -200,10 +202,11 @@ describe('DiaryEntryEditor.vue', () => {
     await submitEventPromise
     const emitted = wrapper.emitted('submit')
     expect(emitted).toBeTruthy()
-    const payload = emitted![0][0] as { showJourney: boolean; fromLocation: string; toLocation: string }
+    const payload = emitted![0][0] as { showJourney: boolean; fromLocation: string; toLocation: string; journeyMode: string }
     expect(payload.showJourney).toBe(false)
     expect(payload.fromLocation).toBe('')
     expect(payload.toLocation).toBe('')
+    expect(payload.journeyMode).toBe('crow-flies')
   })
 
   it('defaults fromLocation to location when showJourney is toggled on with empty fromLocation', async () => {
@@ -498,6 +501,37 @@ describe('DiaryEntryEditor.vue', () => {
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: null })
     await wrapper.vm.$nextTick()
     expect((wrapper.vm as any).imageData).toBeUndefined()
+  })
+
+  it('does not show journey-mode selector when showJourney is false', () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: false },
+      global: { plugins: [vuetify] },
+    })
+    expect(wrapper.find('#journey-mode').exists()).toBe(false)
+  })
+
+  it('shows journey-mode selector when showJourney is true', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, fromLocation: 'Sandwich, UK', toLocation: 'Southampton, UK' },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#journey-mode').exists()).toBe(true)
+  })
+
+  it('emits submit with selected journeyMode in payload', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, fromLocation: 'Sandwich, UK', toLocation: 'Southampton, UK', journeyMode: 'car' as const },
+      global: { plugins: [vuetify] },
+    })
+    const submitEventPromise = Promise.resolve({ valid: true })
+    await (wrapper.vm as any).submit(submitEventPromise)
+    await submitEventPromise
+    const emitted = wrapper.emitted('submit')
+    expect(emitted).toBeTruthy()
+    const payload = emitted![0][0] as { journeyMode: string }
+    expect(payload.journeyMode).toBe('car')
   })
 
   afterEach(() => {
