@@ -1,11 +1,16 @@
 import { getWebInstrumentations, initializeFaro, TransportItemType } from '@grafana/faro-web-sdk'
-import type { TransportItem } from '@grafana/faro-core'
+import type { Faro, TransportItem } from '@grafana/faro-core'
+import type { UserActionInternalInterface } from '@grafana/faro-core/dist/bundle/types/api/userActions/types'
 import { getDefaultOTELInstrumentations, TracingInstrumentation } from '@grafana/faro-web-tracing'
 import { getAppConfigField } from '@/utils/appConfig'
+
+let faroInstance: Faro | undefined
+let currentUserAction: UserActionInternalInterface | undefined
 
 const DYNAMIC_IMPORT_ERROR = /Failed to fetch dynamically imported module/
 
 export function initFaro () {
+  faroInstance = undefined
   const url = getAppConfigField('VITE_FARO_URL')
   if (!url || url === 'NOT_SET') return
 
@@ -17,7 +22,7 @@ export function initFaro () {
 
   const collectorUrlPattern = new RegExp(url.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`))
 
-  initializeFaro({
+  faroInstance = initializeFaro({
     url,
     app: {
       name: 'ccdiary-ui',
@@ -36,6 +41,10 @@ export function initFaro () {
         }
       }
       return item
+    },
+    sessionTracking: {
+      enabled: true,
+      persistent: true,
     },
     instrumentations: [
       ...getWebInstrumentations(),
@@ -66,4 +75,17 @@ export function initFaro () {
       }),
     ],
   })
+}
+
+export function pushFaroEvent (name: string, attributes?: Record<string, string>) {
+  faroInstance?.api.pushEvent(name, attributes)
+}
+
+export function startFaroUserAction (name: string, attributes?: Record<string, string>) {
+  currentUserAction = faroInstance?.api.startUserAction(name, attributes ?? {}) as UserActionInternalInterface | undefined
+}
+
+export function endFaroUserAction () {
+  currentUserAction?.end()
+  currentUserAction = undefined
 }

@@ -20,6 +20,6 @@ export default createVuetify({
     defaultTheme: getSystemTheme(),
   },
   locale: {
-    locale: 'en-UK',
+    locale: 'en',
   },
 })

@@ -14,7 +14,7 @@
           :color="isDatePickerExpanded ? 'primary' : 'secondary'"
           size="small"
           :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
-          @click="toggleDatePickerHeight"
+          @click="onToggleDatePickerHeight"
         >
           <v-icon :icon="isDatePickerExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
           {{ isDatePickerExpanded ? 'Compact View' : 'Expanded View' }}
@@ -26,8 +26,9 @@
             :max-height="datePickerHeight"
             :min="minDate"
             :month="calendarMonth"
+            title=""
             :year="calendarYear"
-            @update:model-value="onCalendarSelectDate"
+            @update:model-value="onCalendarSelectDateTracked"
             @update:month="updateMonth"
             @update:year="updateYear"
           >
@@ -51,7 +52,7 @@
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
-              @click="moveStart()"
+              @click="onMoveStart()"
             >
               <v-icon>
                 mdi-skip-backward
@@ -63,7 +64,7 @@
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
-              @click="moveBackward()"
+              @click="onMoveBackward()"
             >
               <v-icon>
                 mdi-rewind
@@ -79,7 +80,7 @@
                   v-if="state.isAuthenticated"
                   class="mb-2"
                   v-bind="props"
-                  @click="editItem()"
+                  @click="onAddEntry()"
                 >
                   Add
                 </v-btn>
@@ -105,7 +106,7 @@
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
-              @click="moveForward()"
+              @click="onMoveForward()"
             >
               <v-icon>
                 mdi-fast-forward
@@ -117,7 +118,7 @@
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
-              @click="moveEnd()"
+              @click="onMoveEnd()"
             >
               <v-icon>
                 mdi-skip-forward
@@ -158,14 +159,14 @@
                     :color="'red'"
                     icon="mdi-pencil"
                     size="x-small"
-                    @click="editItem(diaryEntry)"
+                    @click="onEditEntry(diaryEntry)"
                   />
                   &nbsp;
                   <v-btn
                     :color="'red'"
                     icon="mdi-delete"
                     size="x-small"
-                    @click="deleteItem(diaryEntry)"
+                    @click="onDeleteEntry(diaryEntry)"
                   />
                 </div>
               </h2>
@@ -185,6 +186,7 @@
         </v-timeline>
       </v-col>
     </v-row>
+
   </v-container>
 
 </template>
@@ -197,6 +199,7 @@
   import dayjs from 'dayjs'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import JourneyView from '@/components/JourneyView.vue'
+  import { startFaroUserAction, endFaroUserAction } from '@/plugins/faro'
 
   const apiStatus = useApiStatusStore()
   const router = useRouter()
@@ -231,6 +234,87 @@
     isDatePickerExpanded.value = !isDatePickerExpanded.value
     localStorage.setItem('id.datePickerExpanded',
                          isDatePickerExpanded.value.toString())
+  }
+
+  const onToggleDatePickerHeight = () => {
+    startFaroUserAction('diary-datepicker-toggle', { expanded: String(!isDatePickerExpanded.value) })
+    try {
+      toggleDatePickerHeight()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onMoveStart = async () => {
+    startFaroUserAction('diary-navigation-start')
+    try {
+      await moveStart()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onMoveBackward = async () => {
+    startFaroUserAction('diary-navigation-backward')
+    try {
+      await moveBackward()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onMoveForward = async () => {
+    startFaroUserAction('diary-navigation-forward')
+    try {
+      await moveForward()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onMoveEnd = async () => {
+    startFaroUserAction('diary-navigation-end')
+    try {
+      await moveEnd()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onAddEntry = async () => {
+    startFaroUserAction('diary-entry-add')
+    try {
+      await editItem()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onEditEntry = async (item: DiaryEntry) => {
+    startFaroUserAction('diary-entry-edit')
+    try {
+      await editItem(item)
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onDeleteEntry = async (item: DiaryEntry) => {
+    startFaroUserAction('diary-entry-delete')
+    try {
+      await deleteItem(item)
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onCalendarSelectDateTracked = async (date: any) => {
+    startFaroUserAction('diary-date-select')
+    try {
+      await onCalendarSelectDate(date)
+    } finally {
+      endFaroUserAction()
+    }
   }
 
   async function loadDiary (diaryId: string) {
