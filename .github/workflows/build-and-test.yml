@@ -249,13 +249,36 @@ jobs:
             STATUS=$(az containerapp revision list \
               --name ${{ vars.CONTAINER_APP_NAME }} \
               --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-              --query "[0].properties.runningState" -o tsv 2>/dev/null || echo "unknown")
+              --query "sort_by([], &properties.createdTime)[-1].properties.runningState" -o tsv 2>/dev/null || echo "unknown")
             if [ "$STATUS" = "Running" ] || [ "$STATUS" = "RunningAtMaxScale" ]; then
               echo "Revision is running ($STATUS)."
               break
             fi
             echo "  Status: $STATUS (attempt $i/30)"
             curl -s -o /dev/null "https://${APP_FQDN}/actuator/health" || true
+            sleep 10
+          done
+
+      - name: Verify deployment health
+        run: |
+          APP_FQDN=$(az containerapp show \
+            --name ${{ vars.CONTAINER_APP_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+            --query 'properties.configuration.ingress.fqdn' -o tsv)
+          echo "Polling https://${APP_FQDN}/actuator/health ..."
+          for i in $(seq 1 20); do
+            HTTP_STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" "https://${APP_FQDN}/actuator/health" || echo "000")
+            HEALTH_STATUS=$(jq -r '.status' /tmp/health.json 2>/dev/null || echo "unknown")
+            echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
+            if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
+              echo "Deployment is healthy."
+              break
+            fi
+            if [ "$i" = "20" ]; then
+              echo "Health check failed after 20 attempts." >&2
+              cat /tmp/health.json >&2
+              exit 1
+            fi
             sleep 10
           done
 
@@ -533,6 +556,8 @@ jobs:
 
     permissions:
       contents: read
+      checks: write
+      pull-requests: write
 
     defaults:
       run:
@@ -643,8 +668,15 @@ jobs:
           path: ${{ github.workspace }}/src/ui/playwright-report/
           retention-days: 5
 
+      - name: Publish E2E Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2.16.1
+        if: always()
+        with:
+          check_name: "E2E Tests"
+          files: "${{ github.workspace }}/src/ui/playwright-report/junit.xml"
+
   create-release:
-    name: Create Release
+    name: create-release
 
     environment: none
 
@@ -655,7 +687,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-prep, deploy-ui, deploy-api]
+    needs: [build-prep, deploy-ui, deploy-api, e2e-tests]
 
     steps:
       - name: Download Artifact
