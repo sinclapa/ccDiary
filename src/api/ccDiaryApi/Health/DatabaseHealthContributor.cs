@@ -4,6 +4,7 @@
 
 namespace ccDiaryApi.Health
 {
+    using System.Diagnostics.CodeAnalysis;
     using ccDiaryApi.Data.Context;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,13 @@ namespace ccDiaryApi.Health
                 using var scope = _scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<DiaryDatabaseContext>();
                 dbContext.Database.ExecuteSqlRaw("SELECT 1");
+
+                var pendingMigrationError = CheckPendingMigrations(dbContext);
+                if (pendingMigrationError != null)
+                {
+                    return pendingMigrationError;
+                }
+
                 return new HealthCheckResult
                 {
                     Status = HealthStatus.UP,
@@ -59,6 +67,37 @@ namespace ccDiaryApi.Health
                     },
                 };
             }
+        }
+
+        /// <summary>
+        /// Returns a DOWN result if SQL Server has pending EF Core migrations, null otherwise.
+        /// SQLite (used in tests via EnsureCreated) is intentionally skipped.
+        /// Requires a live SQL Server; not testable in unit/integration tests.
+        /// </summary>
+        [ExcludeFromCodeCoverage(Justification = "Requires a live SQL Server with pending migrations; not testable in unit/integration tests.")]
+        private static HealthCheckResult? CheckPendingMigrations(DiaryDatabaseContext dbContext)
+        {
+            if (dbContext.Database.ProviderName != "Microsoft.EntityFrameworkCore.SqlServer")
+            {
+                return null;
+            }
+
+            var pending = dbContext.Database.GetPendingMigrations().ToList();
+            if (pending.Count == 0)
+            {
+                return null;
+            }
+
+            return new HealthCheckResult
+            {
+                Status = HealthStatus.DOWN,
+                Details = new Dictionary<string, object>
+                {
+                    { "status", HealthStatus.DOWN.ToString() },
+                    { "database", "SQL Server" },
+                    { "error", $"Pending migrations: {string.Join(", ", pending)}" },
+                },
+            };
         }
     }
 }

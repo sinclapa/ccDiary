@@ -175,6 +175,14 @@ app.UseDefaultFiles();
 
 app.UseStaticFiles();
 
+app.UseExceptionHandler(exceptionHandlerApp =>
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsync("{\"title\":\"An error occurred.\",\"status\":500}");
+    }));
+
 app.UseCors("cors");
 
 app.UseAuthentication();
