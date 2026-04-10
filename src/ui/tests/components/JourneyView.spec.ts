@@ -281,7 +281,7 @@ describe('JourneyView.vue', () => {
     mountJourneyView('London, UK', 'Paris, France', 'car')
     await flushPromises()
     const tileLayerCalls = (L.tileLayer as unknown as ReturnType<typeof vi.fn>).mock.calls
-    const seaMapCall = tileLayerCalls.find((args: unknown[]) => typeof args[0] === 'string' && (args[0] as string).includes('openseamap.org'))
+    const seaMapCall = tileLayerCalls.find((args: unknown[]) => args[0] === 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png')
     expect(seaMapCall).toBeUndefined()
   })
 
