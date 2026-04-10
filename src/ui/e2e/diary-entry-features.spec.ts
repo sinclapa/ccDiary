@@ -229,20 +229,22 @@ test.describe('DiaryEntry API — showJourney, fromLocation, toLocation fields',
       expect(entry).toHaveProperty('showJourney')
       expect(entry).toHaveProperty('fromLocation')
       expect(entry).toHaveProperty('toLocation')
+      expect(entry).toHaveProperty('journeyMode')
     }
   })
 
-  test('seeded May 21 entry has showJourney=true with fromLocation and toLocation set', async ({ request }) => {
+  test('seeded May 21 entry has showJourney=true with fromLocation, toLocation, and journeyMode set', async ({ request }) => {
     const response = await request.get(
       `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
       { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
     )
-    const entries: Array<{ showJourney: boolean; fromLocation: string; toLocation: string }> = await response.json()
+    const entries: Array<{ showJourney: boolean; fromLocation: string; toLocation: string; journeyMode: string }> = await response.json()
     expect(entries.length).toBeGreaterThan(0)
     const journeyEntry = entries.find(e => e.showJourney)
     expect(journeyEntry).toBeDefined()
     expect(journeyEntry?.fromLocation).toBeTruthy()
     expect(journeyEntry?.toLocation).toBeTruthy()
+    expect(['crow-flies', 'walking', 'car', 'train', 'boat']).toContain(journeyEntry?.journeyMode)
   })
 
   test('seeded May 22 entries have showJourney=true', async ({ request }) => {

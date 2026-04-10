@@ -1,5 +1,11 @@
 <template>
   <v-container style="overflow-y: visible">
+    <v-progress-linear
+      :active="loading"
+      color="primary"
+      height="2"
+      indeterminate
+    />
     <v-row>
       <div>
         <span class="title">{{ diary?.title }}&nbsp;</span>
@@ -204,6 +210,7 @@
 
   const apiStatus = useApiStatusStore()
   const router = useRouter()
+  const loading = ref(false)
 
   // Detect if the device is mobile
   const dialog = ref(false)
@@ -517,6 +524,7 @@
   function setDateInUrl (date: Date, replace: boolean) {
     const dateStr = dayjs(date).format('YYYY-MM-DD')
     if (route.query.date === dateStr) return
+    localStorage.setItem(`diary.${route.params.id}.lastDate`, dateStr)
     const query = { ...route.query, date: dateStr }
     if (replace) {
       router.replace({ query })
@@ -526,7 +534,14 @@
   }
 
   async function selectDate (date: any) {
-    diaryEntries.value = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, date.getFullYear(), date.getMonth() + 1, date.getDate())
+    loading.value = true
+    try {
+      diaryEntries.value = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, date.getFullYear(), date.getMonth() + 1, date.getDate())
+    } catch {
+      // API unavailable — ApiStatusBanner surfaces this to the user
+    } finally {
+      loading.value = false
+    }
   }
 
   async function onCalendarSelectDate (date: any) {
@@ -582,6 +597,7 @@
   })
 
   function loadDiaryData () {
+    loading.value = true
     loadDiary(diaryId)
     loadCalendar(diaryId).then(async x => {
       let startDate = x
@@ -599,11 +615,24 @@
           }
         }
       }
+      if (startDate === x) {
+        const storedDate = localStorage.getItem(`diary.${diaryId}.lastDate`)
+        if (storedDate && dayjs(storedDate, 'YYYY-MM-DD', true).isValid()) {
+          const stored = dayjs(storedDate).toDate()
+          startDate = maxDate.value && stored > maxDate.value ? maxDate.value
+            : x && stored < x ? x
+            : stored
+        }
+      }
       selectedDate.value = startDate
       calendarMonth.value = dayjs(startDate).month()
       calendarYear.value = dayjs(startDate).year()
       await selectDate(selectedDate.value)
       setDateInUrl(selectedDate.value, true)
+    }).catch(() => {
+      // API unavailable — ApiStatusBanner surfaces this to the user
+    }).finally(() => {
+      loading.value = false
     })
   }
 

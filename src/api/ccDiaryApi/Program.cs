@@ -5,6 +5,8 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Data.Context;
@@ -99,7 +101,10 @@ builder.Services.AddScoped<IAppInfoService, AppInfoService>();
 
 builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter(JsonNamingPolicy.KebabCaseLower)));
 
 // Add Steeltoe actuators
 builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();

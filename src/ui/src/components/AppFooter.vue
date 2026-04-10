@@ -14,7 +14,7 @@
     >
       <v-icon
         :icon="item.icon"
-        :size="item.icon === '$vuetify' ? 24 : 16"
+        :size=16
       />
     </a>
 
@@ -40,14 +40,14 @@
       href: 'https://vuetifyjs.com/',
     },
     {
-      title: 'Vuetify Support',
-      icon: 'mdi-shield-star-outline',
-      href: 'https://support.vuetifyjs.com/',
-    },
-    {
       title: 'GitHub',
       icon: `mdi-github`,
       href: 'https://github.com/sinclapa/ccDiary',
+    },
+    {
+      title: 'Swagger API',
+      icon: '$swagger',
+      href: apiUrl ? new URL('/swagger', apiUrl).href : '',
     },
     {
       title: `API ${apiUrl}`,

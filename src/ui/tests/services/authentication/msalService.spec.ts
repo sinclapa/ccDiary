@@ -40,10 +40,12 @@ describe('msalService', () => {
     spyInit.mockRestore()
   })
 
-  it('login: calls loginRedirect and sets state', async () => {
-    const spy = vi.spyOn(msalInstance, 'loginRedirect').mockResolvedValue({ user: 'foo' } as any)
+  it('login: calls loginPopup with scopes and sets authenticated state', async () => {
+    const spy = vi.spyOn(msalInstance, 'loginPopup').mockResolvedValue({ account: { name: 'user' } } as any)
+    vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([{ name: 'user' }] as any)
     await service.login()
-    expect(spy).toHaveBeenCalledTimes(2)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ scopes: expect.any(Array) }))
     expect(state.isAuthenticated).toBe(true)
     spy.mockRestore()
   })
@@ -56,8 +58,21 @@ describe('msalService', () => {
     spy.mockRestore()
   })
 
+  it('login: falls back to loginRedirect when popup is blocked', async () => {
+    const { BrowserAuthError } = await import('@azure/msal-browser')
+    const blockedError = new BrowserAuthError('popup_window_error')
+    vi.spyOn(msalInstance, 'loginPopup').mockRejectedValue(blockedError)
+    const redirectSpy = vi.spyOn(msalInstance, 'loginRedirect').mockResolvedValue(undefined)
+    await service.login()
+    expect(redirectSpy).toHaveBeenCalledWith(expect.objectContaining({
+      scopes: expect.any(Array),
+      state: expect.any(String),
+    }))
+    redirectSpy.mockRestore()
+  })
+
   it('login: handles error', async () => {
-    const spyLogin = vi.spyOn(msalInstance, 'loginRedirect').mockRejectedValue(new Error('fail'))
+    const spyLogin = vi.spyOn(msalInstance, 'loginPopup').mockRejectedValue(new Error('fail'))
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     await service.login()
     expect(spy).toHaveBeenCalledWith('Login error:', expect.any(Error))
@@ -97,6 +112,20 @@ describe('msalService', () => {
     await service.handleRedirect()
     expect(state.isAuthenticated).toBe(false)
     expect(state.user).toBeUndefined()
+  })
+
+  it('handleRedirect: returns preserved state path from redirect result', async () => {
+    vi.spyOn(msalInstance, 'handleRedirectPromise').mockResolvedValue({ state: '/diaries/123' } as any)
+    vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([{ name: 'user1' }] as any)
+    const result = await service.handleRedirect()
+    expect(result).toBe('/diaries/123')
+  })
+
+  it('handleRedirect: returns null when no redirect result', async () => {
+    vi.spyOn(msalInstance, 'handleRedirectPromise').mockResolvedValue(null)
+    vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([])
+    const result = await service.handleRedirect()
+    expect(result).toBeNull()
   })
 
   it('handleRedirect: handles error', async () => {

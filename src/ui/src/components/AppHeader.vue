@@ -18,7 +18,7 @@
   </v-app-bar>
   <v-navigation-drawer
     v-model="drawer"
-    :location="$vuetify.display.mobile ? 'bottom' : undefined"
+    :location="$vuetify.display.mobile ? 'top' : undefined"
     temporary
   >
     <v-list-item subtitle="Diary" title="Cooking Code" />
@@ -30,10 +30,12 @@
 
 <script setup lang="ts">
   import { onMounted } from 'vue'
+  import { useRouter } from 'vue-router'
   import { msalService } from '@/services/authentication/msalService'
   import { state } from '@/services/authentication/msalConfig'
 
   const drawer = ref(false)
+  const router = useRouter()
   const { initializeInstance, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor } = msalService()
 
   const handleLogin = async () => {
@@ -54,7 +56,8 @@
 
   onMounted(async () => {
     await initialize()
-    await handleRedirect()
+    const redirectPath = await handleRedirect()
+    if (redirectPath) await router.replace(redirectPath)
     await registerAuthorizationHeaderInterceptor()
   })
 </script>

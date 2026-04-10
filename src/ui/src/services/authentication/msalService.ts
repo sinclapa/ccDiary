@@ -1,3 +1,4 @@
+import { BrowserAuthError } from '@azure/msal-browser'
 import { msalInstance as defaultMsalInstance, state as defaultState } from '@/services/authentication/msalConfig'
 import { getAppConfigField } from '@/utils/appConfig'
 
@@ -15,18 +16,28 @@ export function msalService (
   }
 
   const login = async () => {
+    if (!msalInstance) {
+      console.error('Login error:', new Error('MSAL not initialized. Call initializeMsal() before using MSAL API.'))
+      return
+    }
+    const scopes = [`${getAppConfigField('VITE_APPLICATION_ID_URI')}/Diary.Update`]
     try {
-      if (!msalInstance) {
-        throw new Error('MSAL not initialized. Call initializeMsal() before using MSAL API.')
+      const loginResponse = await msalInstance.loginPopup({ scopes })
+      if (loginResponse) {
+        state.isAuthenticated = true
+        state.user = msalInstance.getAllAccounts()[0]
       }
-      await msalInstance.loginRedirect()
-      state.isAuthenticated = true
-
-      const loginResponse = await msalInstance.loginRedirect()
-      state.isAuthenticated = true
-      console.log('Login success:', loginResponse)
-    } catch (error) {
-      console.error('Login error:', error)
+    } catch (popupError) {
+      if (popupError instanceof BrowserAuthError &&
+        (popupError.errorCode === 'popup_window_error' || popupError.errorCode === 'empty_window_error')) {
+        try {
+          await msalInstance.loginRedirect({ scopes, state: win.location.pathname + win.location.search })
+        } catch (error) {
+          console.error('Login error:', error)
+        }
+      } else {
+        console.error('Login error:', popupError)
+      }
     }
   }
 
@@ -46,15 +57,17 @@ export function msalService (
     }
   }
 
-  const handleRedirect = async () => {
+  const handleRedirect = async (): Promise<string | null> => {
     try {
-      await msalInstance.handleRedirectPromise()
+      const result = await msalInstance.handleRedirectPromise()
       if (msalInstance.getAllAccounts()) {
         state.isAuthenticated = msalInstance.getAllAccounts().length > 0
         state.user = msalInstance.getAllAccounts()[0]
       }
+      return result?.state ?? null
     } catch (error) {
       console.error('Redirect error:', error)
+      return null
     }
   }
 

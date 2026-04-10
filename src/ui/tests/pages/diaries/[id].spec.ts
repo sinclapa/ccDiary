@@ -312,6 +312,62 @@ describe('[id].vue', () => {
     newWrapper.unmount()
   })
 
+  it('setDateInUrl writes diary.{id}.lastDate to localStorage', async () => {
+    await flushPromises()
+    vi.mocked(localStorage.setItem).mockClear()
+    const testDate = new Date(2020, 4, 21)
+    ;(wrapper.vm as any).setDateInUrl(testDate, true)
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      `diary.${diaryId}.lastDate`,
+      '2020-05-21',
+    )
+  })
+
+  it('uses stored date from localStorage when no URL param is present', async () => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+      if (key === `diary.${diaryId}.lastDate`) return '2020-06-15'
+      return null
+    })
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect((newWrapper.vm as any).selectedDate).toEqual(new Date(2020, 5, 15))
+    newWrapper.unmount()
+  })
+
+  it('clamps stored date to minDate when stored date is before diary range', async () => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+      if (key === `diary.${diaryId}.lastDate`) return '2019-01-01'
+      return null
+    })
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect((newWrapper.vm as any).selectedDate).toEqual(minDate)
+    newWrapper.unmount()
+  })
+
+  it('clamps stored date to maxDate when stored date is after diary range', async () => {
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+      if (key === `diary.${diaryId}.lastDate`) return '2025-12-31'
+      return null
+    })
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect((newWrapper.vm as any).selectedDate).toEqual(maxDate)
+    newWrapper.unmount()
+  })
+
+  it('URL param takes precedence over stored date in localStorage', async () => {
+    mockQuery.date = '2020-03-10'
+    vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+      if (key === `diary.${diaryId}.lastDate`) return '2020-09-20'
+      return null
+    })
+    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    expect((newWrapper.vm as any).selectedDate).toEqual(new Date(2020, 2, 10))
+    newWrapper.unmount()
+  })
+
   it('renders diary title and author in v-row', async () => {
     await flushPromises()
     const titleSpan = wrapper.find('.title')
