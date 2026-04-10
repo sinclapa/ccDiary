@@ -264,6 +264,27 @@ describe('JourneyView.vue', () => {
     )
   })
 
+  it('adds OpenSeaMap tile overlay when journeyMode is boat', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Southampton, UK', 'Le Havre, France', 'boat')
+    await flushPromises()
+    expect(L.tileLayer).toHaveBeenCalledWith(
+      expect.stringContaining('openseamap.org'),
+      expect.objectContaining({ opacity: 0.8 }),
+    )
+  })
+
+  it('does not add OpenSeaMap tile overlay for non-boat modes', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('London, UK', 'Paris, France', 'car')
+    await flushPromises()
+    const tileLayerCalls = (L.tileLayer as unknown as ReturnType<typeof vi.fn>).mock.calls
+    const seaMapCall = tileLayerCalls.find((args: unknown[]) => typeof args[0] === 'string' && (args[0] as string).includes('openseamap.org'))
+    expect(seaMapCall).toBeUndefined()
+  })
+
   it('re-renders map when journeyMode prop changes', async () => {
     stubFetchSuccess()
     const L = (await import('leaflet')).default

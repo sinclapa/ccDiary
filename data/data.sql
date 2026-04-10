@@ -199,5 +199,7 @@ WHEN NOT MATCHED THEN INSERT (DiaryEntryId, Date, Location, Entry, DiaryId) VALU
 UPDATE DiaryEntry SET ShowMap = 1, MapLocation = N'Sandwich, UK' WHERE DiaryEntryId = 'B712F351-EFC2-4424-1A5C-08DE012FB313';
 UPDATE DiaryEntry SET ShowMap = 1, MapLocation = N'Southampton, UK' WHERE DiaryEntryId = '1E5128FE-F162-4D8B-1A5D-08DE012FB313';
 
--- DiaryEntry: Set ShowJourney, FromLocation, ToLocation for seeded entries
-UPDATE DiaryEntry SET ShowJourney = 1, FromLocation = N'Sandwich, UK', ToLocation = N'Southampton, UK' WHERE DiaryEntryId = 'B712F351-EFC2-4424-1A5C-08DE012FB313';
+-- DiaryEntry: Set ShowJourney, FromLocation, ToLocation, JourneyMode for seeded entries
+UPDATE DiaryEntry SET ShowJourney = 1, FromLocation = N'Sandwich, UK', ToLocation = N'Southampton, UK', JourneyMode = 0 WHERE DiaryEntryId = 'B712F351-EFC2-4424-1A5C-08DE012FB313';
+UPDATE DiaryEntry SET ShowJourney = 1, JourneyMode = 1 WHERE DiaryEntryId = '03901FEA-BA5C-4EFF-1A5E-08DE012FB313';
+UPDATE DiaryEntry SET ShowJourney = 1, JourneyMode = 3 WHERE DiaryEntryId = 'AF59B9C4-07CE-4EF8-1A5F-08DE012FB313';

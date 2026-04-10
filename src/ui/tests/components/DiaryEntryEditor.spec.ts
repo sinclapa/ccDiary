@@ -534,6 +534,34 @@ describe('DiaryEntryEditor.vue', () => {
     expect(payload.journeyMode).toBe('car')
   })
 
+  it('journey mode selector uses crow-flies as default journeyMode', async () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true, journeyMode: 'crow-flies' as const },
+      global: { plugins: [vuetify] },
+    })
+    await wrapper.vm.$nextTick()
+    const payload = { journeyMode: (wrapper.vm as any).journeyMode }
+    expect(payload.journeyMode).toBe('crow-flies')
+  })
+
+  it('journey mode items include icons for each mode', () => {
+    const wrapper = mount(DiaryEntryEditor, {
+      props: { ...defaultProps, showJourney: true },
+      global: { plugins: [vuetify] },
+    })
+    const items = (wrapper.vm as any).journeyModeItems as Array<{ label: string; value: string; icon: string }>
+    expect(items).toHaveLength(5)
+    for (const item of items) {
+      expect(item.icon).toBeTruthy()
+      expect(item.icon).toMatch(/^mdi-/)
+    }
+    expect(items.find(i => i.value === 'crow-flies')?.icon).toBe('mdi-bird')
+    expect(items.find(i => i.value === 'walking')?.icon).toBe('mdi-walk')
+    expect(items.find(i => i.value === 'car')?.icon).toBe('mdi-car')
+    expect(items.find(i => i.value === 'train')?.icon).toBe('mdi-train')
+    expect(items.find(i => i.value === 'boat')?.icon).toBe('mdi-ferry')
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })

@@ -45,7 +45,7 @@ namespace ccDiaryApiTest.Integration
             // Validate entries
             var responeEntries = await _httpClient.GetAsync($"api/v1/DiaryEntry/GetDiaryEntries/{archiveDiary.Diary.DiaryId}");
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
+            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(resultEntries);
             Assert.AreEqual(3, resultEntries.Count());
             Assert.AreEqual(archiveDiary.DiaryEntries[0].Entry, resultEntries.ElementAt(0).Entry);
@@ -77,7 +77,7 @@ namespace ccDiaryApiTest.Integration
             // Validate entries
             var responeEntries = await _httpClient.GetAsync($"api/v1/DiaryEntry/GetDiaryEntries/{archiveDiary.Diary.DiaryId}");
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
+            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(resultEntries);
             Assert.AreEqual(3, resultEntries.Count());
             Assert.AreEqual(archiveDiary.DiaryEntries[0].Entry, resultEntries.ElementAt(0).Entry);
@@ -102,7 +102,7 @@ namespace ccDiaryApiTest.Integration
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
             var responeEntries = await _httpClient.GetAsync($"api/v1/DiaryEntry/GetDiaryEntries/{archiveDiary.Diary.DiaryId}");
-            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
+            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(resultEntries);
             var updatedEntry = resultEntries.First(e => e.DiaryEntryId == archiveDiary.DiaryEntries[0].DiaryEntryId);
             Assert.IsTrue(updatedEntry.ShowMap);
@@ -116,10 +116,11 @@ namespace ccDiaryApiTest.Integration
             var archiveDiary = CreateArchiveDiary();
             await _httpClient.PostAsJsonAsync($"api/v1/DiaryArchive/Import", archiveDiary);
 
-            // Update showJourney, fromLocation, toLocation on one entry and reimport
+            // Update showJourney, fromLocation, toLocation, journeyMode on one entry and reimport
             archiveDiary.DiaryEntries[0].ShowJourney = true;
             archiveDiary.DiaryEntries[0].FromLocation = "Glasgow, UK";
             archiveDiary.DiaryEntries[0].ToLocation = "Edinburgh, UK";
+            archiveDiary.DiaryEntries[0].JourneyMode = JourneyMode.Train;
 
             // Act
             var response = await _httpClient.PostAsJsonAsync($"api/v1/DiaryArchive/Import", archiveDiary);
@@ -127,12 +128,13 @@ namespace ccDiaryApiTest.Integration
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
             var responeEntries = await _httpClient.GetAsync($"api/v1/DiaryEntry/GetDiaryEntries/{archiveDiary.Diary.DiaryId}");
-            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>();
+            var resultEntries = await responeEntries.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(resultEntries);
             var updatedEntry = resultEntries.First(e => e.DiaryEntryId == archiveDiary.DiaryEntries[0].DiaryEntryId);
             Assert.IsTrue(updatedEntry.ShowJourney);
             Assert.AreEqual("Glasgow, UK", updatedEntry.FromLocation);
             Assert.AreEqual("Edinburgh, UK", updatedEntry.ToLocation);
+            Assert.AreEqual(JourneyMode.Train, updatedEntry.JourneyMode);
         }
 
         private static DiaryArchiveDTO CreateArchiveDiary()

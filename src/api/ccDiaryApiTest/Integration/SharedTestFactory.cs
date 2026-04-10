@@ -4,9 +4,18 @@
 
 namespace ccDiaryApiTest.Integration
 {
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
+
     [TestClass]
     public class SharedTestFactory
     {
+        public static readonly JsonSerializerOptions ApiJsonOptions = new JsonSerializerOptions
+        {
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.KebabCaseLower) },
+            PropertyNameCaseInsensitive = true,
+        };
+
         public static CustomWebApplicationFactory<Program> Factory { get; private set; } = null!;
 
         [AssemblyInitialize]

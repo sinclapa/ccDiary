@@ -1,5 +1,11 @@
 <template>
   <div>
+    <v-progress-linear
+      :active="loading"
+      color="primary"
+      height="2"
+      indeterminate
+    />
     <v-data-table
       :headers="headers"
       :items="diaries"
@@ -87,6 +93,7 @@
   import { useApiStatusStore } from '@/stores/apiStatus'
 
   const apiStatus = useApiStatusStore()
+  const loading = ref(false)
   const dialogDelete = ref(false)
   const dialog = ref(false)
   const diaries = ref([] as Diary[])
@@ -155,7 +162,14 @@
   }
 
   async function data () {
-    diaries.value = await diaryAPI.getDiaries()
+    loading.value = true
+    try {
+      diaries.value = await diaryAPI.getDiaries()
+    } catch {
+      // API unavailable — ApiStatusBanner surfaces this to the user
+    } finally {
+      loading.value = false
+    }
   }
 
   watch(() => apiStatus.recoveryCount, count => {

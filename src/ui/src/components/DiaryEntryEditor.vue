@@ -89,7 +89,19 @@
             item-title="label"
             item-value="value"
             label="Travel Mode"
-          />
+          >
+            <template #item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps">
+                <template #prepend>
+                  <v-icon>{{ item.raw.icon }}</v-icon>
+                </template>
+              </v-list-item>
+            </template>
+            <template #selection="{ item }">
+              <v-icon class="mr-2" size="small">{{ item.raw.icon }}</v-icon>
+              {{ item.title }}
+            </template>
+          </v-select>
 
           <v-switch
             id="show-image"
@@ -189,12 +201,12 @@
   import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
   import type { JourneyMode } from '@/services/models/diaryEntry'
 
-  const journeyModeItems: { label: string; value: JourneyMode }[] = [
-    { label: 'As the Crow Flies', value: 'crow-flies' },
-    { label: 'Walking', value: 'walking' },
-    { label: 'Car', value: 'car' },
-    { label: 'Train', value: 'train' },
-    { label: 'Boat', value: 'boat' },
+  const journeyModeItems: { label: string; value: JourneyMode; icon: string }[] = [
+    { label: 'As the Crow Flies', value: 'crow-flies', icon: 'mdi-bird' },
+    { label: 'Walking',           value: 'walking',    icon: 'mdi-walk' },
+    { label: 'Car',               value: 'car',        icon: 'mdi-car' },
+    { label: 'Train',             value: 'train',      icon: 'mdi-train' },
+    { label: 'Boat',              value: 'boat',       icon: 'mdi-ferry' },
   ]
 
   const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()

@@ -24,7 +24,7 @@
   import { useApiStatusStore } from '@/stores/apiStatus'
 
   const apiStatus = useApiStatusStore()
-  const message = 'The ingredients are being prepared, please wait...'
+  const message = 'Preparing the ingredients, please wait...'
   const messageChars = message.split('')
 
   const elapsedSeconds = ref(0)

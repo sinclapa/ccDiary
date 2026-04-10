@@ -130,6 +130,12 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
+      if ((props.journeyMode ?? 'crow-flies') === 'boat') {
+        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openseamap.org">OpenSeaMap</a> contributors',
+          opacity: 0.8,
+        }).addTo(leafletMap)
+      }
       L.marker(fromCoords).addTo(leafletMap)
       L.marker(toCoords).addTo(leafletMap)
       L.polyline(routeCoords, style).addTo(leafletMap)
@@ -170,6 +176,7 @@
   .journey-container {
     width: 100%;
     height: 250px;
+    isolation: isolate;
   }
 
   .journey-hidden {

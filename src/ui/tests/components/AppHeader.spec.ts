@@ -83,44 +83,32 @@ describe('AppHeader', () => {
     drawerButton.trigger('click')
   })
 
-  test('drawer location is "bottom" on mobile', async () => {
+  test('drawer location is "top" on mobile', async () => {
     const wrapper = mount({
       template: '<v-layout><app-header></app-header></v-layout>',
     }, {
       global: {
         components: { AppHeader },
         plugins: [vuetify],
-        mocks: {
-          $vuetify: {
-            display: { mobile: true },
-          },
-        },
+        mocks: { $vuetify: { display: { mobile: true } } },
       },
     })
-    // Find the navigation drawer
     const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
-    // The prop should be "bottom"
-    expect(drawer.props('location')).toBe('bottom')
+    expect(drawer.props('location')).toBe('top')
   })
 
-  test('drawer location is not "bottom" on non-mobile', async () => {
+  test('drawer location is not "top" on non-mobile', async () => {
     const wrapper = mount({
       template: '<v-layout><app-header></app-header></v-layout>',
     }, {
       global: {
         components: { AppHeader },
         plugins: [vuetify],
-        mocks: {
-          $vuetify: {
-            display: { mobile: false },
-          },
-        },
+        mocks: { $vuetify: { display: { mobile: false } } },
       },
     })
-    // Find the navigation drawer
     const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
-    // The prop should be "bottom"
-    expect(drawer.props('location')).not.toBe('bottom')
+    expect(drawer.props('location')).not.toBe('top')
   })
 
   test('calls initialize, handleRedirect, and registerAuthorizationHeaderInterceptor on mount', async () => {
