@@ -1,5 +1,5 @@
 <template>
-  <v-footer app height="40">
+  <v-footer app height="40" class="app-footer">
     <div class="text-caption text-disabled">
       <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
     </div>
@@ -58,6 +58,13 @@
 </script>
 
 <style scoped lang="sass">
+  .app-footer
+    position: fixed !important
+    bottom: 0
+    left: 0
+    right: 0
+    z-index: 1004
+
   .social-link :deep(.v-icon)
     color: rgba(var(--v-theme-on-background), var(--v-disabled-opacity))
     text-decoration: none
