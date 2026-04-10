@@ -671,26 +671,9 @@ jobs:
       - name: Publish E2E Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2.16.1
         if: always()
-        id: e2e_results
         with:
           check_name: "E2E Tests"
           files: "${{ github.workspace }}/src/ui/playwright-report/junit.xml"
-
-      - name: Post E2E Status Comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        if: github.event_name == 'pull_request'
-        with:
-          recreate: true
-          header: e2e-results
-          message: |
-            ## E2E Test Results
-            ${{ steps.e2e_results.outputs.conclusion == 'success' && '![E2E Tests](https://img.shields.io/badge/E2E%20Tests-passed-brightgreen)' || '![E2E Tests](https://img.shields.io/badge/E2E%20Tests-failed-red)' }}
-
-            | | Count |
-            |---|---|
-            | Passed | ${{ steps.e2e_results.outputs.passed }} |
-            | Failed | ${{ steps.e2e_results.outputs.failed }} |
-            | Skipped | ${{ steps.e2e_results.outputs.skipped }} |
 
   create-release:
     name: create-release
