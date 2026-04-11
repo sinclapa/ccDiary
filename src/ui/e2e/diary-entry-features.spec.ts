@@ -350,7 +350,7 @@ test.describe('URL date bookmarking', () => {
     expect(initialDateMatch).not.toBeNull()
     const initialDate = initialDateMatch![1]
 
-    const forwardBtn = page.locator('button:has(.mdi-fast-forward)').first()
+    const forwardBtn = page.locator('button[aria-label="Move forward"]').first()
     await expect(forwardBtn).not.toBeDisabled()
     await forwardBtn.click()
 
@@ -397,7 +397,7 @@ test.describe('URL date bookmarking', () => {
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Use forward navigation (router.replace — should not add a history entry)
-    const forwardBtn = page.locator('button:has(.mdi-fast-forward)').first()
+    const forwardBtn = page.locator('button[aria-label="Move forward"]').first()
     await expect(forwardBtn).not.toBeDisabled()
     await forwardBtn.click()
     await expect.poll(() => page.url()).toMatch(/[?&]date=\d{4}-\d{2}-\d{2}/)
@@ -442,8 +442,8 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
   test('edit and delete buttons are hidden without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
-    await expect(page.locator('button:has(.mdi-pencil)')).toHaveCount(0)
-    await expect(page.locator('button:has(.mdi-delete)')).toHaveCount(0)
+    await expect(page.locator('button[aria-label="Edit entry"]')).toHaveCount(0)
+    await expect(page.locator('button[aria-label="Delete entry"]')).toHaveCount(0)
   })
 
   test('Show Journey toggle is not visible without authentication', async ({ page }) => {

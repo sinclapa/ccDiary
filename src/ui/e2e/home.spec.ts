@@ -15,7 +15,7 @@ test.describe('Home page', () => {
 
   test('navigation drawer opens and shows links', async ({ page }) => {
     await page.goto('/')
-    await page.locator('[aria-label="navigation icon button"], .v-app-bar__nav-icon, button:has(.mdi-menu)').first().click()
+    await page.locator('button[aria-label="Open navigation"]').first().click()
     await expect(page.getByText('Diaries')).toBeVisible()
     await expect(page.getByText('Home')).toBeVisible()
   })
