@@ -171,6 +171,7 @@
 <style scoped>
   .journey-wrapper {
     width: 100%;
+    isolation: isolate;
   }
 
   .journey-container {

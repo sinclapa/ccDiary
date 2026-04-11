@@ -1,11 +1,13 @@
 <template>
   <v-container style="overflow-y: visible">
+    <v-row>
     <v-progress-linear
       :active="loading"
       color="primary"
       height="2"
       indeterminate
     />
+    </v-row>
     <v-row>
       <div>
         <span class="title">{{ diary?.title }}&nbsp;</span>
@@ -14,17 +16,6 @@
     </v-row>
     <v-row>
       <v-col cols="auto">
-        <v-btn
-          :aria-label="isDatePickerExpanded ? 'Collapse date picker' : 'Expand date picker'"
-          class="mb-3"
-          :color="isDatePickerExpanded ? 'primary' : 'secondary'"
-          size="small"
-          :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
-          @click="onToggleDatePickerHeight"
-        >
-          <v-icon :icon="isDatePickerExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
-          {{ isDatePickerExpanded ? 'Compact View' : 'Expanded View' }}
-        </v-btn>
         <v-row>
           <v-date-picker
             v-model="selectedDate"
@@ -32,12 +23,23 @@
             :max-height="datePickerHeight"
             :min="minDate"
             :month="calendarMonth"
-            title=""
             :year="calendarYear"
             @update:model-value="onCalendarSelectDateTracked"
             @update:month="updateMonth"
             @update:year="updateYear"
           >
+            <template #title>
+              <v-btn
+                :aria-label="isDatePickerExpanded ? 'Collapse date picker' : 'Expand date picker'"
+                :color="isDatePickerExpanded ? 'primary' : 'secondary'"
+                size="small"
+                :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
+                @click="onToggleDatePickerHeight"
+              >
+                <v-icon :icon="isDatePickerExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+                {{ isDatePickerExpanded ? 'Compact View' : 'Expanded View' }}
+              </v-btn>
+            </template>
             <template #header="{ transition }">
               <v-date-picker-header
                 :header="selectedDate ? dayjs(selectedDate).format('ddd D MMM YYYY') : ''"

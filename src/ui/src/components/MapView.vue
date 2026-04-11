@@ -102,6 +102,7 @@
 <style scoped>
   .map-wrapper {
     width: 100%;
+    isolation: isolate;
   }
 
   .map-container {
