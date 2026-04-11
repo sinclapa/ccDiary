@@ -106,9 +106,7 @@ test.describe('DiaryEntry API', () => {
   test.beforeAll(async ({ request }) => {
     const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
     const diaries: Array<{ diaryId: string; title: string }> = await response.json()
-    const ww1 = diaries.find(d => d.title.includes('WW1 Diary') && d.title.includes('Sapper')) ??
-      diaries.find(d => d.title.includes('WW1')) ??
-      diaries[0]
+    const ww1 = diaries.find(d => d.title === 'Integration Test Diary') ?? diaries[0]
     ww1DiaryId = ww1.diaryId
   })
 
