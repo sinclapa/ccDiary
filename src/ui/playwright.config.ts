@@ -4,9 +4,9 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   retries: 1,
-  webServer: {
+  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
     command: 'npm run dev',
-    url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080',
+    url: 'http://localhost:8080',
     reuseExistingServer: true,
     timeout: 120000,
   },
