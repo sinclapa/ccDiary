@@ -41,7 +41,7 @@
     },
     {
       title: 'GitHub',
-      icon: `mdi-github`,
+      icon: '$mdi-github',
       href: 'https://github.com/sinclapa/ccDiary',
     },
     {
@@ -51,7 +51,7 @@
     },
     {
       title: `API ${apiUrl}`,
-      icon: 'mdi-api',
+      icon: '$mdi-api',
       href: apiUrl ? new URL('/', apiUrl).href : '',
     },
   ]
