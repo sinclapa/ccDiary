@@ -49,8 +49,8 @@ test.describe('Diaries list', () => {
   })
 
   test('does not show edit or delete buttons when not authenticated', async ({ page }) => {
-    await expect(page.locator('button:has(.mdi-pencil)')).toHaveCount(0)
-    await expect(page.locator('button:has(.mdi-delete)')).toHaveCount(0)
+    await expect(page.locator('button[aria-label="Edit entry"]')).toHaveCount(0)
+    await expect(page.locator('button[aria-label="Delete entry"]')).toHaveCount(0)
   })
 
   test('clicking diary title navigates to detail page', async ({ page }) => {
@@ -89,13 +89,13 @@ test.describe('Diary detail page', () => {
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Page starts at minDate so skip-backward is already disabled; skip-forward should be enabled
-    const startBtn = page.locator('button:has(.mdi-skip-backward)').first()
+    const startBtn = page.locator('button[aria-label="Go to start"]').first()
     await expect(startBtn).toBeDisabled()
 
     const entryBefore = await page.locator('.v-timeline-item').first().textContent()
 
-    // Move forward one entry (mdi-fast-forward = moveForward)
-    const forwardBtn = page.locator('button:has(.mdi-fast-forward)').first()
+    // Move forward one entry (Move forward = moveForward)
+    const forwardBtn = page.locator('button[aria-label="Move forward"]').first()
     await expect(forwardBtn).not.toBeDisabled()
     await forwardBtn.click()
     await expect.poll(async () => (await page.locator('.v-timeline-item').first().textContent()) ?? '').not.toBe(entryBefore ?? '')
@@ -106,11 +106,11 @@ test.describe('Diary detail page', () => {
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Page initialises at minDate so the go-to-start button is already disabled
-    const startBtn = page.locator('button:has(.mdi-skip-backward)').first()
+    const startBtn = page.locator('button[aria-label="Go to start"]').first()
     await expect(startBtn).toBeDisabled({ timeout: 5000 })
 
     // Navigate to end, then verify go-to-start becomes enabled
-    const endBtn = page.locator('button:has(.mdi-skip-forward)').first()
+    const endBtn = page.locator('button[aria-label="Go to end"]').first()
     await endBtn.click()
     await expect(startBtn).not.toBeDisabled({ timeout: 5000 })
 
@@ -123,7 +123,7 @@ test.describe('Diary detail page', () => {
     await gotoDiaryDetail(page, ww1DiaryId)
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
-    const endBtn = page.locator('button:has(.mdi-skip-forward)').first()
+    const endBtn = page.locator('button[aria-label="Go to end"]').first()
     await endBtn.click()
 
     await expect(endBtn).toBeDisabled({ timeout: 5000 })
@@ -146,7 +146,7 @@ test.describe('Diary detail page', () => {
     const firstEntry = await page.locator('.v-timeline-item').first().textContent()
 
     // Page already starts at minDate — skip-backward is disabled, skip-forward is enabled
-    const startBtn = page.locator('button:has(.mdi-skip-backward)').first()
+    const startBtn = page.locator('button[aria-label="Go to start"]').first()
     await expect(startBtn).toBeDisabled()
 
     // Click a marked day dot
@@ -157,7 +157,7 @@ test.describe('Diary detail page', () => {
     }
 
     // Navigate to a different date via forward button and verify entries update
-    const fwdBtn = page.locator('button:has(.mdi-fast-forward)').first()
+    const fwdBtn = page.locator('button[aria-label="Move forward"]').first()
     if (!await fwdBtn.isDisabled()) {
       await fwdBtn.click()
       await expect.poll(async () => (await page.locator('.v-timeline-item').first().textContent()) ?? '').not.toBe(firstEntry ?? '')
