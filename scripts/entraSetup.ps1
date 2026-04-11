@@ -115,19 +115,21 @@ try {
     # Get the object ID for the application
     $objectId = az ad app show --id $appId --query "id" -o tsv
 
-    # Build the request body for Graph API  
+    # Build the request body for Graph API
     # Update spa and web redirect URIs, identifier URI, and API scopes
+    # isFallbackPublicClient = true allows device code / MSAL public-client flows for local dev tooling
     $requestBody = @{
-        identifierUris = @("api://${appId}")
+        identifierUris        = @("api://${appId}")
+        isFallbackPublicClient = $true
         spa = @{ redirectUris = $spaUris }
-        web = @{ 
+        web = @{
             redirectUris = $webUris
             implicitGrantSettings = @{
-                enableIdTokenIssuance = $true
+                enableIdTokenIssuance  = $true
                 enableAccessTokenIssuance = $false
             }
         }
-        api = @{ oauth2PermissionScopes = $oauthScopes }
+        api      = @{ oauth2PermissionScopes = $oauthScopes }
         appRoles = $appRoles
     } | ConvertTo-Json -Depth 10
 
