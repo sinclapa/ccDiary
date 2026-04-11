@@ -553,13 +553,13 @@ describe('DiaryEntryEditor.vue', () => {
     expect(items).toHaveLength(5)
     for (const item of items) {
       expect(item.icon).toBeTruthy()
-      expect(item.icon).toMatch(/^mdi-/)
+      expect(item.icon).toMatch(/^\$mdi-/)
     }
-    expect(items.find(i => i.value === 'crow-flies')?.icon).toBe('mdi-bird')
-    expect(items.find(i => i.value === 'walking')?.icon).toBe('mdi-walk')
-    expect(items.find(i => i.value === 'car')?.icon).toBe('mdi-car')
-    expect(items.find(i => i.value === 'train')?.icon).toBe('mdi-train')
-    expect(items.find(i => i.value === 'boat')?.icon).toBe('mdi-ferry')
+    expect(items.find(i => i.value === 'crow-flies')?.icon).toBe('$mdi-bird')
+    expect(items.find(i => i.value === 'walking')?.icon).toBe('$mdi-walk')
+    expect(items.find(i => i.value === 'car')?.icon).toBe('$mdi-car')
+    expect(items.find(i => i.value === 'train')?.icon).toBe('$mdi-train')
+    expect(items.find(i => i.value === 'boat')?.icon).toBe('$mdi-ferry')
   })
 
   afterEach(() => {
