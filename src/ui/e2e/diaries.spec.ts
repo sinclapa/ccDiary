@@ -1,16 +1,14 @@
 import { expect, test } from '@playwright/test'
 import { API_BASE } from './config'
 
-// The WW1 diary with the most complete seed data
-const SEEDED_DIARY_TITLE = 'WW1 Diary'
+const SEEDED_DIARY_TITLE = 'Integration Test Diary'
+const SEEDED_DIARY_AUTHOR = 'Claude Sonnet'
 
-async function getWW1DiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
+async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
   const diaries: Array<{ diaryId: string; title: string; author: string }> = await response.json()
-  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ??
-    diaries.find(d => d.title.includes('WW1')) ??
-    diaries[0]
+  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ?? diaries[0]
   return match.diaryId
 }
 
@@ -20,7 +18,7 @@ async function gotoDiaries (page: import('@playwright/test').Page): Promise<void
 }
 
 async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
-  await page.goto(`/diaries/${diaryId}`, { waitUntil: 'networkidle', timeout: 25000 })
+  await page.goto(`/diaries/${diaryId}`, { waitUntil: 'load', timeout: 25000 })
   await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 5000 })
 }
 
@@ -37,12 +35,12 @@ test.describe('Diaries list', () => {
     expect(count).toBeGreaterThan(0)
   })
 
-  test('shows WW1 Diary in the list', async ({ page }) => {
-    await expect(page.getByText('WW1 Diary', { exact: false }).first()).toBeVisible({ timeout: 10000 })
+  test('shows Integration Test Diary in the list', async ({ page }) => {
+    await expect(page.getByText(SEEDED_DIARY_TITLE, { exact: false }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('shows diary author column', async ({ page }) => {
-    await expect(page.getByText('Sapper', { exact: false }).first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(SEEDED_DIARY_AUTHOR, { exact: false }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('does not show Add Diary button when not authenticated', async ({ page }) => {
@@ -67,7 +65,7 @@ test.describe('Diary detail page', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('loads diary detail with date picker', async ({ page }) => {

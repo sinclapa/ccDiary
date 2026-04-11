@@ -1,24 +1,22 @@
 import { expect, test } from '@playwright/test'
 import { API_BASE } from './config'
 
-const SEEDED_DIARY_TITLE = 'WW1 Diary'
+const SEEDED_DIARY_TITLE = 'Integration Test Diary'
 // First seeded entry date — used for direct API calls
 const SEEDED_ENTRY_YEAR = 1918
 const SEEDED_ENTRY_MONTH = 5
 const SEEDED_ENTRY_DAY = 21
 
-async function getWW1DiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
+async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
   const diaries: Array<{ diaryId: string; title: string }> = await response.json()
-  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ??
-    diaries.find(d => d.title.includes('WW1')) ??
-    diaries[0]
+  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ?? diaries[0]
   return match.diaryId
 }
 
 async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
-  await page.goto(`/diaries/${diaryId}`, { waitUntil: 'networkidle', timeout: 25000 })
+  await page.goto(`/diaries/${diaryId}`, { waitUntil: 'load', timeout: 25000 })
   await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 5000 })
 }
 
@@ -28,7 +26,7 @@ test.describe('Date picker header year format', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('date picker header shows the full date including year', async ({ page }) => {
@@ -53,7 +51,7 @@ test.describe('Date picker header year format', () => {
     )
   })
 
-  test('date picker header year matches the WW1 diary era (1918)', async ({ page }) => {
+  test('date picker header year matches the seeded diary era (1918)', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
 
     const header = page.locator('.v-date-picker-header').first()
@@ -67,7 +65,7 @@ test.describe('Map display on diary entries', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('no map is shown for diary entries where showMap is false', async ({ page }) => {
@@ -110,7 +108,7 @@ test.describe('DiaryEntry API — mapLocation and showMap fields', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('GET search for day returns entries that include mapLocation and showMap fields', async ({ request }) => {
@@ -213,7 +211,7 @@ test.describe('DiaryEntry API — showJourney, fromLocation, toLocation fields',
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('GET search for day returns entries that include showJourney, fromLocation, toLocation fields', async ({ request }) => {
@@ -282,13 +280,13 @@ test.describe('Journey map display on diary entries', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('no journey-wrapper shown when showJourney is false', async ({ page }) => {
     // May 25 (SEEDED_ENTRY_DAY + 4) has a single entry with showJourney=false
     const dateNoJourney = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY + 4).padStart(2, '0')}`
-    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoJourney}`, { waitUntil: 'networkidle', timeout: 25000 })
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoJourney}`, { waitUntil: 'load', timeout: 25000 })
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 5000 })
     await expect(page.locator('.journey-wrapper')).toHaveCount(0)
   })
@@ -311,7 +309,7 @@ test.describe('Journey map display on diary entries', () => {
     }
 
     const dateStr = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
-    await page.goto(`/diaries/${ww1DiaryId}?date=${dateStr}`, { waitUntil: 'networkidle', timeout: 25000 })
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateStr}`, { waitUntil: 'load', timeout: 25000 })
     await expect(page.locator('.journey-wrapper').first()).toBeVisible({ timeout: 5000 })
   })
 })
@@ -322,7 +320,7 @@ test.describe('URL date bookmarking', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('URL contains date query param after diary page loads', async ({ page }) => {
@@ -425,7 +423,7 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
   let ww1DiaryId: string
 
   test.beforeAll(async ({ request }) => {
-    ww1DiaryId = await getWW1DiaryId(request)
+    ww1DiaryId = await getIntegrationDiaryId(request)
   })
 
   test('Show Map toggle is not visible without authentication', async ({ page }) => {
