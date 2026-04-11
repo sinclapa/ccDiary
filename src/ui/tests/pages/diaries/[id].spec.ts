@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { VBtn } from 'vuetify/components'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
 // import { useRoute } from 'vue-router'
@@ -120,8 +121,9 @@ describe('[id].vue', () => {
   it('calls deleteItem when delete button is clicked', async () => {
     state.isAuthenticated = true
     await flushPromises()
-    // Find the delete button in the timeline
-    const deleteBtn = wrapper.findAll('button').find(btn => btn.html().includes('mdi-delete'))
+    // Find the delete VBtn by its icon prop (HTML search won't work since $mdi-delete
+    // is a custom alias not registered in the test Vuetify plugin)
+    const deleteBtn = wrapper.findAllComponents(VBtn).find(btn => btn.props('icon') === '$mdi-delete')
     expect(deleteBtn).toBeTruthy()
     if (deleteBtn) await deleteBtn.trigger('click')
     expect((wrapper.vm as any).dialogDelete).toBe(true)
