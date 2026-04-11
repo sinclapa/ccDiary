@@ -57,6 +57,7 @@
         <v-row>
           <v-col style="margin: 0; padding: 0;">
             <v-btn
+              aria-label="Go to start"
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
@@ -69,6 +70,7 @@
           </v-col>
           <v-col style="margin: 0; padding: 0;">
             <v-btn
+              aria-label="Move backward"
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
@@ -112,6 +114,7 @@
           </v-col>
           <v-col style="margin: 0; padding: 0;">
             <v-btn
+              aria-label="Move forward"
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
@@ -124,6 +127,7 @@
           </v-col>
           <v-col style="margin: 0; padding: 0;">
             <v-btn
+              aria-label="Go to end"
               class="mb-2"
               :color="'white'"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
@@ -165,6 +169,7 @@
                 {{ diaryEntry.location }}
                 <div v-if="state.isAuthenticated">
                   <v-btn
+                    aria-label="Edit entry"
                     :color="'red'"
                     icon="$mdi-pencil"
                     size="x-small"
@@ -172,6 +177,7 @@
                   />
                   &nbsp;
                   <v-btn
+                    aria-label="Delete entry"
                     :color="'red'"
                     icon="$mdi-delete"
                     size="x-small"
