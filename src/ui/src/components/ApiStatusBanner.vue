@@ -2,7 +2,7 @@
   <v-banner
     v-if="!apiStatus.available"
     color="warning"
-    icon="mdi-server-network-off"
+    icon="$mdi-server-network-off"
     lines="one"
     sticky
   >

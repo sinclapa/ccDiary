@@ -5,12 +5,38 @@
  */
 
 // Styles
-import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 
 // Composables
 import { createVuetify } from 'vuetify'
-import { aliases, mdi } from 'vuetify/iconsets/mdi'
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
+
+// Icons (tree-shaken SVG paths — no webfont bundle)
+import {
+  mdiAccountCircle,
+  mdiApi,
+  mdiBird,
+  mdiBookOpenVariantOutline,
+  mdiCar,
+  mdiChevronDown,
+  mdiChevronUp,
+  mdiDelete,
+  mdiFastForward,
+  mdiFerry,
+  mdiGithub,
+  mdiImagePlus,
+  mdiLogin,
+  mdiAlertCircleOutline,
+  mdiMapMarkerOff,
+  mdiPen,
+  mdiPencil,
+  mdiRewind,
+  mdiServerNetworkOff,
+  mdiSkipBackward,
+  mdiSkipForward,
+  mdiTrain,
+  mdiWalk,
+} from '@mdi/js'
 
 // Utilities
 import { defineComponent, h, markRaw } from 'vue'
@@ -30,6 +56,30 @@ export default createVuetify({
     aliases: {
       ...aliases,
       swagger: swaggerIcon,
+      // App-specific icons — keyed as mdi-* so templates use $mdi-* syntax
+      'mdi-account-circle': mdiAccountCircle,
+      'mdi-api': mdiApi,
+      'mdi-bird': mdiBird,
+      'mdi-book-open-variant-outline': mdiBookOpenVariantOutline,
+      'mdi-car': mdiCar,
+      'mdi-chevron-down': mdiChevronDown,
+      'mdi-chevron-up': mdiChevronUp,
+      'mdi-delete': mdiDelete,
+      'mdi-fast-forward': mdiFastForward,
+      'mdi-ferry': mdiFerry,
+      'mdi-github': mdiGithub,
+      'mdi-image-plus': mdiImagePlus,
+      'mdi-login': mdiLogin,
+      'mdi-map-marker-off': mdiMapMarkerOff,
+      'mdi-map-off': mdiAlertCircleOutline,
+      'mdi-pen': mdiPen,
+      'mdi-pencil': mdiPencil,
+      'mdi-rewind': mdiRewind,
+      'mdi-server-network-off': mdiServerNetworkOff,
+      'mdi-skip-backward': mdiSkipBackward,
+      'mdi-skip-forward': mdiSkipForward,
+      'mdi-train': mdiTrain,
+      'mdi-walk': mdiWalk,
     },
     sets: { mdi },
   },

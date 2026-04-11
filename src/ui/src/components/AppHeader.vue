@@ -10,10 +10,10 @@
       icon
       @click="handleLogout"
     >
-      <v-icon>mdi-account-circle</v-icon>
+      <v-icon>$mdi-account-circle</v-icon>
     </v-btn>
     <v-btn v-else id="login" icon @click="handleLogin">
-      <v-icon>mdi-login</v-icon>
+      <v-icon>$mdi-login</v-icon>
     </v-btn>
   </v-app-bar>
   <v-navigation-drawer

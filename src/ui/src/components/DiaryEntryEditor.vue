@@ -2,7 +2,7 @@
   <v-sheet class="mx-auto" width="400">
     <v-form @submit.prevent="submit">
       <v-card
-        prepend-icon="mdi-pen"
+        prepend-icon="$mdi-pen"
         title="Add Diary Entry"
       >
         <v-card-text>
@@ -137,7 +137,7 @@
                   color="grey-lighten-1"
                   size="48"
                 >
-                  mdi-image-plus
+                  $mdi-image-plus
                 </v-icon>
                 <div class="text-grey mt-2 text-body-2">
                   Click, drag & drop, or paste an image
@@ -202,11 +202,11 @@
   import type { JourneyMode } from '@/services/models/diaryEntry'
 
   const journeyModeItems: { label: string; value: JourneyMode; icon: string }[] = [
-    { label: 'As the Crow Flies', value: 'crow-flies', icon: 'mdi-bird' },
-    { label: 'Walking',           value: 'walking',    icon: 'mdi-walk' },
-    { label: 'Car',               value: 'car',        icon: 'mdi-car' },
-    { label: 'Train',             value: 'train',      icon: 'mdi-train' },
-    { label: 'Boat',              value: 'boat',       icon: 'mdi-ferry' },
+    { label: 'As the Crow Flies', value: 'crow-flies', icon: '$mdi-bird' },
+    { label: 'Walking',           value: 'walking',    icon: '$mdi-walk' },
+    { label: 'Car',               value: 'car',        icon: '$mdi-car' },
+    { label: 'Train',             value: 'train',      icon: '$mdi-train' },
+    { label: 'Boat',              value: 'boat',       icon: '$mdi-ferry' },
   ]
 
   const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()

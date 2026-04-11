@@ -4,11 +4,11 @@
       <v-progress-circular color="red" indeterminate />
     </div>
     <div v-else-if="status === 'not-found'" class="journey-placeholder journey-not-found">
-      <v-icon color="grey">mdi-map-marker-off</v-icon>
+      <v-icon color="grey">$mdi-map-marker-off</v-icon>
       <span class="text-caption text-grey">Location not found</span>
     </div>
     <div v-else-if="status === 'error'" class="journey-placeholder journey-error">
-      <v-icon color="grey">mdi-map-off</v-icon>
+      <v-icon color="grey">$mdi-map-off</v-icon>
       <span class="text-caption text-grey">Map unavailable</span>
     </div>
     <div

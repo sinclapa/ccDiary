@@ -36,7 +36,7 @@
                 :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
                 @click="onToggleDatePickerHeight"
               >
-                <v-icon :icon="isDatePickerExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down'" />
+                <v-icon :icon="isDatePickerExpanded ? '$mdi-chevron-up' : '$mdi-chevron-down'" />
                 {{ isDatePickerExpanded ? 'Compact View' : 'Expanded View' }}
               </v-btn>
             </template>
@@ -63,7 +63,7 @@
               @click="onMoveStart()"
             >
               <v-icon>
-                mdi-skip-backward
+                $mdi-skip-backward
               </v-icon>
             </v-btn>
           </v-col>
@@ -75,7 +75,7 @@
               @click="onMoveBackward()"
             >
               <v-icon>
-                mdi-rewind
+                $mdi-rewind
               </v-icon>
             </v-btn>
           </v-col>
@@ -118,7 +118,7 @@
               @click="onMoveForward()"
             >
               <v-icon>
-                mdi-fast-forward
+                $mdi-fast-forward
               </v-icon>
             </v-btn>
           </v-col>
@@ -130,7 +130,7 @@
               @click="onMoveEnd()"
             >
               <v-icon>
-                mdi-skip-forward
+                $mdi-skip-forward
               </v-icon>
             </v-btn>
           </v-col>
@@ -166,14 +166,14 @@
                 <div v-if="state.isAuthenticated">
                   <v-btn
                     :color="'red'"
-                    icon="mdi-pencil"
+                    icon="$mdi-pencil"
                     size="x-small"
                     @click="onEditEntry(diaryEntry)"
                   />
                   &nbsp;
                   <v-btn
                     :color="'red'"
-                    icon="mdi-delete"
+                    icon="$mdi-delete"
                     size="x-small"
                     @click="onDeleteEntry(diaryEntry)"
                   />

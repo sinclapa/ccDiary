@@ -66,7 +66,7 @@
             @click="editItem(item)"
           >
             <v-icon>
-              mdi-pencil
+              $mdi-pencil
             </v-icon>
           </v-btn>
           <v-btn
@@ -77,7 +77,7 @@
             @click="deleteItem(item)"
           >
             <v-icon>
-              mdi-delete
+              $mdi-delete
             </v-icon>
           </v-btn>
         </div>

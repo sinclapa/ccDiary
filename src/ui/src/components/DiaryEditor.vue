@@ -2,7 +2,7 @@
   <v-sheet class="mx-auto" width="300">
     <v-form @submit.prevent="submit">
       <v-card
-        prepend-icon="mdi-book-open-variant-outline"
+        prepend-icon="$mdi-book-open-variant-outline"
         :title="addMode ? 'Add Diary' : 'Edit Diary'"
       >
         <v-card-text>
