@@ -31,10 +31,11 @@ namespace ccDiaryApi.Services
             var clientId = _configuration["Graph:ClientId"];
             var clientSecret = _configuration["Graph:ClientSecret"];
             var redirectUrl = _configuration["Graph:InviteRedirectUrl"] ?? "https://localhost:5173";
+            var maskedEmail = MaskEmail(email);
 
             if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
-                _logger.LogWarning("Graph API not configured — skipping invitation for {Email}", email);
+                _logger.LogWarning("Graph API not configured — skipping invitation for {Email}", maskedEmail);
                 return string.Empty;
             }
 
@@ -69,16 +70,34 @@ namespace ccDiaryApi.Services
             var body = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Graph invitation failed for {Email}: {Status} {Body}", email, response.StatusCode, body);
+                _logger.LogError("Graph invitation failed for {Email}: {Status} {Body}", maskedEmail, response.StatusCode, body);
                 throw new InvalidOperationException($"Failed to send Entra invitation: {response.StatusCode}");
             }
 
-            _logger.LogInformation("Entra B2B invitation sent to {Email}. Response: {Body}", email, body);
+            _logger.LogInformation("Entra B2B invitation sent to {Email}. Response: {Body}", maskedEmail, body);
 
             using var doc = JsonDocument.Parse(body);
             return doc.RootElement.TryGetProperty("inviteRedeemUrl", out var urlProp)
                 ? urlProp.GetString() ?? string.Empty
                 : string.Empty;
+        }
+
+        private static string MaskEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return "***";
+            }
+
+            var atIndex = email.IndexOf('@');
+            if (atIndex <= 0 || atIndex == email.Length - 1)
+            {
+                return "***";
+            }
+
+            var localPartFirstChar = email[0];
+            var domain = email[(atIndex + 1)..];
+            return $"{localPartFirstChar}***@{domain}";
         }
 
         private static async Task<string> AcquireTokenAsync(string tenantId, string clientId, string clientSecret)
