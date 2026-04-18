@@ -36,7 +36,7 @@ describe('accessRequestService', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
       json: async () => { throw new Error('not json') },
-    } as Response)
+    } as unknown as Response)
 
     await expect(submitAccessRequest('Jane', 'jane@example.com')).rejects.toThrow('Failed to submit access request')
   })
