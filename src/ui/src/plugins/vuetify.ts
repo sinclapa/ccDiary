@@ -14,10 +14,12 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 // Icons (tree-shaken SVG paths — no webfont bundle)
 import {
   mdiAccountCircle,
+  mdiAlertCircleOutline,
   mdiApi,
   mdiBird,
   mdiBookOpenVariantOutline,
   mdiCar,
+  mdiCheckCircle,
   mdiChevronDown,
   mdiChevronUp,
   mdiDelete,
@@ -26,7 +28,6 @@ import {
   mdiGithub,
   mdiImagePlus,
   mdiLogin,
-  mdiAlertCircleOutline,
   mdiMapMarkerOff,
   mdiPen,
   mdiPencil,
@@ -62,6 +63,7 @@ export default createVuetify({
       'mdi-bird': mdiBird,
       'mdi-book-open-variant-outline': mdiBookOpenVariantOutline,
       'mdi-car': mdiCar,
+      'mdi-check-circle': mdiCheckCircle,
       'mdi-chevron-down': mdiChevronDown,
       'mdi-chevron-up': mdiChevronUp,
       'mdi-delete': mdiDelete,

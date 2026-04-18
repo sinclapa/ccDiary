@@ -1,12 +1,12 @@
 <template>
   <v-container style="overflow-y: visible">
     <v-row>
-    <v-progress-linear
-      :active="loading"
-      color="primary"
-      height="2"
-      indeterminate
-    />
+      <v-progress-linear
+        :active="loading"
+        color="primary"
+        height="2"
+        indeterminate
+      />
     </v-row>
     <v-row>
       <div>
@@ -87,7 +87,7 @@
             >
               <template #activator="{ props }">
                 <v-btn
-                  v-if="state.isAuthenticated"
+                  v-if="canEditDiary"
                   class="mb-2"
                   v-bind="props"
                   @click="onAddEntry()"
@@ -167,7 +167,7 @@
             <div>
               <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">
                 {{ diaryEntry.location }}
-                <div v-if="state.isAuthenticated">
+                <div v-if="canEditDiary">
                   <v-btn
                     aria-label="Edit entry"
                     :color="'red'"
@@ -189,7 +189,13 @@
                 {{ diaryEntry.entry }}
               </div>
               <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" class="mt-2" :location="diaryEntry.mapLocation" />
-              <journey-view v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation" class="mt-2" :from-location="diaryEntry.fromLocation" :journey-mode="diaryEntry.journeyMode" :to-location="diaryEntry.toLocation" />
+              <journey-view
+                v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation"
+                class="mt-2"
+                :from-location="diaryEntry.fromLocation"
+                :journey-mode="diaryEntry.journeyMode"
+                :to-location="diaryEntry.toLocation"
+              />
               <v-img
                 v-if="diaryEntry.imageData && diaryEntry.imageContentType"
                 class="mt-2"
@@ -210,11 +216,13 @@
   import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
   import Diary from '@/services/models/diary'
   import DiaryEntry from '@/services/models/diaryEntry'
-  import { state } from '@/services/authentication/msalConfig'
+  import { useAuthStore } from '@/stores/auth'
   import dayjs from 'dayjs'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import JourneyView from '@/components/JourneyView.vue'
-  import { startFaroUserAction, endFaroUserAction } from '@/plugins/faro'
+  import { endFaroUserAction, startFaroUserAction } from '@/plugins/faro'
+
+  const authStore = useAuthStore()
 
   const apiStatus = useApiStatusStore()
   const router = useRouter()
@@ -228,6 +236,12 @@
   const route = useRoute('/diaries/[id]')
   const diaryId = route.params.id
   const diary = ref(new Diary('', '', '') as Diary | undefined)
+
+  const canEditDiary = computed(() => {
+    if (authStore.isAdmin) return true
+    if (!authStore.isContributor) return false
+    return diary.value?.ownerId === authStore.appUser?.entraObjectId
+  })
   const defaultItem = ref<DiaryEntry>(new DiaryEntry(diaryId, new Date(Date.now()), '', ''))
   const editedItem = ref<DiaryEntry>(new DiaryEntry(diaryId, new Date(Date.now()), '', ''))
   const minDate = ref<Date>()
@@ -629,7 +643,7 @@
           const stored = dayjs(storedDate).toDate()
           startDate = maxDate.value && stored > maxDate.value ? maxDate.value
             : x && stored < x ? x
-            : stored
+              : stored
         }
       }
       selectedDate.value = startDate

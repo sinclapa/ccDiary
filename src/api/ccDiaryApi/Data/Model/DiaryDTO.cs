@@ -23,5 +23,7 @@ namespace ccDiaryApi.Data.Model
         required public string Author { get; set; }
 
         public string? Description { get; set; }
+
+        public string? OwnerId { get; set; }
     }
 }

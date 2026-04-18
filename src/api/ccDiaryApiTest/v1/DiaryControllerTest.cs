@@ -7,12 +7,14 @@ namespace ccDiaryApiTest.v1
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Security.Claims;
     using System.Text;
     using System.Threading.Tasks;
     using ccDiaryApi.Controllers.v1;
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
+    using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Http.HttpResults;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
@@ -45,7 +47,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             // Act
             var response = controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
@@ -65,7 +67,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             // Act
             controller.Create(new DiaryDTO { Author = "Paul1", Title = "Paul's 1st Diary" });
@@ -86,7 +88,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             // Act
             controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
@@ -107,7 +109,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             // Act
             controller.Create(new DiaryDTO { Author = "Paul1", Title = "Paul's 1st Diary", Description = "Description of Paul's 1st Diary" });
@@ -133,7 +135,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             controller.Create(new DiaryDTO { Author = "Paul1", Title = "Paul's 1st Diary", Description = "Description of Paul's 1st Diary" });
             var createResponse = controller.Create(new DiaryDTO { Author = "Paul2", Title = "Paul's 2nd Diary", Description = "Description of Paul's 2nd Diary" });
@@ -162,7 +164,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             // Act
             var response = controller.Delete(Guid.NewGuid());
@@ -177,7 +179,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             var createResponse = controller.Create(new DiaryDTO { Author = "Paul2", Title = "Paul's 2nd Diary", Description = "Description of Paul's 2nd Diary" });
             var createResult = createResponse.GetObjectResult();
@@ -205,7 +207,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var diaryService = new DiaryService(db);
-            var controller = new DiaryController(diaryService);
+            var controller = CreateController(diaryService);
 
             // Act
             var response = controller.Get();
@@ -215,6 +217,108 @@ namespace ccDiaryApiTest.v1
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.Count());
+        }
+
+        [TestMethod]
+        public void Update_AsNonOwner_ReturnsForbid()
+        {
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+
+            var ownerController = CreateController(diaryService, oid: "owner-oid");
+            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
+            Assert.IsNotNull(diary);
+
+            var otherController = CreateController(diaryService, oid: "other-oid");
+            diary.Title = "Hijacked";
+            var response = otherController.Update(diary);
+
+            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
+        }
+
+        [TestMethod]
+        public void Update_WithMissingDiary_ReturnsForbid()
+        {
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+            var controller = CreateController(diaryService, oid: "user-oid");
+
+            var response = controller.Update(new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Ghost", Title = "Ghost Diary" });
+
+            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
+        }
+
+        [TestMethod]
+        public void Update_AsAdmin_ReturnsOk()
+        {
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+
+            var ownerController = CreateController(diaryService, oid: "owner-oid");
+            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
+            Assert.IsNotNull(diary);
+
+            var adminController = CreateController(diaryService, oid: "admin-oid", isAdmin: true);
+            diary.Title = "Admin Updated";
+            var response = adminController.Update(diary);
+
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+        }
+
+        [TestMethod]
+        public void Delete_AsNonOwner_ReturnsForbid()
+        {
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+
+            var ownerController = CreateController(diaryService, oid: "owner-oid");
+            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
+            Assert.IsNotNull(diary);
+
+            var otherController = CreateController(diaryService, oid: "other-oid");
+            var response = otherController.Delete(diary.DiaryId!.Value);
+
+            Assert.IsInstanceOfType(response, typeof(ForbidResult));
+        }
+
+        [TestMethod]
+        public void Delete_AsAdmin_ReturnsOk()
+        {
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+
+            var ownerController = CreateController(diaryService, oid: "owner-oid");
+            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
+            Assert.IsNotNull(diary);
+
+            var adminController = CreateController(diaryService, oid: "admin-oid", isAdmin: true);
+            var response = adminController.Delete(diary.DiaryId!.Value);
+
+            Assert.IsInstanceOfType(response, typeof(OkResult));
+        }
+
+        private static DiaryController CreateController(IDiaryService service, string? oid = null, bool isAdmin = false)
+        {
+            var claims = new List<Claim>();
+            if (oid != null)
+            {
+                claims.Add(new Claim("oid", oid));
+            }
+
+            if (isAdmin)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "DiaryAdmin"));
+            }
+
+            var controller = new DiaryController(service);
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, claims.Count > 0 ? "Test" : string.Empty)),
+                },
+            };
+            return controller;
         }
     }
 }

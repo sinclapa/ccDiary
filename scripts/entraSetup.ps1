@@ -97,6 +97,22 @@ try {
             description = "Allows seeding of test data for automated testing (used by CI/CD)"
             value = "Diary.Seed"
             isEnabled = $true
+        },
+        @{
+            id = (New-GuidFromString "${resourceGroupId}-${AppName}-approle-diary-admin").ToString()
+            allowedMemberTypes = @("User")
+            displayName = "Diary Administrator"
+            description = "Full access to all diaries and user management"
+            value = "Diary.Admin"
+            isEnabled = $true
+        },
+        @{
+            id = (New-GuidFromString "${resourceGroupId}-${AppName}-approle-diary-contributor").ToString()
+            allowedMemberTypes = @("User")
+            displayName = "Diary Contributor"
+            description = "Can create and edit their own diaries"
+            value = "Diary.Contributor"
+            isEnabled = $true
         }
     )
 
@@ -131,6 +147,19 @@ try {
         }
         api      = @{ oauth2PermissionScopes = $oauthScopes }
         appRoles = $appRoles
+        requiredResourceAccess = @(
+            @{
+                # Microsoft Graph
+                resourceAppId = "00000003-0000-0000-c000-000000000000"
+                resourceAccess = @(
+                    @{
+                        # User.Invite.All (Application permission)
+                        id   = "09850681-111b-4a89-9bed-3f2cae46d706"
+                        type = "Role"
+                    }
+                )
+            }
+        )
     } | ConvertTo-Json -Depth 10
 
     # Write JSON to temp file
@@ -139,7 +168,34 @@ try {
     
     try {
         if ($objectId) {
-            # Use Get-Content to read file and pipe to az rest
+            # Azure requires scopes and roles to be disabled before they can be updated or removed.
+            # Fetch current state and disable all existing scopes and roles first.
+            $existingApp = az ad app show --id $appId | ConvertFrom-Json
+            $existingScopes = @($existingApp.api.oauth2PermissionScopes)
+            $existingRoles  = @($existingApp.appRoles)
+
+            if ($existingScopes.Count -gt 0 -or $existingRoles.Count -gt 0) {
+                foreach ($scope in $existingScopes) { $scope.isEnabled = $false }
+                foreach ($role  in $existingRoles)  { $role.isEnabled  = $false }
+
+                $disableBody = @{
+                    api      = @{ oauth2PermissionScopes = $existingScopes }
+                    appRoles = $existingRoles
+                } | ConvertTo-Json -Depth 10
+
+                $tempDisableFile = [System.IO.Path]::GetTempFileName()
+                try {
+                    Set-Content -Path $tempDisableFile -Value $disableBody -Encoding UTF8
+                    Get-Content -Path $tempDisableFile | az rest --method PATCH `
+                        --uri "https://graph.microsoft.com/v1.0/applications/$objectId" `
+                        --headers "Content-Type=application/json" `
+                        --body "@-" 2>&1 | Out-Null
+                } finally {
+                    Remove-Item -Path $tempDisableFile -Force -ErrorAction SilentlyContinue
+                }
+            }
+
+            # Apply the full update with the desired scopes and roles
             Get-Content -Path $tempBodyFile | az rest --method PATCH `
                 --uri "https://graph.microsoft.com/v1.0/applications/$objectId" `
                 --headers "Content-Type=application/json" `
@@ -187,6 +243,60 @@ try {
         Write-Host "  Diary.Seed role already assigned."
     }
 
+    # Grant admin consent for User.Invite.All on Microsoft Graph
+    Write-Host "  Granting User.Invite.All consent to service principal..."
+    $graphSpId = az ad sp show --id "00000003-0000-0000-c000-000000000000" --query "id" -o tsv 2>$null
+    if ($graphSpId) {
+        $userInviteAllRoleId = "09850681-111b-4a89-9bed-3f2cae46d706"
+        $existingGrant = az rest --method GET `
+            --uri "https://graph.microsoft.com/v1.0/servicePrincipals/${spId}/appRoleAssignments" `
+            --output json | ConvertFrom-Json
+        $alreadyGranted = $existingGrant.value | Where-Object { $_.appRoleId -eq $userInviteAllRoleId -and $_.resourceId -eq $graphSpId }
+        if (-not $alreadyGranted) {
+            $grantBody = @{
+                principalId = $spId
+                resourceId  = $graphSpId
+                appRoleId   = $userInviteAllRoleId
+            } | ConvertTo-Json
+            $tempGrantFile = [System.IO.Path]::GetTempFileName()
+            try {
+                Set-Content -Path $tempGrantFile -Value $grantBody -Encoding UTF8
+                Get-Content -Path $tempGrantFile | az rest --method POST `
+                    --uri "https://graph.microsoft.com/v1.0/servicePrincipals/${spId}/appRoleAssignments" `
+                    --headers "Content-Type=application/json" `
+                    --body "@-" 2>&1 | Out-Null
+                Write-Host "  User.Invite.All granted."
+            } finally {
+                Remove-Item -Path $tempGrantFile -Force -ErrorAction SilentlyContinue
+            }
+        } else {
+            Write-Host "  User.Invite.All already granted."
+        }
+    } else {
+        Write-Host "  WARNING: Could not find Microsoft Graph service principal - skipping consent grant." -ForegroundColor Yellow
+    }
+
+    # Create a client secret for the app (used by the API to call Graph)
+    Write-Host "  Creating client secret for Graph API access..."
+    $secretBody = @{
+        passwordCredential = @{
+            displayName = "Local Dev - $(Get-Date -Format 'yyyy-MM-dd')"
+        }
+    } | ConvertTo-Json
+    $tempSecretFile = [System.IO.Path]::GetTempFileName()
+    $clientSecret = $null
+    try {
+        Set-Content -Path $tempSecretFile -Value $secretBody -Encoding UTF8
+        $secretResult = Get-Content -Path $tempSecretFile | az rest --method POST `
+            --uri "https://graph.microsoft.com/v1.0/applications/$objectId/addPassword" `
+            --headers "Content-Type=application/json" `
+            --body "@-" | ConvertFrom-Json
+        $clientSecret = $secretResult.secretText
+        Write-Host "  Client secret created."
+    } finally {
+        Remove-Item -Path $tempSecretFile -Force -ErrorAction SilentlyContinue
+    }
+
     $EntraObjectId = $objectId
     $EntraApplicationIdURI = "api://${appId}"
     $EntraClientId = $appId
@@ -194,11 +304,11 @@ try {
     Write-Host "  EntraClientId = $EntraClientId"
     Write-Host "  EntraObjectId = $EntraObjectId"
 
-    # Return object with 2 string properties
     return [PSCustomObject]@{
         EntraApplicationIdURI = $EntraApplicationIdURI
-        EntraClientId = $EntraClientId
-        EntraObjectId = $EntraObjectId
+        EntraClientId         = $EntraClientId
+        EntraObjectId         = $EntraObjectId
+        ClientSecret          = $clientSecret
     }
 } catch {
     Write-Error "Failed to setup Entra application: $($_.Exception.Message)"

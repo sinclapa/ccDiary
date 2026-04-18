@@ -85,9 +85,9 @@
             id="journey-mode"
             v-model="journeyMode"
             class="mt-4"
-            :items="journeyModeItems"
             item-title="label"
             item-value="value"
+            :items="journeyModeItems"
             label="Travel Mode"
           >
             <template #item="{ item, props: itemProps }">
@@ -116,13 +116,13 @@
             <button
               id="image-drop-zone"
               class="image-drop-zone mt-2"
-              type="button"
               :class="{ 'drag-over': isDragging }"
+              type="button"
               @click="triggerFileInput"
-              @keydown.enter="triggerFileInput"
               @dragleave.prevent="isDragging = false"
               @dragover.prevent="isDragging = true"
               @drop.prevent="handleDrop"
+              @keydown.enter="triggerFileInput"
             >
               <v-img
                 v-if="imagePreview"
@@ -203,10 +203,10 @@
 
   const journeyModeItems: { label: string; value: JourneyMode; icon: string }[] = [
     { label: 'As the Crow Flies', value: 'crow-flies', icon: '$mdi-bird' },
-    { label: 'Walking',           value: 'walking',    icon: '$mdi-walk' },
-    { label: 'Car',               value: 'car',        icon: '$mdi-car' },
-    { label: 'Train',             value: 'train',      icon: '$mdi-train' },
-    { label: 'Boat',              value: 'boat',       icon: '$mdi-ferry' },
+    { label: 'Walking', value: 'walking', icon: '$mdi-walk' },
+    { label: 'Car', value: 'car', icon: '$mdi-car' },
+    { label: 'Train', value: 'train', icon: '$mdi-train' },
+    { label: 'Boat', value: 'boat', icon: '$mdi-ferry' },
   ]
 
   const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()

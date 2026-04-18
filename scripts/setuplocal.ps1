@@ -84,6 +84,7 @@ $entraOut = & "$PSScriptRoot/entraSetup.ps1" `
     -resourceGroupId $machineName
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
+$entraClientSecret = $entraOut.ClientSecret
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Local Build Environment #>
@@ -271,6 +272,17 @@ $apiEnv["Entra__ClientId"] = $entraClientId
 $apiEnv["Entra__ApplicationIdUri"] = $entraApplicationIdURI
 $apiEnv["OTEL_EXPORTER_OTLP_ENDPOINT"] = $otlpEndpoint
 $apiEnv["OTEL_EXPORTER_OTLP_HEADERS"] = $otlpAuthHeader
+$bootstrapEmail = if ($userInfoJson.mail) { $userInfoJson.mail } else { $userInfoJson.userPrincipalName }
+$bootstrapDisplayName = if ($userInfoJson.displayName) { $userInfoJson.displayName } else { $bootstrapEmail }
+$apiEnv["BootstrapAdmin__ObjectId"] = $userId
+$apiEnv["BootstrapAdmin__Email"] = $bootstrapEmail
+$apiEnv["BootstrapAdmin__DisplayName"] = $bootstrapDisplayName
+$apiEnv["Graph__TenantId"] = $tenantId
+$apiEnv["Graph__ClientId"] = $entraClientId
+$apiEnv["Graph__InviteRedirectUrl"] = $baseUrlUI
+if ($entraClientSecret) {
+    $apiEnv["Graph__ClientSecret"] = $entraClientSecret
+}
 $apiEnv | ConvertTo-StringData | Set-Content -Path $envPath
 Write-Host "  USER_SECRETS_PATH set to: $userSecretsPath" -ForegroundColor Gray
 Write-Host "  HTTPS_CERTS_PATH set to: $httpsCertsPath" -ForegroundColor Gray
@@ -283,16 +295,45 @@ if ($otlpEndpoint) {
     Write-Host "  OTEL_EXPORTER_OTLP_ENDPOINT not set (Grafana telemetry disabled locally)" -ForegroundColor Yellow
 }
 
-dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" init
-dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "SA_PASSWORD" "$localDBPassword"
-dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:TenantId" "$tenantId"
-dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ClientId" "$entraClientId"
-dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+$apiProject = "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj"
+dotnet user-secrets -p $apiProject init
+dotnet user-secrets -p $apiProject set "SA_PASSWORD" "$localDBPassword"
+dotnet user-secrets -p $apiProject set "Entra:TenantId" "$tenantId"
+if ($entraClientId) {
+    dotnet user-secrets -p $apiProject set "Entra:ClientId" "$entraClientId"
+} else {
+    Write-Warning 'Entra:ClientId is empty - Entra setup may have failed. Run entraSetup.ps1 manually.'
+}
+if ($entraApplicationIdURI) {
+    dotnet user-secrets -p $apiProject set "Entra:ApplicationIdUri" "$entraApplicationIdURI"
+} else {
+    Write-Warning 'Entra:ApplicationIdUri is empty - Entra setup may have failed. Run entraSetup.ps1 manually.'
+}
 if ($otlpEndpoint) {
-    dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "OTEL_EXPORTER_OTLP_ENDPOINT" "$otlpEndpoint"
+    dotnet user-secrets -p $apiProject set "OTEL_EXPORTER_OTLP_ENDPOINT" "$otlpEndpoint"
     if ($otlpAuthHeader) {
-        dotnet user-secrets -p "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj" set "OTEL_EXPORTER_OTLP_HEADERS" "$otlpAuthHeader"
+        dotnet user-secrets -p $apiProject set "OTEL_EXPORTER_OTLP_HEADERS" "$otlpAuthHeader"
     }
+}
+
+# Bootstrap admin - the user running setuplocal becomes diary-admin on first API start
+$bootstrapEmail = if ($userInfoJson.mail) { $userInfoJson.mail } else { $userInfoJson.userPrincipalName }
+$bootstrapDisplayName = if ($userInfoJson.displayName) { $userInfoJson.displayName } else { $bootstrapEmail }
+dotnet user-secrets -p $apiProject set "BootstrapAdmin:ObjectId"   "$userId"
+dotnet user-secrets -p $apiProject set "BootstrapAdmin:Email"       "$bootstrapEmail"
+dotnet user-secrets -p $apiProject set "BootstrapAdmin:DisplayName" "$bootstrapDisplayName"
+
+# Graph API - used by the API to send B2B invitations when approving access requests
+$inviteRedirectUrl = $baseUrlUI
+dotnet user-secrets -p $apiProject set "Graph:TenantId"        "$tenantId"
+if ($entraClientId) {
+    dotnet user-secrets -p $apiProject set "Graph:ClientId"        "$entraClientId"
+} else {
+    Write-Warning 'Graph:ClientId is empty - Entra setup may have failed.'
+}
+dotnet user-secrets -p $apiProject set "Graph:InviteRedirectUrl" "$inviteRedirectUrl"
+if ($entraClientSecret) {
+    dotnet user-secrets -p $apiProject set "Graph:ClientSecret" "$entraClientSecret"
 }
 
 $vuePath = "$PSScriptRoot/../src/ui/.env.dev.local"

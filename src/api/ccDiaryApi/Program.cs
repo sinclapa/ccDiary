@@ -9,8 +9,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Asp.Versioning;
 using ccDiaryApi;
+using ccDiaryApi.Authorization;
 using ccDiaryApi.Data.Context;
 using ccDiaryApi.Data.Migration;
+using ccDiaryApi.Data.Model;
 using ccDiaryApi.Endpoints;
 using ccDiaryApi.Extensions;
 using ccDiaryApi.Health;
@@ -41,6 +43,8 @@ if (builder.Environment.IsEnvironment("local"))
 if (builder.Environment.IsEnvironment("Local")
     || builder.Environment.IsEnvironment("local")
     || builder.Environment.IsEnvironment("LocalContainer")
+    || builder.Environment.IsEnvironment("localcompose")
+    || builder.Environment.IsEnvironment("LocalCompose")
     || builder.Environment.IsEnvironment("localcontainer"))
 {
     builder.Configuration.AddUserSecrets<Program>();
@@ -90,6 +94,14 @@ builder.Services.AddApiVersioning(options =>
         Program.ConfigureApiExplorer(options);
     });
 
+builder.Services.AddAuthorization(opts =>
+{
+    opts.AddPolicy("DiaryAdmin", p => p.RequireRole(AppRole.DiaryAdmin.ToString()));
+    opts.AddPolicy("DiaryContributor", p => p.RequireRole(
+        AppRole.DiaryAdmin.ToString(),
+        AppRole.DiaryContributor.ToString()));
+});
+
 // Add services to the container.
 builder.Services.AddScoped<IDiaryService, DiaryService>();
 
@@ -98,6 +110,14 @@ builder.Services.AddScoped<IDiaryEntryService, DiaryEntryService>();
 builder.Services.AddScoped<IDiaryArchiveService, DiaryArchiveService>();
 
 builder.Services.AddScoped<IAppInfoService, AppInfoService>();
+
+builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();
+
+builder.Services.AddScoped<IGraphService, GraphService>();
+
+builder.Services.AddHttpClient();
 
 builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 
@@ -152,6 +172,12 @@ else
     Log.Logger.Information("Skipping database migration (RUN_MIGRATIONS is not set)");
 }
 
+using (var scope = app.Services.CreateScope())
+{
+    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+    await userService.SeedBootstrapAdminAsync();
+}
+
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
@@ -188,6 +214,8 @@ app.UseCors("cors");
 app.UseAuthentication();
 
 app.UseObservabilityUserContext();
+
+app.UseAppUserEnrichment();
 
 app.UseAuthorization();
 

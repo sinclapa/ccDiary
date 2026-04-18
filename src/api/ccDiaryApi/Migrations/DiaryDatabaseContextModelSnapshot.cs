@@ -22,6 +22,41 @@ namespace ccDiaryApi.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("ccDiaryApi.Data.Model.AccessRequestDTO", b =>
+                {
+                    b.Property<Guid>("AccessRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ProcessedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("AccessRequestId");
+
+                    b.HasIndex("ProcessedByUserId");
+
+                    b.ToTable("AccessRequest");
+                });
+
             modelBuilder.Entity("ccDiaryApi.Data.Model.AppInfoDTO", b =>
                 {
                     b.Property<int>("Id")
@@ -40,6 +75,41 @@ namespace ccDiaryApi.Migrations
                     b.ToTable("AppInfo");
                 });
 
+            modelBuilder.Entity("ccDiaryApi.Data.Model.AppUserDTO", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("EntraObjectId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("EntraObjectId")
+                        .IsUnique();
+
+                    b.ToTable("AppUser");
+                });
+
             modelBuilder.Entity("ccDiaryApi.Data.Model.DiaryDTO", b =>
                 {
                     b.Property<Guid>("DiaryId")
@@ -52,6 +122,9 @@ namespace ccDiaryApi.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OwnerId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
@@ -113,6 +186,15 @@ namespace ccDiaryApi.Migrations
                     b.HasIndex("DiaryId");
 
                     b.ToTable("DiaryEntry");
+                });
+
+            modelBuilder.Entity("ccDiaryApi.Data.Model.AccessRequestDTO", b =>
+                {
+                    b.HasOne("ccDiaryApi.Data.Model.AppUserDTO", "ProcessedBy")
+                        .WithMany()
+                        .HasForeignKey("ProcessedByUserId");
+
+                    b.Navigation("ProcessedBy");
                 });
 
             modelBuilder.Entity("ccDiaryApi.Data.Model.DiaryEntryDTO", b =>

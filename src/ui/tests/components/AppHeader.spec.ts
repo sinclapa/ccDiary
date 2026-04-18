@@ -6,6 +6,16 @@ import { AccountInfo } from '@azure/msal-browser'
 import { describe } from 'node:test'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    isAdmin: false,
+    isContributor: false,
+    appUser: null,
+    fetchAppUser: vi.fn().mockResolvedValue(undefined),
+    clearAppUser: vi.fn(),
+  }),
+}))
+
 vi.mock('@/services/authentication/msalConfig')
 const msalServiceSpies = {
   initializeInstance: vi.fn().mockImplementation(() => { throw new Error('MSAL instance initialization failed') }),
