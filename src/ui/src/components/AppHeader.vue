@@ -23,8 +23,10 @@
   >
     <v-list-item subtitle="Diary" title="Cooking Code" />
     <v-divider />
-    <v-list-item href="/" link title="Home" />
-    <v-list-item href="/diaries" link title="Diaries" />
+    <v-list-item link title="Home" to="/" />
+    <v-list-item link title="Diaries" to="/diaries" />
+    <v-list-item v-if="!state.isAuthenticated" link title="Register" to="/register" />
+    <v-list-item v-if="authStore.isAdmin" link title="Admin" to="/admin" />
   </v-navigation-drawer>
 </template>
 
@@ -33,16 +35,22 @@
   import { useRouter } from 'vue-router'
   import { msalService } from '@/services/authentication/msalService'
   import { state } from '@/services/authentication/msalConfig'
+  import { useAuthStore } from '@/stores/auth'
 
   const drawer = ref(false)
   const router = useRouter()
+  const authStore = useAuthStore()
   const { initializeInstance, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor } = msalService()
 
   const handleLogin = async () => {
     await login()
+    if (state.isAuthenticated) {
+      await authStore.fetchAppUser()
+    }
   }
 
   const handleLogout = () => {
+    authStore.clearAppUser()
     logout()
   }
 
@@ -59,5 +67,8 @@
     const redirectPath = await handleRedirect()
     if (redirectPath) await router.replace(redirectPath)
     await registerAuthorizationHeaderInterceptor()
+    if (state.isAuthenticated) {
+      await authStore.fetchAppUser()
+    }
   })
 </script>

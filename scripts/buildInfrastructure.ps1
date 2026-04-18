@@ -212,6 +212,30 @@ else {
     $grafanaFaroUrl = $params["GrafanaFaroUrl"]
 }
 
+if (-Not ($params.ContainsKey("BootstrapAdminObjectId"))) {
+    $bootstrapAdminObjectId = Read-Host -Prompt "Enter the Bootstrap Admin Entra Object ID (leave empty to skip)"
+    $params.Add("BootstrapAdminObjectId", $bootstrapAdminObjectId)
+}
+else {
+    $bootstrapAdminObjectId = $params["BootstrapAdminObjectId"]
+}
+
+if (-Not ($params.ContainsKey("BootstrapAdminEmail"))) {
+    $bootstrapAdminEmail = Read-Host -Prompt "Enter the Bootstrap Admin email (leave empty to skip)"
+    $params.Add("BootstrapAdminEmail", $bootstrapAdminEmail)
+}
+else {
+    $bootstrapAdminEmail = $params["BootstrapAdminEmail"]
+}
+
+if (-Not ($params.ContainsKey("BootstrapAdminDisplayName"))) {
+    $bootstrapAdminDisplayName = Read-Host -Prompt "Enter the Bootstrap Admin display name (leave empty to skip)"
+    $params.Add("BootstrapAdminDisplayName", $bootstrapAdminDisplayName)
+}
+else {
+    $bootstrapAdminDisplayName = $params["BootstrapAdminDisplayName"]
+}
+
 # Remove stale key from previous script version
 $params.Remove("GrafanaOtlpAuthHeader")
 
@@ -327,6 +351,10 @@ az sql server firewall-rule create `
   --end-ip-address "${myIP}" `
   --output none
 
+Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
+$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
+$entraClientCredentialsPassword = $entraClientCredentials.password
+
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 
 # Prepare environment variables as an array so PowerShell passes each as a separate argument
@@ -338,7 +366,15 @@ $envVars = @(
         "RUN_MIGRATIONS=false",
         "OTEL_EXPORTER_OTLP_ENDPOINT=$grafanaOtlpEndpoint",
         "OTEL_EXPORTER_OTLP_HEADERS=$grafanaOtlpAuthHeader",
-        "OTEL_SERVICE_NAME=ccDiaryApi"
+        "OTEL_SERVICE_NAME=ccDiaryApi",
+        "Graph__TenantId=$tenantId",
+        "Graph__ClientId=$entraClientId",
+        "Graph__ClientSecret=$entraClientCredentialsPassword",
+        "Graph__InviteRedirectUrl=https://$staticSiteUrl/",
+        "Graph__AppDisplayName=Cooking Code Diary",
+        "BootstrapAdmin__ObjectId=$bootstrapAdminObjectId",
+        "BootstrapAdmin__Email=$bootstrapAdminEmail",
+        "BootstrapAdmin__DisplayName=$bootstrapAdminDisplayName"
 )
 
 az containerapp update `
@@ -347,13 +383,8 @@ az containerapp update `
     --output none `
     --set-env-vars $envVars
 
-Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan 
+Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan
 az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_") --output none --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
-
-
-Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
-$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
-$entraClientCredentialsPassword = $entraClientCredentials.password
 
 Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
 
@@ -388,6 +419,10 @@ gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $g
 gh secret set "OTEL_EXPORTER_OTLP_ENDPOINT" --body "$grafanaOtlpEndpoint" --repo $gitHubRepo --env "${environment}"
 gh secret set "OTEL_EXPORTER_OTLP_HEADERS" --body "$grafanaOtlpAuthHeader" --repo $gitHubRepo --env "${environment}"
 gh secret set "GRAFANA_FARO_URL" --body "$grafanaFaroUrl" --repo $gitHubRepo --env "${environment}"
+gh secret set "GRAPH_INVITE_REDIRECT_URL" --body "https://$staticSiteUrl/" --repo $gitHubRepo --env "${environment}"
+gh secret set "BOOTSTRAP_ADMIN_OBJECT_ID" --body "$bootstrapAdminObjectId" --repo $gitHubRepo --env "${environment}"
+gh secret set "BOOTSTRAP_ADMIN_EMAIL" --body "$bootstrapAdminEmail" --repo $gitHubRepo --env "${environment}"
+gh secret set "BOOTSTRAP_ADMIN_DISPLAY_NAME" --body "$bootstrapAdminDisplayName" --repo $gitHubRepo --env "${environment}"
 
 Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan
 gh variable set "SONAR_API_PROJECT_KEY" --body "$sonarApiProjectKey" --repo $gitHubRepo

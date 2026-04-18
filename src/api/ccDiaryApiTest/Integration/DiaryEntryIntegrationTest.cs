@@ -22,6 +22,7 @@ namespace ccDiaryApiTest.Integration
         {
             _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
             await SharedTestFactory.Factory.ClearDatabaseAsync();
+            await SharedTestFactory.Factory.CreateAppUserAsync(SharedTestFactory.Factory.DefaultUserId, AppRole.DiaryAdmin);
         }
 
         public async Task<DiaryDTO> CreateDiary()

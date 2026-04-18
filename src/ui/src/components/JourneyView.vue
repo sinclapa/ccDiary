@@ -49,10 +49,10 @@
 
   const modeStyle: Record<NonNullable<JourneyMode>, { color: string; weight: number; dashArray?: string }> = {
     'crow-flies': { color: 'red', weight: 2, dashArray: '6 4' },
-    walking:      { color: '#2e7d32', weight: 2, dashArray: '2 6' },
-    car:          { color: '#1565c0', weight: 3 },
-    train:        { color: '#e65100', weight: 4, dashArray: '10 4' },
-    boat:         { color: '#00838f', weight: 2, dashArray: '8 6' },
+    walking: { color: '#2e7d32', weight: 2, dashArray: '2 6' },
+    car: { color: '#1565c0', weight: 3 },
+    train: { color: '#e65100', weight: 4, dashArray: '10 4' },
+    boat: { color: '#00838f', weight: 2, dashArray: '8 6' },
   }
 
   async function geocode (location: string): Promise<[number, number] | null> {

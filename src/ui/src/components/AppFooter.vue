@@ -1,5 +1,5 @@
 <template>
-  <v-footer app height="40" class="app-footer">
+  <v-footer app class="app-footer" height="40">
     <div class="text-caption text-disabled">
       <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
     </div>
@@ -14,7 +14,7 @@
     >
       <v-icon
         :icon="item.icon"
-        :size=16
+        :size="16"
       />
     </a>
 

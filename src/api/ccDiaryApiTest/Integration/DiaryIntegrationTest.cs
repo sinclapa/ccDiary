@@ -7,7 +7,6 @@ namespace ccDiaryApiTest.Integration
     using System.Net;
     using System.Net.Http.Json;
     using ccDiaryApi.Data.Model;
-    using Microsoft.AspNetCore.Http;
 
     [TestClass]
     public class DiaryIntegrationTest
@@ -37,6 +36,9 @@ namespace ccDiaryApiTest.Integration
         {
             _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
             await SharedTestFactory.Factory.ClearDatabaseAsync();
+
+            // Seed the default test user as admin so Create/Update/Delete are authorised
+            await SharedTestFactory.Factory.CreateAppUserAsync(SharedTestFactory.Factory.DefaultUserId, AppRole.DiaryAdmin);
         }
 
         [TestMethod]
@@ -253,6 +255,54 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task Contributor_CannotEditAnotherUsersDiary()
+        {
+            // Arrange — owner creates a diary
+            var ownerOid = "owner-oid";
+            await SharedTestFactory.Factory.CreateAppUserAsync(ownerOid, AppRole.DiaryContributor);
+
+            var ownerClient = SharedTestFactory.Factory.CreateClient();
+            ownerClient.DefaultRequestHeaders.Add(TestAuthHandler.UserId, ownerOid);
+            ownerClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryContributor");
+
+            var diary = await CreateDiary(ownerClient);
+
+            // Arrange — a different contributor tries to delete the diary
+            var otherOid = "other-contributor-oid";
+            await SharedTestFactory.Factory.CreateAppUserAsync(otherOid, AppRole.DiaryContributor);
+
+            var otherClient = SharedTestFactory.Factory.CreateClient();
+            otherClient.DefaultRequestHeaders.Add(TestAuthHandler.UserId, otherOid);
+            otherClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryContributor");
+
+            // Act
+            var response = await otherClient.DeleteAsync($"/api/v1/Diary/Delete/{diary.DiaryId}");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task Admin_CanEditAnyDiary()
+        {
+            // Arrange — contributor creates a diary
+            var contributorOid = "contributor-for-admin-test";
+            await SharedTestFactory.Factory.CreateAppUserAsync(contributorOid, AppRole.DiaryContributor);
+
+            var contributorClient = SharedTestFactory.Factory.CreateClient();
+            contributorClient.DefaultRequestHeaders.Add(TestAuthHandler.UserId, contributorOid);
+            contributorClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryContributor");
+
+            var diary = await CreateDiary(contributorClient);
+
+            // Act — admin deletes it
+            var response = await _httpClient.DeleteAsync($"/api/v1/Diary/Delete/{diary.DiaryId}");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         }
     }
 }

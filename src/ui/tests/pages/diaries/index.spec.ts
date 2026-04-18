@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { state } from '@/services/authentication/msalConfig'
 import { useApiStatusStore } from '@/stores/apiStatus'
+import { useAuthStore } from '@/stores/auth'
 import Index from '@/pages/diaries/index.vue'
 import { diaryAPI } from '@/services/modules/diaryService'
 
@@ -125,13 +126,20 @@ describe('pages/diaries/index.vue', () => {
 
   it('should conditionally render buttons based on authentication', async () => {
     const mockDiaries = [
-      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
+      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1', ownerId: 'oid-1' },
     ];
     (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
+
+    // Set user as admin so canEdit returns true
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
+
     await wrapper.vm.data()
     expect(wrapper.html()).toContain('_delete')
-    state.isAuthenticated = false
-    wrapper = mount(Index)
+
+    // Clear user — no longer admin/contributor
+    authStore.appUser = null
+    await wrapper.vm.$nextTick()
     expect(wrapper.html()).not.toContain('_delete')
   })
 

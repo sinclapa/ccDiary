@@ -20,6 +20,19 @@ namespace ccDiaryApi.Data.Context
 
         public DbSet<AppInfoDTO> AppInfo { get; set; }
 
+        public DbSet<AppUserDTO> AppUsers { get; set; }
+
+        public DbSet<AccessRequestDTO> AccessRequests { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<AppUserDTO>()
+                .HasIndex(u => u.EntraObjectId)
+                .IsUnique();
+        }
+
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             configurationBuilder

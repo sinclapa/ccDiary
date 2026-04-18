@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { initFaro, pushFaroEvent, startFaroUserAction, endFaroUserAction } from '../faro'
+import { endFaroUserAction, initFaro, pushFaroEvent, startFaroUserAction } from '../faro'
 import { getAppConfigField } from '@/utils/appConfig'
 
 const mockPushEvent = vi.fn()

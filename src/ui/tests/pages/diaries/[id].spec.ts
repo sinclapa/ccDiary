@@ -10,6 +10,7 @@ import { diaryAPI } from '@/services/modules/diaryService'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
 import { state } from '@/services/authentication/msalConfig'
 import { useApiStatusStore } from '@/stores/apiStatus'
+import { useAuthStore } from '@/stores/auth'
 import Component from '@/pages/diaries/[id].vue'
 import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
@@ -101,16 +102,18 @@ describe('[id].vue', () => {
     expect(wrapper.text()).toContain('Test Author')
   })
 
-  it('shows Add button only when authenticated', async () => {
+  it('shows Add button only when authenticated as contributor or admin', async () => {
     await flushPromises()
     expect(wrapper.html()).not.toContain('Add')
-    state.isAuthenticated = true
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
     await flushPromises()
     expect(wrapper.html()).toContain('Add')
   })
 
   it('calls editItem when Add button is clicked', async () => {
-    state.isAuthenticated = true
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
     await flushPromises()
     const addBtn = wrapper.findAll('button').find(btn => btn.text() === 'Add')
     expect(addBtn).toBeTruthy()
@@ -119,7 +122,8 @@ describe('[id].vue', () => {
   })
 
   it('calls deleteItem when delete button is clicked', async () => {
-    state.isAuthenticated = true
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
     await flushPromises()
     // Find the delete VBtn by its icon prop (HTML search won't work since $mdi-delete
     // is a custom alias not registered in the test Vuetify plugin)

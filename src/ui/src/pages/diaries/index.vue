@@ -21,7 +21,7 @@
           >
             <template #activator="{ props }">
               <v-btn
-                v-if="state.isAuthenticated"
+                v-if="authStore.isContributor"
                 class="mb-2"
                 v-bind="props"
                 @click="editItem()"
@@ -59,7 +59,7 @@
       <template #item.actions="{ item }">
         <div class="d-flex justify-end">
           <v-btn
-            v-if="state.isAuthenticated"
+            v-if="canEdit(item)"
             :id="item.diaryId + '_edit'"
             icon
             size="small"
@@ -70,7 +70,7 @@
             </v-icon>
           </v-btn>
           <v-btn
-            v-if="state.isAuthenticated"
+            v-if="canEdit(item)"
             :id="item.diaryId + '_delete'"
             icon
             size="small"
@@ -91,8 +91,10 @@
   import Diary from '@/services/models/diary'
   import { state } from '@/services/authentication/msalConfig'
   import { useApiStatusStore } from '@/stores/apiStatus'
+  import { useAuthStore } from '@/stores/auth'
 
   const apiStatus = useApiStatusStore()
+  const authStore = useAuthStore()
   const loading = ref(false)
   const dialogDelete = ref(false)
   const dialog = ref(false)
@@ -106,11 +108,16 @@
       { title: 'Author', value: 'author' },
       { title: 'Description', value: 'description' },
     ]
-    if (state.isAuthenticated) {
+    if (authStore.isContributor) {
       cols.push({ title: 'Actions', key: 'actions', align: 'end' } as any)
     }
     return cols
   })
+
+  function canEdit (item: Diary): boolean {
+    if (authStore.isAdmin) return true
+    return authStore.isContributor && item.ownerId === authStore.appUser?.entraObjectId
+  }
 
   async function onAddDiary (payload : {title: string, author: string, description: string}) {
     editedItem.value.title = payload.title

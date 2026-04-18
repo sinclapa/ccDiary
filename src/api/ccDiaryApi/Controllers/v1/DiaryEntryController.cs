@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryEntryController.cs" company="CookingCode">
+// <copyright file="DiaryEntryController.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -7,6 +7,7 @@ namespace ccDiaryApi.Controllers.v1
     using System.ComponentModel;
     using Asp.Versioning;
     using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Extensions;
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -20,11 +21,16 @@ namespace ccDiaryApi.Controllers.v1
     public class DiaryEntryController : ControllerBase
     {
         private readonly IDiaryEntryService _diaryEntryService;
+        private readonly IDiaryService _diaryService;
         private readonly ILogger<DiaryEntryController> _logger;
 
-        public DiaryEntryController(IDiaryEntryService diaryEntryService, ILogger<DiaryEntryController>? logger = null)
+        public DiaryEntryController(
+            IDiaryEntryService diaryEntryService,
+            IDiaryService diaryService,
+            ILogger<DiaryEntryController>? logger = null)
         {
             _diaryEntryService = diaryEntryService;
+            _diaryService = diaryService;
             _logger = logger ?? NullLogger<DiaryEntryController>.Instance;
         }
 
@@ -95,8 +101,18 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [HttpPost]
+        [Authorize(Policy = "DiaryContributor")]
         public ActionResult<DiaryEntryDTO> Create([FromBody] DiaryEntryDTO diaryEntry)
         {
+            if (!User.IsInRole("DiaryAdmin"))
+            {
+                var diary = _diaryService.GetDiary(diaryEntry.DiaryId);
+                if (diary == null || diary.OwnerId != User.GetOid())
+                {
+                    return Forbid();
+                }
+            }
+
             var retDiaryEntry = _diaryEntryService.CreateDiaryEntry(diaryEntry);
             _logger.LogInformation(
                 "Diary entry created. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}",
@@ -106,8 +122,18 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [HttpPut]
+        [Authorize(Policy = "DiaryContributor")]
         public ActionResult<DiaryEntryDTO> Update([FromBody] DiaryEntryDTO diaryEntry)
         {
+            if (!User.IsInRole("DiaryAdmin"))
+            {
+                var diary = _diaryService.GetDiary(diaryEntry.DiaryId);
+                if (diary == null || diary.OwnerId != User.GetOid())
+                {
+                    return Forbid();
+                }
+            }
+
             var retDiaryEntry = _diaryEntryService.UpdateDiaryEntry(diaryEntry);
             _logger.LogInformation(
                 "Diary entry updated. DiaryEntryId={DiaryEntryId} DiaryId={DiaryId}",
@@ -118,12 +144,22 @@ namespace ccDiaryApi.Controllers.v1
 
         [Route("{diaryEntryId:guid}")]
         [HttpDelete]
+        [Authorize(Policy = "DiaryContributor")]
         public ActionResult Delete(Guid diaryEntryId)
         {
             var diaryEntry = _diaryEntryService.GetDiaryEntry(diaryEntryId);
             if (diaryEntry == null)
             {
                 return NotFound();
+            }
+
+            if (!User.IsInRole("DiaryAdmin"))
+            {
+                var diary = _diaryService.GetDiary(diaryEntry.DiaryId);
+                if (diary == null || diary.OwnerId != User.GetOid())
+                {
+                    return Forbid();
+                }
             }
 
             _diaryEntryService.DeleteDiaryEntry(diaryEntry);

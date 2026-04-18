@@ -18,6 +18,13 @@ namespace ccDiaryApiTest
         public const string UserId = "UserId";
 
         public const string AuthenticationScheme = "Test";
+
+        public const string UserRole = "X-Test-Role";
+
+        public const string UserEmail = "X-Test-Email";
+
+        public const string NoAuth = "X-Test-No-Auth";
+
         private readonly string _defaultUserId;
 
         public TestAuthHandler(
@@ -31,21 +38,46 @@ namespace ccDiaryApiTest
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            if (Context.Request.Headers.ContainsKey(NoAuth))
+            {
+                return Task.FromResult(AuthenticateResult.NoResult());
+            }
+
             var claims = new List<Claim> { new (ClaimTypes.Name, "Test user") };
 
             // Extract User ID from the request headers if it exists,
             // otherwise use the default User ID from the options.
+            var oid = _defaultUserId;
             if (Context.Request.Headers.TryGetValue(UserId, out var userId))
             {
                 var headerUserId = userId[0];
                 if (headerUserId != null)
                 {
-                    claims.Add(new Claim(ClaimTypes.NameIdentifier, headerUserId));
+                    oid = headerUserId;
                 }
             }
-            else
+
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, oid));
+            claims.Add(new Claim("oid", oid));
+
+            // Extract email from the X-Test-Email header if present
+            if (Context.Request.Headers.TryGetValue(UserEmail, out var emailHeader))
             {
-                claims.Add(new Claim(ClaimTypes.NameIdentifier, _defaultUserId));
+                var email = emailHeader[0];
+                if (!string.IsNullOrEmpty(email))
+                {
+                    claims.Add(new Claim("preferred_username", email));
+                }
+            }
+
+            // Extract role from the X-Test-Role header if present
+            if (Context.Request.Headers.TryGetValue(UserRole, out var roleHeader))
+            {
+                var role = roleHeader[0];
+                if (!string.IsNullOrEmpty(role))
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
             }
 
             var identity = new ClaimsIdentity(claims, AuthenticationScheme);

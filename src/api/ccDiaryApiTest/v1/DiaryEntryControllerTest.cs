@@ -6,9 +6,11 @@ namespace ccDiaryApiTest.v1
 {
     using System;
     using System.Collections.Generic;
+    using System.Security.Claims;
     using ccDiaryApi.Controllers.v1;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
+    using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Moq;
 
@@ -24,7 +26,8 @@ namespace ccDiaryApiTest.v1
             Guid id = Guid.NewGuid();
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = id, DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "London", Entry = "Some text." };
             diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(id)).Returns(diaryEntry);
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var response = controller.Get(id);
@@ -41,7 +44,8 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var response = controller.Get(Guid.NewGuid());
@@ -73,7 +77,8 @@ namespace ccDiaryApiTest.v1
                 })
                 .Returns([2022, 2023]);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
@@ -109,7 +114,8 @@ namespace ccDiaryApiTest.v1
                 })
                 .Returns([04, 05, 08]);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
@@ -145,7 +151,8 @@ namespace ccDiaryApiTest.v1
                 })
                 .Returns([7, 13, 23, 30]);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
@@ -179,7 +186,8 @@ namespace ccDiaryApiTest.v1
                 })
                 .Returns([7, 13, 23, 24]);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act — BST offset (+60 min): local May starts at UTC April 30 23:00
             var id = Guid.NewGuid();
@@ -218,7 +226,8 @@ namespace ccDiaryApiTest.v1
                 })
                 .Returns([diaryEntry]);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
@@ -256,7 +265,10 @@ namespace ccDiaryApiTest.v1
                 .Callback<DiaryEntryDTO>(d => captured = d)
                 .Returns(diaryEntry);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
+                .Returns(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var response = controller.Create(diaryEntry);
@@ -292,7 +304,10 @@ namespace ccDiaryApiTest.v1
                 .Callback<DiaryEntryDTO>(d => captured = d)
                 .Returns(diaryEntry);
 
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
+                .Returns(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var response = controller.Update(diaryEntry);
@@ -303,6 +318,146 @@ namespace ccDiaryApiTest.v1
             Assert.IsTrue(captured.ShowJourney);
             Assert.AreEqual("London, UK", captured.FromLocation);
             Assert.AreEqual("Paris, France", captured.ToLocation);
+        }
+
+        [TestMethod]
+        public void Create_AsNonOwner_ReturnsForbid()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
+                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
+            var response = controller.Create(diaryEntry);
+
+            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
+        }
+
+        [TestMethod]
+        public void Create_AsAdmin_ReturnsCreated()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock.Setup(x => x.CreateDiaryEntry(It.IsAny<DiaryEntryDTO>())).Returns(diaryEntry);
+            var diaryServiceMock = new Mock<IDiaryService>();
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
+            var response = controller.Create(diaryEntry);
+
+            Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
+        }
+
+        [TestMethod]
+        public void Update_AsNonOwner_ReturnsForbid()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
+                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
+            var response = controller.Update(diaryEntry);
+
+            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
+        }
+
+        [TestMethod]
+        public void Update_AsAdmin_ReturnsOk()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock.Setup(x => x.UpdateDiaryEntry(It.IsAny<DiaryEntryDTO>())).Returns(diaryEntry);
+            var diaryServiceMock = new Mock<IDiaryService>();
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
+            var response = controller.Update(diaryEntry);
+
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+        }
+
+        [TestMethod]
+        public void Delete_EntryNotFound_ReturnsNotFound()
+        {
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+
+            var response = controller.Delete(Guid.NewGuid());
+
+            Assert.IsInstanceOfType(response, typeof(NotFoundResult));
+        }
+
+        [TestMethod]
+        public void Delete_AsOwner_ReturnsOk()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(diaryEntry.DiaryEntryId!.Value)).Returns(diaryEntry);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
+                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "owner-oid");
+            var response = controller.Delete(diaryEntry.DiaryEntryId!.Value);
+
+            Assert.IsInstanceOfType(response, typeof(OkResult));
+        }
+
+        [TestMethod]
+        public void Delete_AsNonOwner_ReturnsForbid()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(diaryEntry.DiaryEntryId!.Value)).Returns(diaryEntry);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
+                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
+            var response = controller.Delete(diaryEntry.DiaryEntryId!.Value);
+
+            Assert.IsInstanceOfType(response, typeof(ForbidResult));
+        }
+
+        [TestMethod]
+        public void Delete_AsAdmin_ReturnsOk()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(diaryEntry.DiaryEntryId!.Value)).Returns(diaryEntry);
+            var diaryServiceMock = new Mock<IDiaryService>();
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
+            var response = controller.Delete(diaryEntry.DiaryEntryId!.Value);
+
+            Assert.IsInstanceOfType(response, typeof(OkResult));
+        }
+
+        private static DiaryEntryController CreateController(IDiaryEntryService entryService, IDiaryService diaryService, string? oid = null, bool isAdmin = false)
+        {
+            var claims = new List<Claim>();
+            if (oid != null)
+            {
+                claims.Add(new Claim("oid", oid));
+            }
+
+            if (isAdmin)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "DiaryAdmin"));
+            }
+
+            var controller = new DiaryEntryController(entryService, diaryService);
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, claims.Count > 0 ? "Test" : string.Empty)),
+                },
+            };
+            return controller;
         }
     }
 }
