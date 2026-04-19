@@ -208,6 +208,8 @@ namespace ccDiaryApi.Services
 
         private static double Round6(double v) => Math.Round(v, 6);
 
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
+
         private static (double Lat, double Lon)? TryParseCoordinates(string input)
         {
             // DMS: 10°00'05.0"S 39°43'11.9"E — accepts common Unicode variants for each separator:
@@ -217,7 +219,8 @@ namespace ccDiaryApi.Services
             var dms = Regex.Match(
                 input,
                 "(\\d+)[\u00b0d]\\s*(\\d+)[\u0027\u2019\u2032]\\s*(\\d+\\.?\\d*)[\u0022\u201d\u2033]\\s*([NS])[,\\s]+(\\d+)[\u00b0d]\\s*(\\d+)[\u0027\u2019\u2032]\\s*(\\d+\\.?\\d*)[\u0022\u201d\u2033]\\s*([EW])",
-                RegexOptions.IgnoreCase);
+                RegexOptions.IgnoreCase,
+                RegexTimeout);
             if (dms.Success)
             {
                 var lat = DmsToDegrees(dms.Groups[1].Value, dms.Groups[2].Value, dms.Groups[3].Value, dms.Groups[4].Value);
@@ -226,7 +229,7 @@ namespace ccDiaryApi.Services
             }
 
             // Decimal degrees: -10.001389, 39.719972  or  -10.001389 39.719972
-            var dec = Regex.Match(input, @"^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$");
+            var dec = Regex.Match(input, @"^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$", RegexOptions.None, RegexTimeout);
             if (dec.Success
                 && double.TryParse(dec.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var dlat)
                 && double.TryParse(dec.Groups[2].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var dlon)
