@@ -382,9 +382,32 @@ az containerapp update `
     --resource-group $resourceGroupName `
     --output none `
     --set-env-vars $envVars
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to update Container App environment variables."
+    exit 1
+}
 
 Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan
-az containerapp connection create sql --connection "sql_$(New-GuidFromString $appName)".Replace("-", "_") --output none --source-id $containerAppId --target-id $databaseId --client-type dotnet --system-identity -c $containerAppName
+$connectionName = "sql_$((New-GuidFromString $appName).ToString().Replace('-', '_'))"
+$existingConnection = az containerapp connection list `
+    --source-id $containerAppId `
+    --query "[?name=='$connectionName'] | [0].name" -o tsv 2>$null
+if ($existingConnection -eq $connectionName) {
+    Write-Host "  Service Connector '$connectionName' already exists, skipping." -ForegroundColor Gray
+} else {
+    az containerapp connection create sql `
+        --connection $connectionName `
+        --source-id $containerAppId `
+        --target-id $databaseId `
+        --client-type dotnet `
+        --system-identity `
+        -c $containerAppName
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to create Service Connector. The Container App cannot connect to SQL without it. Aborting."
+        exit 1
+    }
+    Write-Host "  Service Connector '$connectionName' created successfully." -ForegroundColor Green
+}
 
 Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
 
