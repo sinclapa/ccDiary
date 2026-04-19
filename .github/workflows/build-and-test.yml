@@ -246,6 +246,7 @@ jobs:
               "BootstrapAdmin__ObjectId=${{ secrets.BOOTSTRAP_ADMIN_OBJECT_ID }}" \
               "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}" \
               "BootstrapAdmin__DisplayName=${{ secrets.BOOTSTRAP_ADMIN_DISPLAY_NAME }}" \
+            --no-wait \
             --output none
 
       - name: Wait for revision to be running
@@ -255,7 +256,7 @@ jobs:
             --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
             --query 'properties.configuration.ingress.fqdn' -o tsv)
           echo "Waking app at https://${APP_FQDN}..."
-          curl -s -o /dev/null "https://${APP_FQDN}/actuator/health" || true
+          curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
           echo "Waiting for new revision to become active..."
           for i in $(seq 1 30); do
             STATUS=$(az containerapp revision list \
@@ -267,7 +268,7 @@ jobs:
               break
             fi
             echo "  Status: $STATUS (attempt $i/30)"
-            curl -s -o /dev/null "https://${APP_FQDN}/actuator/health" || true
+            curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
             sleep 10
           done
 
@@ -279,7 +280,7 @@ jobs:
             --query 'properties.configuration.ingress.fqdn' -o tsv)
           echo "Polling https://${APP_FQDN}/actuator/health ..."
           for i in $(seq 1 20); do
-            HTTP_STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" "https://${APP_FQDN}/actuator/health" || echo "000")
+            HTTP_STATUS=$(curl -s --max-time 15 -o /tmp/health.json -w "%{http_code}" "https://${APP_FQDN}/actuator/health" || echo "000")
             HEALTH_STATUS=$(jq -r '.status' /tmp/health.json 2>/dev/null || echo "unknown")
             echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
             if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
@@ -300,6 +301,7 @@ jobs:
             --name ${{ vars.CONTAINER_APP_NAME }} \
             --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
             --set-env-vars "RUN_MIGRATIONS=false" \
+            --no-wait \
             --output none
 
       - name: Get Container App URL
