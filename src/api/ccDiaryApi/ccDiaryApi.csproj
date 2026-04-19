@@ -21,7 +21,8 @@
     <!--
     CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'
     -->    
-    <NoWarn>$(NoWarn),1591,CA1848,NU1608</NoWarn>
+    <!-- SA1516/AD0001: StyleCop SA1201 crashes (KeyNotFoundException) on C# record declarations in this StyleCop version -->
+    <NoWarn>$(NoWarn),1591,CA1848,NU1608,SA1516,AD0001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

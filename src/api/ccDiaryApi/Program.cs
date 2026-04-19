@@ -119,6 +119,15 @@ builder.Services.AddScoped<IGraphService, GraphService>();
 
 builder.Services.AddHttpClient();
 
+builder.Services.AddHttpClient("MapTileProxy", client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        "ccDiary/1.0 (https://github.com/cookingcode/ccdiary; dear_paul_sinclair@hotmail.com)");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
+builder.Services.AddScoped<IMapTileService, MapTileService>();
+
 builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
 
 builder.Services.AddControllers()

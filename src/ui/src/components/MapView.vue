@@ -25,6 +25,7 @@
   import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
   import markerIcon from 'leaflet/dist/images/marker-icon.png'
   import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+  import { getAppConfigField } from '@/utils/appConfig'
 
   // Fix Vite asset URL resolution for Leaflet default marker icons
   delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -52,17 +53,19 @@
     status.value = 'loading'
 
     try {
+      const apiBase = getAppConfigField('VITE_API')
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(props.location)}&format=json&limit=1`
+        `${apiBase}v1/MapTile/Geocode?q=${encodeURIComponent(props.location)}`
       )
-      const results = await response.json()
 
-      if (!results || results.length === 0) {
+      if (!response.ok) {
         status.value = 'not-found'
         return
       }
 
-      const { lat, lon } = results[0]
+      const result = await response.json()
+      const lat: number = result.lat
+      const lon: number = result.lon
       status.value = 'ready'
 
       // Wait for Vue to remove the map-hidden class before Leaflet measures dimensions
@@ -73,11 +76,11 @@
         leafletMap = null
       }
 
-      leafletMap = L.map(mapContainer.value!).setView([Number.parseFloat(lat), Number.parseFloat(lon)], 13)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      leafletMap = L.map(mapContainer.value!).setView([lat, lon], 13)
+      L.tileLayer(`${apiBase}v1/MapTile/Tile/osm/{z}/{x}/{y}`, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
-      L.marker([Number.parseFloat(lat), Number.parseFloat(lon)]).addTo(leafletMap)
+      L.marker([lat, lon]).addTo(leafletMap)
     } catch {
       status.value = 'error'
     }

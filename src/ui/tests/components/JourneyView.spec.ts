@@ -51,10 +51,22 @@ function mountJourneyView (fromLocation: string, toLocation: string, journeyMode
   })
 }
 
+// Geocoding calls return { lat, lon }; any extra calls (routing) also succeed but return wrong shape
+// — only use this for crow-flies / train / boat modes that don't call OSRM routing
 function stubFetchSuccess () {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: vi.fn().mockResolvedValue([{ lat: '51.5074', lon: '-0.1278' }]),
+    ok: true,
+    json: vi.fn().mockResolvedValue({ lat: 51.5074, lon: -0.1278 }),
   }))
+}
+
+// For walking/car modes: first 2 calls are geocoding, route call returns 404 so it falls back to direct line
+function stubFetchSuccessWithFailedRoute () {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ lat: 51.5074, lon: -0.1278 }) })
+    .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ lat: 51.5074, lon: -0.1278 }) })
+    .mockResolvedValue({ ok: false }),
+  )
 }
 
 function stubFetchError () {
@@ -110,10 +122,10 @@ describe('JourneyView.vue', () => {
     expect(mockMapInstance.fitBounds).toHaveBeenCalledWith(mockBoundsInstance, { padding: [40, 40] })
   })
 
-  it('shows not-found state when fromLocation geocoding returns empty array', async () => {
+  it('shows not-found state when fromLocation geocoding returns 404', async () => {
     vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValue([]) })
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValue([{ lat: '50.9', lon: '-1.4' }]) })
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ lat: 50.9, lon: -1.4 }) }),
     )
     const wrapper = mountJourneyView('zzz_nonexistent_xyz', 'Southampton, UK')
     await flushPromises()
@@ -121,10 +133,10 @@ describe('JourneyView.vue', () => {
     expect(wrapper.text()).toContain('Location not found')
   })
 
-  it('shows not-found state when toLocation geocoding returns empty array', async () => {
+  it('shows not-found state when toLocation geocoding returns 404', async () => {
     vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValue([{ lat: '51.3', lon: '1.3' }]) })
-      .mockResolvedValueOnce({ json: vi.fn().mockResolvedValue([]) })
+      .mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ lat: 51.3, lon: 1.3 }) })
+      .mockResolvedValueOnce({ ok: false, status: 404 }),
     )
     const wrapper = mountJourneyView('Sandwich, UK', 'zzz_nonexistent_xyz')
     await flushPromises()
@@ -221,7 +233,7 @@ describe('JourneyView.vue', () => {
   })
 
   it('uses car style (blue solid) when journeyMode is car', async () => {
-    stubFetchSuccess()
+    stubFetchSuccessWithFailedRoute()
     const L = (await import('leaflet')).default
     mountJourneyView('Sandwich, UK', 'Southampton, UK', 'car')
     await flushPromises()
@@ -232,7 +244,7 @@ describe('JourneyView.vue', () => {
   })
 
   it('uses walking style (green dotted) when journeyMode is walking', async () => {
-    stubFetchSuccess()
+    stubFetchSuccessWithFailedRoute()
     const L = (await import('leaflet')).default
     mountJourneyView('Sandwich, UK', 'Southampton, UK', 'walking')
     await flushPromises()
@@ -270,19 +282,41 @@ describe('JourneyView.vue', () => {
     mountJourneyView('Southampton, UK', 'Le Havre, France', 'boat')
     await flushPromises()
     expect(L.tileLayer).toHaveBeenCalledWith(
-      expect.stringContaining('openseamap.org'),
+      expect.stringContaining('openseamap'),
       expect.objectContaining({ opacity: 0.8 }),
     )
   })
 
   it('does not add OpenSeaMap tile overlay for non-boat modes', async () => {
-    stubFetchSuccess()
+    stubFetchSuccessWithFailedRoute()
     const L = (await import('leaflet')).default
     mountJourneyView('London, UK', 'Paris, France', 'car')
     await flushPromises()
     const tileLayerCalls = (L.tileLayer as unknown as ReturnType<typeof vi.fn>).mock.calls
-    const seaMapCall = tileLayerCalls.find((args: unknown[]) => args[0] === 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png')
+    const seaMapCall = tileLayerCalls.find(
+      (args: unknown[]) => typeof args[0] === 'string' && (args[0] as string).includes('openseamap'),
+    )
     expect(seaMapCall).toBeUndefined()
+  })
+
+  it('uses the proxy tile URL for OSM tiles', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountJourneyView('Sandwich, UK', 'Southampton, UK')
+    await flushPromises()
+    const tileLayerCalls = (L.tileLayer as unknown as ReturnType<typeof vi.fn>).mock.calls
+    expect(tileLayerCalls[0][0]).toContain('MapTile/Tile/osm/{z}/{x}/{y}')
+    expect(tileLayerCalls[0][0]).not.toContain('tile.openstreetmap.org')
+  })
+
+  it('uses the proxy geocode URL, not Nominatim directly', async () => {
+    stubFetchSuccess()
+    mountJourneyView('Sandwich, UK', 'Southampton, UK')
+    await flushPromises()
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+    const calls = fetchMock.mock.calls.map((args: unknown[]) => args[0] as string)
+    expect(calls.some(url => url.includes('MapTile/Geocode'))).toBe(true)
+    expect(calls.every(url => !url.includes('nominatim.openstreetmap.org'))).toBe(true)
   })
 
   it('re-renders map when journeyMode prop changes', async () => {
