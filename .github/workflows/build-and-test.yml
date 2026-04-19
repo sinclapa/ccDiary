@@ -227,6 +227,24 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Wake SQL database (auto-resume from serverless pause)
+        run: |
+          STATUS=$(az sql db show \
+            --name ${{ vars.SQL_DB_NAME }} \
+            --server ${{ vars.SQL_SERVER_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+            --query "status" -o tsv 2>/dev/null || echo "unknown")
+          echo "SQL database status: $STATUS"
+          if [ "$STATUS" = "Paused" ]; then
+            echo "Resuming paused SQL database (waiting until online)..."
+            az sql db update \
+              --name ${{ vars.SQL_DB_NAME }} \
+              --server ${{ vars.SQL_SERVER_NAME }} \
+              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+              --output none
+            echo "Database is online."
+          fi
+
       - name: Deploy GHCR image to Container App with migration
         run: |
           az containerapp update \
@@ -235,6 +253,7 @@ jobs:
             --image ${{ env.IMAGE_TAG }} \
             --set-env-vars \
               "RUN_MIGRATIONS=true" \
+              "AZURE_SQL_CONNECTIONSTRING=${{ vars.SQL_CONNECTION_STRING }}" \
               "OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}" \
               "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}" \
               "OTEL_SERVICE_NAME=ccDiaryApi" \
