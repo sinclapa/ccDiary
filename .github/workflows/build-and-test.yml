@@ -316,12 +316,18 @@ jobs:
 
       - name: Disable migration for subsequent restarts
         run: |
-          az containerapp update \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --set-env-vars "RUN_MIGRATIONS=false" \
-            --no-wait \
-            --output none
+          for i in $(seq 1 10); do
+            if az containerapp update \
+              --name ${{ vars.CONTAINER_APP_NAME }} \
+              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+              --set-env-vars "RUN_MIGRATIONS=false" \
+              --no-wait \
+              --output none; then
+              break
+            fi
+            echo "  Operation in progress, retrying in 15s (attempt $i/10)..."
+            sleep 15
+          done
 
       - name: Get Container App URL
         run: |
