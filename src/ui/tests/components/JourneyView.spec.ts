@@ -316,7 +316,7 @@ describe('JourneyView.vue', () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
     const calls = fetchMock.mock.calls.map((args: unknown[]) => args[0] as string)
     expect(calls.some(url => url.includes('MapTile/Geocode'))).toBe(true)
-    expect(calls.every(url => !url.includes('nominatim.openstreetmap.org'))).toBe(true)
+    expect(calls.every(url => new URL(url, 'http://localhost').hostname !== 'nominatim.openstreetmap.org')).toBe(true)
   })
 
   it('re-renders map when journeyMode prop changes', async () => {

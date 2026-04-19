@@ -70,7 +70,7 @@ namespace ccDiaryApi.Services
                 {
                     _logger.LogWarning(
                         "Upstream tile fetch failed. Source={Source} Z={Z} X={X} Y={Y} Status={Status}",
-                        source,
+                        SanitizeForLog(source),
                         z,
                         x,
                         y,
@@ -86,7 +86,7 @@ namespace ccDiaryApi.Services
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error fetching tile. Source={Source} Z={Z} X={X} Y={Y}", source, z, x, y);
+                _logger.LogError(ex, "HTTP error fetching tile. Source={Source} Z={Z} X={X} Y={Y}", SanitizeForLog(source), z, x, y);
                 return null;
             }
         }
@@ -121,7 +121,7 @@ namespace ccDiaryApi.Services
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Nominatim fetch failed. Query={Query} Status={Status}", normalised, response.StatusCode);
+                    _logger.LogWarning("Nominatim fetch failed. Query={Query} Status={Status}", SanitizeForLog(normalised), response.StatusCode);
                     return null;
                 }
 
@@ -139,7 +139,7 @@ namespace ccDiaryApi.Services
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error geocoding. Query={Query}", normalised);
+                _logger.LogError(ex, "HTTP error geocoding. Query={Query}", SanitizeForLog(normalised));
                 return null;
             }
         }
@@ -180,7 +180,7 @@ namespace ccDiaryApi.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "OSRM fetch failed. Profile={Profile} Status={Status}", profile, response.StatusCode);
+                        "OSRM fetch failed. Profile={Profile} Status={Status}", SanitizeForLog(profile), response.StatusCode);
                     return null;
                 }
 
@@ -201,12 +201,14 @@ namespace ccDiaryApi.Services
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "HTTP error fetching route. Profile={Profile}", profile);
+                _logger.LogError(ex, "HTTP error fetching route. Profile={Profile}", SanitizeForLog(profile));
                 return null;
             }
         }
 
         private static double Round6(double v) => Math.Round(v, 6);
+
+        private static string SanitizeForLog(string value) => value.ReplaceLineEndings(string.Empty);
 
         private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
 
@@ -287,7 +289,7 @@ namespace ccDiaryApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to persist tile. Source={Source} Z={Z} X={X} Y={Y}", source, z, x, y);
+                _logger.LogWarning(ex, "Failed to persist tile. Source={Source} Z={Z} X={X} Y={Y}", SanitizeForLog(source), z, x, y);
             }
         }
 
@@ -321,7 +323,7 @@ namespace ccDiaryApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to persist geocoding result. Query={Query}", query);
+                _logger.LogWarning(ex, "Failed to persist geocoding result. Query={Query}", SanitizeForLog(query));
             }
         }
 
@@ -360,7 +362,7 @@ namespace ccDiaryApi.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to persist route. Profile={Profile}", profile);
+                _logger.LogWarning(ex, "Failed to persist route. Profile={Profile}", SanitizeForLog(profile));
             }
         }
 
