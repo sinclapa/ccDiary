@@ -159,8 +159,8 @@ namespace ccDiaryApi.Services
             var cutoff = DateTime.UtcNow - RoutingTtl;
 
             var cached = _context.RoutingCache
-                .Where(r => r.FromLat == rFromLat && r.FromLon == rFromLon
-                         && r.ToLat == rToLat && r.ToLon == rToLon
+                .Where(r => Math.Abs(r.FromLat - rFromLat) < 1e-9 && Math.Abs(r.FromLon - rFromLon) < 1e-9
+                         && Math.Abs(r.ToLat - rToLat) < 1e-9 && Math.Abs(r.ToLon - rToLon) < 1e-9
                          && r.Profile == profile && r.CachedAt >= cutoff)
                 .Select(r => r.RouteCoords)
                 .FirstOrDefault();
@@ -329,8 +329,8 @@ namespace ccDiaryApi.Services
             double fromLat, double fromLon, double toLat, double toLon, string profile, string json)
         {
             var existing = _context.RoutingCache
-                .Where(r => r.FromLat == fromLat && r.FromLon == fromLon
-                         && r.ToLat == toLat && r.ToLon == toLon
+                .Where(r => Math.Abs(r.FromLat - fromLat) < 1e-9 && Math.Abs(r.FromLon - fromLon) < 1e-9
+                         && Math.Abs(r.ToLat - toLat) < 1e-9 && Math.Abs(r.ToLon - toLon) < 1e-9
                          && r.Profile == profile)
                 .FirstOrDefault();
 
