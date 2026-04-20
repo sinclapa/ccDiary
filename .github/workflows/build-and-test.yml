@@ -247,7 +247,8 @@ jobs:
 
       - name: Deploy GHCR image to Container App with migration
         env:
-          SQL_CONNECTION_STRING: ${{ vars.SQL_CONNECTION_STRING }}
+          SQL_SERVER_NAME: ${{ vars.SQL_SERVER_NAME }}
+          SQL_DB_NAME: ${{ vars.SQL_DB_NAME }}
         run: |
           ENV_VARS=(
             "RUN_MIGRATIONS=true"
@@ -263,11 +264,12 @@ jobs:
             "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
             "BootstrapAdmin__DisplayName=${{ secrets.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
           )
-          # Only override the connection string when the environment variable is
-          # explicitly set. When absent, remove any user-defined value so the
-          # Service Connector binding is not shadowed by a stale empty string.
-          if [ -n "$SQL_CONNECTION_STRING" ]; then
-            ENV_VARS+=("AZURE_SQL_CONNECTIONSTRING=$SQL_CONNECTION_STRING")
+          # Construct the connection string from the individual server/DB name
+          # variables (the same ones used by the wake-SQL step, so known-correct).
+          # When absent, remove any stale user-defined value so the Service
+          # Connector binding is not shadowed.
+          if [ -n "$SQL_SERVER_NAME" ] && [ -n "$SQL_DB_NAME" ]; then
+            ENV_VARS+=("AZURE_SQL_CONNECTIONSTRING=Server=tcp:${SQL_SERVER_NAME}.database.windows.net,1433;Initial Catalog=${SQL_DB_NAME};Authentication=Active Directory Default")
           fi
           UPDATE_CMD=(az containerapp update
             --name "${{ vars.CONTAINER_APP_NAME }}"
@@ -276,7 +278,7 @@ jobs:
             --set-env-vars "${ENV_VARS[@]}"
             --no-wait
             --output none)
-          if [ -z "$SQL_CONNECTION_STRING" ]; then
+          if [ -z "$SQL_SERVER_NAME" ] || [ -z "$SQL_DB_NAME" ]; then
             UPDATE_CMD+=(--remove-env-vars AZURE_SQL_CONNECTIONSTRING)
           fi
           "${UPDATE_CMD[@]}"
