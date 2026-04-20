@@ -16,6 +16,7 @@ namespace ccDiaryApi.Services
         private static readonly TimeSpan TileTtl = TimeSpan.FromDays(90);
         private static readonly TimeSpan GeocodingTtl = TimeSpan.FromDays(180);
         private static readonly TimeSpan RoutingTtl = TimeSpan.FromDays(90);
+        private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
 
         private static readonly Dictionary<string, string> SourceUrls =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -170,7 +171,7 @@ namespace ccDiaryApi.Services
                 return JsonSerializer.Deserialize<List<double[]>>(cached);
             }
 
-            var url = $"https://router.project-osrm.org/route/v1/{profile}/{rFromLon.ToString(CultureInfo.InvariantCulture)},{rFromLat.ToString(CultureInfo.InvariantCulture)};{rToLon.ToString(CultureInfo.InvariantCulture)},{rToLat.ToString(CultureInfo.InvariantCulture)}?overview=full&geometries=geojson";
+            var url = BuildOsrmUrl(profile, rFromLon, rFromLat, rToLon, rToLat);
 
             try
             {
@@ -210,7 +211,10 @@ namespace ccDiaryApi.Services
 
         private static string SanitizeForLog(string value) => value.ReplaceLineEndings(string.Empty);
 
-        private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
+        private static string BuildOsrmUrl(string profile, double fromLon, double fromLat, double toLon, double toLat) =>
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"https://router.project-osrm.org/route/v1/{profile}/{fromLon},{fromLat};{toLon},{toLat}?overview=full&geometries=geojson");
 
         private static (double Lat, double Lon)? TryParseCoordinates(string input)
         {

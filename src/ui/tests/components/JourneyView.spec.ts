@@ -276,6 +276,15 @@ describe('JourneyView.vue', () => {
     )
   })
 
+  it('does not call the route endpoint for boat mode (great-circle line)', async () => {
+    stubFetchSuccess()
+    mountJourneyView('Dover, UK', 'Calais, France', 'boat')
+    await flushPromises()
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+    const calls = fetchMock.mock.calls.map((args: unknown[]) => args[0] as string)
+    expect(calls.every(url => !url.includes('MapTile/Route'))).toBe(true)
+  })
+
   it('adds OpenSeaMap tile overlay when journeyMode is boat', async () => {
     stubFetchSuccess()
     const L = (await import('leaflet')).default

@@ -391,7 +391,10 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            var osrm = new { code = "NoRoute", routes = (object[]?)null };
+#pragma warning disable SA1011
+            object[]? noRoutes = null;
+#pragma warning restore SA1011
+            var osrm = new { code = "NoRoute", routes = noRoutes };
             var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, osrm));
 
             // Act
