@@ -7,14 +7,13 @@ param adminUserSID string
 param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
+// FreeLimitExhaustionBehavior is immutable once set to BillOverUsage.
+// The deployment script reads the current value before deploying and passes it here
+// so we never attempt an illegal transition.
+@allowed(['AutoPause', 'BillOverUsage'])
+param freeLimitExhaustionBehavior string = 'AutoPause'
 var appName string = '${name}-${environment}'
 var sqlServerName string = 'sql-${appName}'
-// Free-tier auto-pause is only applied to non-prod; prod's FreeLimitExhaustionBehavior
-// is immutable once set to BillOverUsage so we omit the properties entirely there.
-var freeLimitProperties = environment != 'prod' ? {
-  useFreeLimit: true
-  freeLimitExhaustionBehavior: 'AutoPause'
-} : {}
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'logs-${appName}'
@@ -80,7 +79,7 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     name: 'GP_S_Gen5_1'
     tier: 'GeneralPurpose'
   }
-  properties: union({
+  properties: {
     createMode: 'Default'
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 34359738368 // 32 GB
@@ -92,8 +91,10 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     requestedBackupStorageRedundancy: 'Local'
     catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
     isLedgerOn: false
+    useFreeLimit: true
+    freeLimitExhaustionBehavior: freeLimitExhaustionBehavior
     maintenanceConfigurationId: subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')
-  }, freeLimitProperties)
+  }
 }
 
 resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {

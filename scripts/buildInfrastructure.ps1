@@ -278,11 +278,22 @@ Write-Host "  Subscription ID: $subscriptionId" -ForegroundColor Gray
 Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
+# FreeLimitExhaustionBehavior is immutable once set to BillOverUsage.
+# Read the current value so we never attempt an illegal AutoPause -> BillOverUsage -> AutoPause transition.
+$appName = "${name}-${environment}"
+$existingFreeLimitBehavior = az sql db show `
+  --name "sqldb-${appName}" `
+  --server "sql-${appName}" `
+  --resource-group "rg-${name}-${environment}" `
+  --query "freeLimitExhaustionBehavior" -o tsv 2>$null
+$freeLimitExhaustionBehavior = if ($existingFreeLimitBehavior -eq 'BillOverUsage') { 'BillOverUsage' } else { 'AutoPause' }
+Write-Host "  SQL freeLimitExhaustionBehavior: $freeLimitExhaustionBehavior" -ForegroundColor Gray
+
 # Deploy using Azure CLI
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file "$PSScriptRoot\..\deploy\main.bicep" `
-  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
+  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" freeLimitExhaustionBehavior=$freeLimitExhaustionBehavior `
   --output json | ConvertFrom-Json
 
 # Check if deployment succeeded

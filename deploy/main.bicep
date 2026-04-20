@@ -12,6 +12,8 @@ param adminUserSID string
 param devApiContainerImage string
 param externalDomainName string?
 param location string = deployment().location
+@allowed(['AutoPause', 'BillOverUsage'])
+param freeLimitExhaustionBehavior string = 'AutoPause'
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
   name: 'rg-${name}-${environment}'
@@ -29,6 +31,7 @@ module resourceGroupModule 'resourceGroup.bicep' = {
     containerImageName: devApiContainerImage
     externalDomainName: externalDomainName
     location: location
+    freeLimitExhaustionBehavior: freeLimitExhaustionBehavior
   }
 }
 
