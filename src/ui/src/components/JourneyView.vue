@@ -67,7 +67,7 @@
     return [result.lat as number, result.lon as number]
   }
 
-  async function fetchOsrmRoute (
+  async function fetchRoute (
     from: [number, number],
     to: [number, number],
     profile: 'driving' | 'foot',
@@ -88,10 +88,10 @@
   ): Promise<[number, number][]> {
     const mode = props.journeyMode ?? 'crow-flies'
     if (mode === 'walking') {
-      const route = await fetchOsrmRoute(from, to, 'foot')
+      const route = await fetchRoute(from, to, 'foot')
       if (route) return route
     } else if (mode === 'car') {
-      const route = await fetchOsrmRoute(from, to, 'driving')
+      const route = await fetchRoute(from, to, 'driving')
       if (route) return route
     }
     return [from, to]
