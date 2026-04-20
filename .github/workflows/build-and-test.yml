@@ -246,25 +246,33 @@ jobs:
           fi
 
       - name: Deploy GHCR image to Container App with migration
+        env:
+          SQL_CONNECTION_STRING: ${{ vars.SQL_CONNECTION_STRING }}
         run: |
+          ENV_VARS=(
+            "RUN_MIGRATIONS=true"
+            "OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}"
+            "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}"
+            "OTEL_SERVICE_NAME=ccDiaryApi"
+            "Graph__TenantId=${{ secrets.TENANT_ID }}"
+            "Graph__ClientId=${{ secrets.ENTRA_CLIENT_ID }}"
+            "Graph__ClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}"
+            "Graph__InviteRedirectUrl=${{ secrets.GRAPH_INVITE_REDIRECT_URL }}"
+            "Graph__AppDisplayName=Cooking Code Diary"
+            "BootstrapAdmin__ObjectId=${{ secrets.BOOTSTRAP_ADMIN_OBJECT_ID }}"
+            "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
+            "BootstrapAdmin__DisplayName=${{ secrets.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
+          )
+          # Only override the connection string when the environment variable is
+          # explicitly set. Leaving it out preserves the Service Connector binding.
+          if [ -n "$SQL_CONNECTION_STRING" ]; then
+            ENV_VARS+=("AZURE_SQL_CONNECTIONSTRING=$SQL_CONNECTION_STRING")
+          fi
           az containerapp update \
             --name ${{ vars.CONTAINER_APP_NAME }} \
             --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
             --image ${{ env.IMAGE_TAG }} \
-            --set-env-vars \
-              "RUN_MIGRATIONS=true" \
-              "AZURE_SQL_CONNECTIONSTRING=${{ vars.SQL_CONNECTION_STRING }}" \
-              "OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}" \
-              "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}" \
-              "OTEL_SERVICE_NAME=ccDiaryApi" \
-              "Graph__TenantId=${{ secrets.TENANT_ID }}" \
-              "Graph__ClientId=${{ secrets.ENTRA_CLIENT_ID }}" \
-              "Graph__ClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}" \
-              "Graph__InviteRedirectUrl=${{ secrets.GRAPH_INVITE_REDIRECT_URL }}" \
-              "Graph__AppDisplayName=Cooking Code Diary" \
-              "BootstrapAdmin__ObjectId=${{ secrets.BOOTSTRAP_ADMIN_OBJECT_ID }}" \
-              "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}" \
-              "BootstrapAdmin__DisplayName=${{ secrets.BOOTSTRAP_ADMIN_DISPLAY_NAME }}" \
+            --set-env-vars "${ENV_VARS[@]}" \
             --no-wait \
             --output none
 
