@@ -41,10 +41,10 @@ jobs:
       - name: Remove Entra SPA redirect URI
         if: steps.find-comment.outputs.preview_url != ''
         env:
-          AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.TENANT_ID }}
-          ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID }}
+          AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
+          ENTRA_APP_OBJECT_ID: ${{ vars.ENTRA_APP_OBJECT_ID }}
         run: |
           PREVIEW_URL="${{ steps.find-comment.outputs.preview_url }}"
           echo "Removing preview URL: $PREVIEW_URL"
