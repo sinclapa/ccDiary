@@ -118,7 +118,8 @@ ccDiary/
 |---|---|
 | buildAllInfrastructure.ps1 | Deploy infrastructure for all environments (dev, staging, prod) sequentially |
 | buildInfrastructure.ps1 | Build infrastructure in Azure |
-| ensure-local-apps-running.ps1 | Run UI and API if not running |
+| startLocal.ps1 | Run UI and API if not running |
+| stopLocal.ps1 | Kill UI and API processes (preserves VS Code and Visual Studio) |
 | run-coverage-summary.ps1 | Run coverage for API and UI |
 | setuplocal.ps1 | Setup local environment |
 

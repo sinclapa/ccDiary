@@ -14,7 +14,7 @@ $reportXml = Join-Path $uiPath 'playwright-report/junit.xml'
 
 # ── Optionally ensure API + UI are running and data is seeded ──────────────────
 if (-not $SkipEnsureRunning) {
-    & "$PSScriptRoot/ensure-local-apps-running.ps1"
+    & "$PSScriptRoot/startLocal.ps1"
 }
 
 # ── Run Playwright ─────────────────────────────────────────────────────────────

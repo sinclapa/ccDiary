@@ -43,13 +43,15 @@ function mountMapView (location: string) {
 
 function stubFetchSuccess () {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: vi.fn().mockResolvedValue([{ lat: '51.5074', lon: '-0.1278' }]),
+    ok: true,
+    json: vi.fn().mockResolvedValue({ lat: 51.5074, lon: -0.1278 }),
   }))
 }
 
 function stubFetchNotFound () {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: vi.fn().mockResolvedValue([]),
+    ok: false,
+    status: 404,
   }))
 }
 
@@ -96,7 +98,27 @@ describe('MapView.vue', () => {
     expect(L.marker).toHaveBeenCalledWith([51.5074, -0.1278])
   })
 
-  it('shows not-found state when geocoding returns empty array', async () => {
+  it('uses the proxy tile URL for OSM tiles', async () => {
+    stubFetchSuccess()
+    const L = (await import('leaflet')).default
+    mountMapView('London, UK')
+    await flushPromises()
+    const tileLayerCalls = (L.tileLayer as unknown as ReturnType<typeof vi.fn>).mock.calls
+    expect(tileLayerCalls[0][0]).toContain('MapTile/Tile/osm/{z}/{x}/{y}')
+    expect(tileLayerCalls[0][0]).not.toContain('openstreetmap.org')
+  })
+
+  it('uses the proxy geocode URL, not Nominatim directly', async () => {
+    stubFetchSuccess()
+    mountMapView('London, UK')
+    await flushPromises()
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+    const geocodeCall = fetchMock.mock.calls[0][0] as string
+    expect(geocodeCall).toContain('MapTile/Geocode')
+    expect(geocodeCall).not.toContain('nominatim.openstreetmap.org')
+  })
+
+  it('shows not-found state when geocoding returns 404', async () => {
     stubFetchNotFound()
     const wrapper = mountMapView('zzz_nonexistent_place_xyz')
     await flushPromises()

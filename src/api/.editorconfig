@@ -107,3 +107,7 @@ dotnet_style_namespace_match_folder = true:suggestion
 
 [**/Migrations/*.cs]
 dotnet_diagnostic.SA1633.severity = none
+
+# AD0001: StyleCop SA1201 crashes on C# record declarations (KeyNotFoundException bug in this StyleCop version)
+dotnet_diagnostic.AD0001.severity = none
+

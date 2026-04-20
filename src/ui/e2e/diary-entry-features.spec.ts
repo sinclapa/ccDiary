@@ -457,4 +457,73 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
     await expect(page.locator('#from-location')).toHaveCount(0)
     await expect(page.locator('#to-location')).toHaveCount(0)
   })
+
+  test('Add Image toggle is not visible without authentication', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(page.locator('#show-image')).toHaveCount(0)
+  })
+
+  test('Image drop zone is not in the DOM without authentication', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.locator('#image-drop-zone')).toHaveCount(0)
+  })
+})
+
+// ─── API: imageData and imageContentType fields ────────────────────────────────
+
+test.describe('DiaryEntry API — imageData and imageContentType fields', () => {
+  let ww1DiaryId: string
+
+  test.beforeAll(async ({ request }) => {
+    ww1DiaryId = await getIntegrationDiaryId(request)
+  })
+
+  test('GET search for day returns entries that include imageData and imageContentType properties', async ({ request }) => {
+    const response = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    expect(response.ok()).toBeTruthy()
+    const entries: Array<Record<string, unknown>> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
+
+    for (const entry of entries) {
+      expect(entry).toHaveProperty('imageData')
+      expect(entry).toHaveProperty('imageContentType')
+    }
+  })
+
+  test('GET single diary entry includes imageData and imageContentType', async ({ request }) => {
+    const searchResponse = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_ENTRY_YEAR}/${SEEDED_ENTRY_MONTH}/${SEEDED_ENTRY_DAY}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    const entries: Array<{ diaryEntryId: string }> = await searchResponse.json()
+    const entryId = entries[0].diaryEntryId
+
+    const getResponse = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Get/${entryId}`,
+      { ignoreHTTPSErrors: true },
+    )
+    expect(getResponse.ok()).toBeTruthy()
+    const entry: Record<string, unknown> = await getResponse.json()
+    expect(entry).toHaveProperty('imageData')
+    expect(entry).toHaveProperty('imageContentType')
+  })
+
+  test('POST create with imageData requires authentication', async ({ request }) => {
+    const response = await request.post(`${API_BASE}/api/v1/DiaryEntry/Create`, {
+      ignoreHTTPSErrors: true,
+      data: {
+        diaryId: ww1DiaryId,
+        date: new Date().toISOString(),
+        location: 'Test Location',
+        entry: 'E2E image test entry',
+        imageData: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        imageContentType: 'image/png',
+      },
+    })
+    expect(response.status()).toBe(401)
+  })
 })

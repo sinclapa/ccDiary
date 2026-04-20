@@ -95,7 +95,7 @@ namespace ccDiaryApi.Services
             }
 
             var localPartFirstChar = email[0];
-            var domain = email[(atIndex + 1)..];
+            var domain = email[(atIndex + 1) ..];
             return $"{localPartFirstChar}***@{domain}";
         }
 

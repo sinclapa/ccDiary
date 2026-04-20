@@ -24,12 +24,30 @@ namespace ccDiaryApi.Data.Context
 
         public DbSet<AccessRequestDTO> AccessRequests { get; set; }
 
+        public DbSet<MapTileCacheDTO> MapTileCache { get; set; }
+
+        public DbSet<GeocodingCacheDTO> GeocodingCache { get; set; }
+
+        public DbSet<RoutingCacheDTO> RoutingCache { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<AppUserDTO>()
                 .HasIndex(u => u.EntraObjectId)
+                .IsUnique();
+
+            modelBuilder.Entity<MapTileCacheDTO>()
+                .HasIndex(t => new { t.Source, t.Z, t.X, t.Y })
+                .IsUnique();
+
+            modelBuilder.Entity<GeocodingCacheDTO>()
+                .HasIndex(g => g.Query)
+                .IsUnique();
+
+            modelBuilder.Entity<RoutingCacheDTO>()
+                .HasIndex(r => new { r.FromLat, r.FromLon, r.ToLat, r.ToLon, r.Profile })
                 .IsUnique();
         }
 

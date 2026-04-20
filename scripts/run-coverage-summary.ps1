@@ -173,7 +173,7 @@ $uiProcess = Start-Process -FilePath 'npm.cmd' -ArgumentList @('run', 'coverage'
 $null = $apiProcess.WaitForExit()
 $null = $uiProcess.WaitForExit()
 
-if ($apiProcess.ExitCode -ne 0) {
+if ($null -ne $apiProcess.ExitCode -and $apiProcess.ExitCode -ne 0) {
     Write-Host 'API coverage failed. Last output:' -ForegroundColor Red
     if (Test-Path -Path $apiOutLog) {
         Get-Content -Path $apiOutLog -Tail 20
@@ -186,7 +186,7 @@ if ($apiProcess.ExitCode -ne 0) {
     throw "API coverage run failed with exit code $($apiProcess.ExitCode)."
 }
 
-if ($uiProcess.ExitCode -ne 0) {
+if ($null -ne $uiProcess.ExitCode -and $uiProcess.ExitCode -ne 0) {
     Write-Host 'UI coverage failed. Last output:' -ForegroundColor Red
     if (Test-Path -Path $uiOutLog) {
         Get-Content -Path $uiOutLog -Tail 20

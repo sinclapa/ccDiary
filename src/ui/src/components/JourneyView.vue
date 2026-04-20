@@ -26,6 +26,7 @@
   import markerIcon from 'leaflet/dist/images/marker-icon.png'
   import markerShadow from 'leaflet/dist/images/marker-shadow.png'
   import type { JourneyMode } from '@/services/models/diaryEntry'
+  import { getAppConfigField } from '@/utils/appConfig'
 
   // Fix Vite asset URL resolution for Leaflet default marker icons
   delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -55,13 +56,15 @@
     boat: { color: '#00838f', weight: 2, dashArray: '8 6' },
   }
 
+  const apiBase = getAppConfigField('VITE_API')
+
   async function geocode (location: string): Promise<[number, number] | null> {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`
+      `${apiBase}v1/MapTile/Geocode?q=${encodeURIComponent(location)}`
     )
-    const results = await response.json()
-    if (!results || results.length === 0) return null
-    return [Number.parseFloat(results[0].lat), Number.parseFloat(results[0].lon)]
+    if (!response.ok) return null
+    const result = await response.json()
+    return [result.lat as number, result.lon as number]
   }
 
   async function fetchOsrmRoute (
@@ -70,11 +73,10 @@
     profile: 'driving' | 'foot',
   ): Promise<[number, number][] | null> {
     try {
-      const url = `https://router.project-osrm.org/route/v1/${profile}/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`
+      const url = `${apiBase}v1/MapTile/Route?fromLat=${from[0]}&fromLon=${from[1]}&toLat=${to[0]}&toLon=${to[1]}&profile=${profile}`
       const response = await fetch(url)
-      const data = await response.json()
-      if (data.code !== 'Ok' || !data.routes?.length) return null
-      return (data.routes[0].geometry.coordinates as [number, number][]).map(([lon, lat]) => [lat, lon])
+      if (!response.ok) return null
+      return await response.json() as [number, number][]
     } catch {
       return null
     }
@@ -127,11 +129,11 @@
       const style = modeStyle[props.journeyMode ?? 'crow-flies']
       const bounds = L.latLngBounds(routeCoords)
       leafletMap = L.map(mapContainer.value!).fitBounds(bounds, { padding: [40, 40] })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer(`${apiBase}v1/MapTile/Tile/osm/{z}/{x}/{y}`, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
       if ((props.journeyMode ?? 'crow-flies') === 'boat') {
-        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+        L.tileLayer(`${apiBase}v1/MapTile/Tile/openseamap/{z}/{x}/{y}`, {
           attribution: '&copy; <a href="https://www.openseamap.org">OpenSeaMap</a> contributors',
           opacity: 0.8,
         }).addTo(leafletMap)
