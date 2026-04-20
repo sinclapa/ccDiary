@@ -264,17 +264,22 @@ jobs:
             "BootstrapAdmin__DisplayName=${{ secrets.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
           )
           # Only override the connection string when the environment variable is
-          # explicitly set. Leaving it out preserves the Service Connector binding.
+          # explicitly set. When absent, remove any user-defined value so the
+          # Service Connector binding is not shadowed by a stale empty string.
           if [ -n "$SQL_CONNECTION_STRING" ]; then
             ENV_VARS+=("AZURE_SQL_CONNECTIONSTRING=$SQL_CONNECTION_STRING")
           fi
-          az containerapp update \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --image ${{ env.IMAGE_TAG }} \
-            --set-env-vars "${ENV_VARS[@]}" \
-            --no-wait \
-            --output none
+          UPDATE_CMD=(az containerapp update
+            --name "${{ vars.CONTAINER_APP_NAME }}"
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}"
+            --image "${{ env.IMAGE_TAG }}"
+            --set-env-vars "${ENV_VARS[@]}"
+            --no-wait
+            --output none)
+          if [ -z "$SQL_CONNECTION_STRING" ]; then
+            UPDATE_CMD+=(--remove-env-vars AZURE_SQL_CONNECTIONSTRING)
+          fi
+          "${UPDATE_CMD[@]}"
 
       - name: Wait for revision to be running
         run: |
