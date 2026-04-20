@@ -278,11 +278,22 @@ Write-Host "  Subscription ID: $subscriptionId" -ForegroundColor Gray
 Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
+# FreeLimitExhaustionBehavior is immutable once set to BillOverUsage.
+# Read the current value so we never attempt an illegal AutoPause -> BillOverUsage -> AutoPause transition.
+$appName = "${name}-${environment}"
+$existingFreeLimitBehavior = az sql db show `
+  --name "sqldb-${appName}" `
+  --server "sql-${appName}" `
+  --resource-group "rg-${name}-${environment}" `
+  --query "freeLimitExhaustionBehavior" -o tsv 2>$null
+$freeLimitExhaustionBehavior = if ($existingFreeLimitBehavior -eq 'BillOverUsage') { 'BillOverUsage' } else { 'AutoPause' }
+Write-Host "  SQL freeLimitExhaustionBehavior: $freeLimitExhaustionBehavior" -ForegroundColor Gray
+
 # Deploy using Azure CLI
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file "$PSScriptRoot\..\deploy\main.bicep" `
-  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
+  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" freeLimitExhaustionBehavior=$freeLimitExhaustionBehavior `
   --output json | ConvertFrom-Json
 
 # Check if deployment succeeded
@@ -429,23 +440,27 @@ if ($LASTEXITCODE -eq 0) {
 $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --resource-group "$resourceGroupName" --output json | ConvertFrom-Json
 $token = $staticSiteSecrets.properties.apiKey
 gh api --method PUT repos/${gitHubOwnerRepo}/environments/${environment}
-gh variable set "CONTAINER_APP_NAME".ToUpper() --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
-gh variable set "RESOURCE_GROUP_NAME".ToUpper() --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
-gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN".ToUpper() --body "$token" --repo $gitHubRepo --env "${environment}"
-gh secret set "API_URL".ToUpper() --body "https://$containerAppUrl/api/" --repo $gitHubRepo --env "${environment}"
-gh secret set "ENTRA_CLIENT_ID".ToUpper() --body "$entraClientId" --repo $gitHubRepo --env "${environment}"
-gh secret set "ENTRA_APP_OBJECT_ID".ToUpper() --body "$entraObjectId" --repo $gitHubRepo --env "${environment}"
-gh secret set "ENTRA_CLIENT_SECRET".ToUpper() --body "${entraClientCredentialsPassword}" --repo $gitHubRepo --env "${environment}"
-gh secret set "ENTRA_APPLICATION_ID_URI".ToUpper() --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
-gh secret set "TENANT_ID".ToUpper() --body "$tenantId" --repo $gitHubRepo --env "${environment}"
-gh secret set "AZURE_CREDENTIALS".ToUpper() --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
-gh secret set "OTEL_EXPORTER_OTLP_ENDPOINT" --body "$grafanaOtlpEndpoint" --repo $gitHubRepo --env "${environment}"
+# Variables — non-sensitive configuration
+gh variable set "CONTAINER_APP_NAME" --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
+gh variable set "RESOURCE_GROUP_NAME" --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
+gh variable set "SQL_DB_NAME" --body "$databaseName" --repo $gitHubRepo --env "${environment}"
+gh variable set "SQL_SERVER_NAME" --body "$databaseServerName" --repo $gitHubRepo --env "${environment}"
+gh variable set "API_URL" --body "https://$containerAppUrl/api/" --repo $gitHubRepo --env "${environment}"
+gh variable set "ENTRA_CLIENT_ID" --body "$entraClientId" --repo $gitHubRepo --env "${environment}"
+gh variable set "ENTRA_APP_OBJECT_ID" --body "$entraObjectId" --repo $gitHubRepo --env "${environment}"
+gh variable set "ENTRA_APPLICATION_ID_URI" --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
+gh variable set "TENANT_ID" --body "$tenantId" --repo $gitHubRepo --env "${environment}"
+gh variable set "OTEL_EXPORTER_OTLP_ENDPOINT" --body "$grafanaOtlpEndpoint" --repo $gitHubRepo --env "${environment}"
+gh variable set "GRAFANA_FARO_URL" --body "$grafanaFaroUrl" --repo $gitHubRepo --env "${environment}"
+# Secrets — credentials and tokens only
+gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN" --body "$token" --repo $gitHubRepo --env "${environment}"
+gh secret set "ENTRA_CLIENT_SECRET" --body "${entraClientCredentialsPassword}" --repo $gitHubRepo --env "${environment}"
+gh secret set "AZURE_CREDENTIALS" --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
 gh secret set "OTEL_EXPORTER_OTLP_HEADERS" --body "$grafanaOtlpAuthHeader" --repo $gitHubRepo --env "${environment}"
-gh secret set "GRAFANA_FARO_URL" --body "$grafanaFaroUrl" --repo $gitHubRepo --env "${environment}"
-gh secret set "GRAPH_INVITE_REDIRECT_URL" --body "https://$staticSiteUrl/" --repo $gitHubRepo --env "${environment}"
-gh secret set "BOOTSTRAP_ADMIN_OBJECT_ID" --body "$bootstrapAdminObjectId" --repo $gitHubRepo --env "${environment}"
+gh variable set "GRAPH_INVITE_REDIRECT_URL" --body "https://$staticSiteUrl/" --repo $gitHubRepo --env "${environment}"
+gh variable set "BOOTSTRAP_ADMIN_OBJECT_ID" --body "$bootstrapAdminObjectId" --repo $gitHubRepo --env "${environment}"
+gh variable set "BOOTSTRAP_ADMIN_DISPLAY_NAME" --body "$bootstrapAdminDisplayName" --repo $gitHubRepo --env "${environment}"
 gh secret set "BOOTSTRAP_ADMIN_EMAIL" --body "$bootstrapAdminEmail" --repo $gitHubRepo --env "${environment}"
-gh secret set "BOOTSTRAP_ADMIN_DISPLAY_NAME" --body "$bootstrapAdminDisplayName" --repo $gitHubRepo --env "${environment}"
 
 Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan
 gh variable set "SONAR_API_PROJECT_KEY" --body "$sonarApiProjectKey" --repo $gitHubRepo

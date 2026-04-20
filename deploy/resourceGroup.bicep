@@ -7,6 +7,11 @@ param adminUserSID string
 param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
+// FreeLimitExhaustionBehavior is immutable once set to BillOverUsage.
+// The deployment script reads the current value before deploying and passes it here
+// so we never attempt an illegal transition.
+@allowed(['AutoPause', 'BillOverUsage'])
+param freeLimitExhaustionBehavior string = 'AutoPause'
 var appName string = '${name}-${environment}'
 var sqlServerName string = 'sql-${appName}'
 
@@ -87,7 +92,7 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
     isLedgerOn: false
     useFreeLimit: true
-    freeLimitExhaustionBehavior: 'AutoPause'
+    freeLimitExhaustionBehavior: freeLimitExhaustionBehavior
     maintenanceConfigurationId: subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')
   }
 }

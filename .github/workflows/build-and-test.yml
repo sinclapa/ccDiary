@@ -252,17 +252,17 @@ jobs:
         run: |
           ENV_VARS=(
             "RUN_MIGRATIONS=true"
-            "OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}"
+            "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}"
             "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}"
             "OTEL_SERVICE_NAME=ccDiaryApi"
-            "Graph__TenantId=${{ secrets.TENANT_ID }}"
-            "Graph__ClientId=${{ secrets.ENTRA_CLIENT_ID }}"
+            "Graph__TenantId=${{ vars.TENANT_ID }}"
+            "Graph__ClientId=${{ vars.ENTRA_CLIENT_ID }}"
             "Graph__ClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}"
-            "Graph__InviteRedirectUrl=${{ secrets.GRAPH_INVITE_REDIRECT_URL }}"
+            "Graph__InviteRedirectUrl=${{ vars.GRAPH_INVITE_REDIRECT_URL }}"
             "Graph__AppDisplayName=Cooking Code Diary"
-            "BootstrapAdmin__ObjectId=${{ secrets.BOOTSTRAP_ADMIN_OBJECT_ID }}"
+            "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}"
             "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
-            "BootstrapAdmin__DisplayName=${{ secrets.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
+            "BootstrapAdmin__DisplayName=${{ vars.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
           )
           # Construct the connection string from the individual server/DB name
           # variables (the same ones used by the wake-SQL step, so known-correct).
@@ -518,11 +518,11 @@ jobs:
 
       - name: "Configure UI"
         env:
-          VITE_API: ${{ secrets.API_URL }}
-          VITE_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI }}
-          VITE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID }}
-          VITE_TENANT_ID: ${{ secrets.TENANT_ID }}
-          VITE_FARO_URL: ${{ secrets.GRAFANA_FARO_URL }}
+          VITE_API: ${{ vars.API_URL }}
+          VITE_APPLICATION_ID_URI: ${{ vars.ENTRA_APPLICATION_ID_URI }}
+          VITE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
+          VITE_TENANT_ID: ${{ vars.TENANT_ID }}
+          VITE_FARO_URL: ${{ vars.GRAFANA_FARO_URL }}
           VITE_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
         run: |
           node << 'SCRIPT'
@@ -561,10 +561,10 @@ jobs:
         if: github.event_name == 'pull_request'
         id: add-entra-redirect
         env:
-          AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.TENANT_ID_DEV }}
-          ENTRA_APP_OBJECT_ID: ${{ secrets.ENTRA_APP_OBJECT_ID }}
+          AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
+          ENTRA_APP_OBJECT_ID: ${{ vars.ENTRA_APP_OBJECT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Try common outputs from the static web apps deploy action
@@ -670,10 +670,10 @@ jobs:
       - name: Get API bearer token
         id: api_token
         env:
-          AZURE_CLIENT_ID: ${{ secrets.ENTRA_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.TENANT_ID }}
-          ENTRA_APPLICATION_ID_URI: ${{ secrets.ENTRA_APPLICATION_ID_URI }}
+          AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
+          ENTRA_APPLICATION_ID_URI: ${{ vars.ENTRA_APPLICATION_ID_URI }}
         run: |
           RESPONSE=$(curl -s -X POST \
             -d "client_id=$AZURE_CLIENT_ID&scope=${ENTRA_APPLICATION_ID_URI}/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
@@ -742,7 +742,7 @@ jobs:
 
     environment: none
 
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-latest
 
