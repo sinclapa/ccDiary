@@ -299,6 +299,14 @@ jobs:
               echo "Revision is running ($STATUS)."
               break
             fi
+            if [ "$STATUS" = "ActivationFailed" ]; then
+              echo "Revision activation failed — app crashed on startup. Check Container App logs in the Azure Portal." >&2
+              exit 1
+            fi
+            if [ "$i" = "30" ]; then
+              echo "Timed out after 30 attempts waiting for revision to become active (last status: $STATUS)." >&2
+              exit 1
+            fi
             echo "  Status: $STATUS (attempt $i/30)"
             curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
             sleep 10
