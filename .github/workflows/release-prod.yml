@@ -70,27 +70,57 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy public GHCR image to Container App with migration
+      - name: Wake SQL database (auto-resume from serverless pause)
         run: |
-          az containerapp update \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
+          STATUS=$(az sql db show \
+            --name ${{ vars.SQL_DB_NAME }} \
+            --server ${{ vars.SQL_SERVER_NAME }} \
             --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --image ${{ steps.api_image.outputs.value }} \
-            --set-env-vars \
-              "RUN_MIGRATIONS=true" \
-              "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}" \
-              "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}" \
-              "OTEL_SERVICE_NAME=ccDiaryApi" \
-              "Graph__TenantId=${{ vars.TENANT_ID }}" \
-              "Graph__ClientId=${{ vars.ENTRA_CLIENT_ID }}" \
-              "Graph__ClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}" \
-              "Graph__InviteRedirectUrl=${{ vars.GRAPH_INVITE_REDIRECT_URL }}" \
-              "Graph__AppDisplayName=Cooking Code Diary" \
-              "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}" \
-              "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}" \
-              "BootstrapAdmin__DisplayName=${{ vars.BOOTSTRAP_ADMIN_DISPLAY_NAME }}" \
-            --no-wait \
-            --output none
+            --query "status" -o tsv 2>/dev/null || echo "unknown")
+          echo "SQL database status: $STATUS"
+          if [ "$STATUS" = "Paused" ]; then
+            echo "Resuming paused SQL database (waiting until online)..."
+            az sql db update \
+              --name ${{ vars.SQL_DB_NAME }} \
+              --server ${{ vars.SQL_SERVER_NAME }} \
+              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+              --output none
+            echo "Database is online."
+          fi
+
+      - name: Deploy public GHCR image to Container App with migration
+        env:
+          SQL_SERVER_NAME: ${{ vars.SQL_SERVER_NAME }}
+          SQL_DB_NAME: ${{ vars.SQL_DB_NAME }}
+        run: |
+          ENV_VARS=(
+            "RUN_MIGRATIONS=true"
+            "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}"
+            "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}"
+            "OTEL_SERVICE_NAME=ccDiaryApi"
+            "Graph__TenantId=${{ vars.TENANT_ID }}"
+            "Graph__ClientId=${{ vars.ENTRA_CLIENT_ID }}"
+            "Graph__ClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}"
+            "Graph__InviteRedirectUrl=${{ vars.GRAPH_INVITE_REDIRECT_URL }}"
+            "Graph__AppDisplayName=Cooking Code Diary"
+            "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}"
+            "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
+            "BootstrapAdmin__DisplayName=${{ vars.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
+          )
+          if [ -n "$SQL_SERVER_NAME" ] && [ -n "$SQL_DB_NAME" ]; then
+            ENV_VARS+=("AZURE_SQL_CONNECTIONSTRING=Server=tcp:${SQL_SERVER_NAME}.database.windows.net,1433;Initial Catalog=${SQL_DB_NAME};Authentication=Active Directory Default")
+          fi
+          UPDATE_CMD=(az containerapp update
+            --name "${{ vars.CONTAINER_APP_NAME }}"
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}"
+            --image "${{ steps.api_image.outputs.value }}"
+            --set-env-vars "${ENV_VARS[@]}"
+            --no-wait
+            --output none)
+          if [ -z "$SQL_SERVER_NAME" ] || [ -z "$SQL_DB_NAME" ]; then
+            UPDATE_CMD+=(--remove-env-vars AZURE_SQL_CONNECTIONSTRING)
+          fi
+          "${UPDATE_CMD[@]}"
 
       - name: Wait for revision to be running
         run: |
@@ -109,6 +139,10 @@ jobs:
             if [ "$STATUS" = "Running" ] || [ "$STATUS" = "RunningAtMaxScale" ]; then
               echo "Revision is running ($STATUS)."
               break
+            fi
+            if [ "$STATUS" = "ActivationFailed" ]; then
+              echo "Revision activation failed — app crashed on startup. Check Container App logs in the Azure Portal." >&2
+              exit 1
             fi
             echo "  Status: $STATUS (attempt $i/30)"
             curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
