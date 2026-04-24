@@ -64,7 +64,7 @@ namespace ccDiaryApiTest
         {
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<DiaryDatabaseContext>();
-            var user = new AppUserDTO
+            var user = new AppUserDto
             {
                 UserId = Guid.NewGuid(),
                 EntraObjectId = oid,

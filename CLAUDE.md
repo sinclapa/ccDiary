@@ -175,7 +175,7 @@ Sensitive values are never committed. Override them via:
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector base URL (optional — OTel is disabled when absent) |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Comma-separated `key=value` auth headers for OTLP (e.g. Grafana Cloud token) |
 
-### OpenTelemetry
+### OpenTelemetry (API)
 
 OTel is configured in `OpenTelemetryExtensions.cs`. When `OTEL_EXPORTER_OTLP_ENDPOINT` is set it exports:
 - **Traces** — ASP.NET Core, HttpClient, EF Core, SqlClient instrumentation → `{endpoint}/v1/traces`
@@ -185,6 +185,43 @@ OTel is configured in `OpenTelemetryExtensions.cs`. When `OTEL_EXPORTER_OTLP_END
 Signal paths are always appended explicitly because the SDK disables auto-append when the endpoint is set programmatically. The exporter uses HTTP/Protobuf with a **simple processor** (not batch) to handle scale-to-zero environments where the process may terminate before a batch flush.
 
 Tracing excludes `/swagger`, `/actuator`, `/api/assembly-info`, and `/health` paths, and filters out low-value SQL probe queries (e.g. `SELECT 1`).
+
+### Grafana Cloud — API (Loki)
+
+API logs are shipped to Grafana Cloud Loki via the OTLP sink.
+
+| Property | Value |
+|---|---|
+| Datasource name | `grafanacloud-cookingcode-logs` |
+| Datasource UID | `grafanacloud-logs` |
+| Service label | `service_name="ccDiaryApi"` |
+
+Common LogQL queries:
+```logql
+# All API logs
+{service_name="ccDiaryApi"}
+
+# Errors only
+{service_name="ccDiaryApi"} | detected_level="error"
+
+# Warnings only
+{service_name="ccDiaryApi"} | detected_level="warn"
+
+# Filter by environment (prod / staging / dev)
+{service_name="ccDiaryApi", deployment_environment="prod"}
+```
+
+### Grafana Cloud — UI (Faro)
+
+The UI uses Grafana Faro (Real User Monitoring) configured in `src/ui/src/plugins/faro.ts`. It is enabled when `VITE_FARO_URL` is set in the runtime config (not `NOT_SET`).
+
+| Property | Value |
+|---|---|
+| App name | `ccdiary-ui` |
+| Config key | `VITE_FARO_URL` (Faro collector endpoint) |
+| Environment | Set via `VITE_ENVIRONMENT` runtime config field |
+
+Faro ships browser traces, errors, logs, and user actions to Grafana Cloud. The app name `ccdiary-ui` is the primary filter when querying Faro data in Grafana.
 
 ## Infrastructure as Code (Bicep)
 
@@ -205,15 +242,20 @@ Requires >85% overall code coverage and >85% on branch.
 
 ### SonarCloud Projects
 
-SonarCloud organization (`cookingcode`)
+SonarCloud organization: `cookingcode`
 
-| Project Key | Scope | Config |
-|---|---|---|
-| `cookingcode_ccDiary_api` | `src/api/` — C# API code | CLI args in `build-api` CI job |
-| `cookingcode_ccDiary_ui` | `src/ui/src/`, `src/ui/tests/` | `sonar-project.properties` (repo root) |
-| `cookingcode_ccDiary_infra` | `deploy/`, `scripts/`, `data/`, `*.ps1` | `sonar-project-infra.properties` (repo root) |
+| Component | Project Key | Scope | Config |
+|---|---|---|---|
+| **API** | `cookingcode_ccDiary_api` | `src/api/` — C# API code | CLI args in `build-api` CI job |
+| **UI** | `cookingcode_ccDiary_ui` | `src/ui/src/`, `src/ui/tests/` | `sonar-project.properties` (repo root) |
+| **Infra** | `cookingcode_ccDiary_infra` | `deploy/`, `scripts/`, `data/`, `*.ps1` | `sonar-project-infra.properties` (repo root) |
+
+When querying SonarQube MCP tools, use the project key for the component you are working on:
+- Working in `src/api/` → use project key `cookingcode_ccDiary_api`
+- Working in `src/ui/` → use project key `cookingcode_ccDiary_ui`
+- Working in `deploy/` or `scripts/` → use project key `cookingcode_ccDiary_infra`
 
 ---
 
-**Last Updated**: 2026-04-06
+**Last Updated**: 2026-04-24
 **Created For**: Claude Code instances working on ccDiary repository

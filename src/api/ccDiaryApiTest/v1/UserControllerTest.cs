@@ -79,7 +79,7 @@ namespace ccDiaryApiTest.v1
             adminClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryAdmin");
 
             var requests = await (await adminClient.GetAsync("/api/v1/Admin/Requests"))
-                .Content.ReadFromJsonAsync<List<AccessRequestDTO>>(SharedTestFactory.ApiJsonOptions);
+                .Content.ReadFromJsonAsync<List<AccessRequestDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(requests);
             await adminClient.PutAsync($"/api/v1/Admin/Approve/{requests[0].AccessRequestId}", null);
 

@@ -20,33 +20,33 @@ namespace ccDiaryApi.Data.Context
 
         public DbSet<AppInfoDTO> AppInfo { get; set; }
 
-        public DbSet<AppUserDTO> AppUsers { get; set; }
+        public DbSet<AppUserDto> AppUsers { get; set; }
 
-        public DbSet<AccessRequestDTO> AccessRequests { get; set; }
+        public DbSet<AccessRequestDto> AccessRequests { get; set; }
 
-        public DbSet<MapTileCacheDTO> MapTileCache { get; set; }
+        public DbSet<MapTileCacheDto> MapTileCache { get; set; }
 
-        public DbSet<GeocodingCacheDTO> GeocodingCache { get; set; }
+        public DbSet<GeocodingCacheDto> GeocodingCache { get; set; }
 
-        public DbSet<RoutingCacheDTO> RoutingCache { get; set; }
+        public DbSet<RoutingCacheDto> RoutingCache { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<AppUserDTO>()
+            modelBuilder.Entity<AppUserDto>()
                 .HasIndex(u => u.EntraObjectId)
                 .IsUnique();
 
-            modelBuilder.Entity<MapTileCacheDTO>()
+            modelBuilder.Entity<MapTileCacheDto>()
                 .HasIndex(t => new { t.Source, t.Z, t.X, t.Y })
                 .IsUnique();
 
-            modelBuilder.Entity<GeocodingCacheDTO>()
+            modelBuilder.Entity<GeocodingCacheDto>()
                 .HasIndex(g => g.Query)
                 .IsUnique();
 
-            modelBuilder.Entity<RoutingCacheDTO>()
+            modelBuilder.Entity<RoutingCacheDto>()
                 .HasIndex(r => new { r.FromLat, r.FromLon, r.ToLat, r.ToLon, r.Profile })
                 .IsUnique();
         }

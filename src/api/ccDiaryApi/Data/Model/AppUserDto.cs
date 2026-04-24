@@ -1,4 +1,4 @@
-// <copyright file="AppUserDTO.cs" company="CookingCode">
+// <copyright file="AppUserDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,7 +8,7 @@ namespace ccDiaryApi.Data.Model
     using System.ComponentModel.DataAnnotations.Schema;
 
     [Table("AppUser")]
-    public class AppUserDTO
+    public class AppUserDto
     {
         [Key]
         public Guid UserId { get; set; }

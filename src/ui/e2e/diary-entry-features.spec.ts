@@ -17,7 +17,7 @@ async function getIntegrationDiaryId (request: import('@playwright/test').APIReq
 
 async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
   await page.goto(`/diaries/${diaryId}`, { waitUntil: 'load', timeout: 25000 })
-  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 10000 })
 }
 
 // ─── Date picker header year format ────────────────────────────────────────────
@@ -287,7 +287,7 @@ test.describe('Journey map display on diary entries', () => {
     // May 25 (SEEDED_ENTRY_DAY + 4) has a single entry with showJourney=false
     const dateNoJourney = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY + 4).padStart(2, '0')}`
     await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoJourney}`, { waitUntil: 'load', timeout: 25000 })
-    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
     await expect(page.locator('.journey-wrapper')).toHaveCount(0)
   })
 

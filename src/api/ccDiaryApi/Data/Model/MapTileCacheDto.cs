@@ -1,4 +1,4 @@
-// <copyright file="MapTileCacheDTO.cs" company="CookingCode">
+// <copyright file="MapTileCacheDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,7 +8,7 @@ namespace ccDiaryApi.Data.Model
     using System.ComponentModel.DataAnnotations.Schema;
 
     [Table("MapTileCache")]
-    public class MapTileCacheDTO
+    public class MapTileCacheDto
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

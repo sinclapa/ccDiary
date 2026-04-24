@@ -17,7 +17,7 @@ namespace ccDiaryApiTest.v1
         public async Task ApproveAsync_AdminNotFound_ThrowsInvalidOperation()
         {
             using var db = CreateDb();
-            var request = new AccessRequestDTO
+            var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = "Test User",
@@ -38,7 +38,7 @@ namespace ccDiaryApiTest.v1
         public async Task DeclineAsync_AdminNotFound_ThrowsInvalidOperation()
         {
             using var db = CreateDb();
-            var request = new AccessRequestDTO
+            var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = "Test User",

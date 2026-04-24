@@ -1,4 +1,4 @@
-// <copyright file="AccessRequestDTO.cs" company="CookingCode">
+// <copyright file="AccessRequestDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,7 +8,7 @@ namespace ccDiaryApi.Data.Model
     using System.ComponentModel.DataAnnotations.Schema;
 
     [Table("AccessRequest")]
-    public class AccessRequestDTO
+    public class AccessRequestDto
     {
         [Key]
         public Guid AccessRequestId { get; set; }
@@ -30,6 +30,6 @@ namespace ccDiaryApi.Data.Model
         public Guid? ProcessedByUserId { get; set; }
 
         [ForeignKey(nameof(ProcessedByUserId))]
-        public AppUserDTO? ProcessedBy { get; set; }
+        public AppUserDto? ProcessedBy { get; set; }
     }
 }

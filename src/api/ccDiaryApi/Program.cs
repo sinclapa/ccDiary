@@ -18,6 +18,7 @@ using ccDiaryApi.Extensions;
 using ccDiaryApi.Health;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -94,13 +95,11 @@ builder.Services.AddApiVersioning(options =>
         Program.ConfigureApiExplorer(options);
     });
 
-builder.Services.AddAuthorization(opts =>
-{
-    opts.AddPolicy("DiaryAdmin", p => p.RequireRole(AppRole.DiaryAdmin.ToString()));
-    opts.AddPolicy("DiaryContributor", p => p.RequireRole(
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("DiaryAdmin", p => p.RequireRole(AppRole.DiaryAdmin.ToString()))
+    .AddPolicy("DiaryContributor", p => p.RequireRole(
         AppRole.DiaryAdmin.ToString(),
         AppRole.DiaryContributor.ToString()));
-});
 
 // Add services to the container.
 builder.Services.AddScoped<IDiaryService, DiaryService>();
@@ -155,6 +154,8 @@ builder.Services.AddCors(p => p.AddPolicy("cors", builder =>
 {
     builder.WithOrigins("*").AllowAnyMethod().AllowAnyHeader();
 }));
+
+builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
 builder.Services.AddCcDiaryOpenTelemetry(
     builder.Configuration,

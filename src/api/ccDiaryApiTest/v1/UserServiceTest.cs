@@ -28,7 +28,7 @@ namespace ccDiaryApiTest.v1
         public async Task SeedBootstrapAdminAsync_AdminAlreadyExists_DoesNotSeedAgain()
         {
             using var db = CreateDb();
-            db.AppUsers.Add(new AppUserDTO
+            db.AppUsers.Add(new AppUserDto
             {
                 UserId = Guid.NewGuid(),
                 EntraObjectId = "existing-admin",
@@ -74,7 +74,7 @@ namespace ccDiaryApiTest.v1
         public async Task GetOrCreateUserAsync_ExistingUser_ReturnsUser()
         {
             using var db = CreateDb();
-            var user = new AppUserDTO
+            var user = new AppUserDto
             {
                 UserId = Guid.NewGuid(),
                 EntraObjectId = "existing-oid",
@@ -108,7 +108,7 @@ namespace ccDiaryApiTest.v1
         public async Task GetOrCreateUserAsync_ApprovedRequest_CreatesAndReturnsContributor()
         {
             using var db = CreateDb();
-            db.AccessRequests.Add(new AccessRequestDTO
+            db.AccessRequests.Add(new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = "Invited User",
@@ -131,7 +131,7 @@ namespace ccDiaryApiTest.v1
         public async Task GetOrCreateUserAsync_PendingRequestOnly_ReturnsNull()
         {
             using var db = CreateDb();
-            db.AccessRequests.Add(new AccessRequestDTO
+            db.AccessRequests.Add(new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = "Pending User",

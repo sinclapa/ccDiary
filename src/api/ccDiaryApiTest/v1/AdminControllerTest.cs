@@ -113,7 +113,7 @@ namespace ccDiaryApiTest.v1
             adminClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryAdmin");
 
             var requests = await (await adminClient.GetAsync("/api/v1/Admin/Requests"))
-                .Content.ReadFromJsonAsync<List<AccessRequestDTO>>(SharedTestFactory.ApiJsonOptions);
+                .Content.ReadFromJsonAsync<List<AccessRequestDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(requests);
             Assert.AreEqual(1, requests.Count);
 
@@ -143,7 +143,7 @@ namespace ccDiaryApiTest.v1
                 adminClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryAdmin");
 
                 var requests = await (await adminClient.GetAsync("/api/v1/Admin/Requests"))
-                    .Content.ReadFromJsonAsync<List<AccessRequestDTO>>(SharedTestFactory.ApiJsonOptions);
+                    .Content.ReadFromJsonAsync<List<AccessRequestDto>>(SharedTestFactory.ApiJsonOptions);
                 Assert.IsNotNull(requests);
 
                 var approveResponse = await adminClient.PutAsync($"/api/v1/Admin/Approve/{requests[0].AccessRequestId}", null);
@@ -213,7 +213,7 @@ namespace ccDiaryApiTest.v1
             adminClient.DefaultRequestHeaders.Add(TestAuthHandler.UserRole, "DiaryAdmin");
 
             var requestsResponse = await adminClient.GetAsync("/api/v1/Admin/Requests");
-            var requests = await requestsResponse.Content.ReadFromJsonAsync<List<AccessRequestDTO>>(SharedTestFactory.ApiJsonOptions);
+            var requests = await requestsResponse.Content.ReadFromJsonAsync<List<AccessRequestDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(requests);
             Assert.AreEqual(1, requests.Count);
 
@@ -222,7 +222,7 @@ namespace ccDiaryApiTest.v1
 
             // Declined request should no longer appear in pending list
             var afterResponse = await adminClient.GetAsync("/api/v1/Admin/Requests");
-            var afterRequests = await afterResponse.Content.ReadFromJsonAsync<List<AccessRequestDTO>>(SharedTestFactory.ApiJsonOptions);
+            var afterRequests = await afterResponse.Content.ReadFromJsonAsync<List<AccessRequestDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(afterRequests);
             Assert.AreEqual(0, afterRequests.Count);
         }

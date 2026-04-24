@@ -8,9 +8,9 @@ namespace ccDiaryApi.Services
 
     public interface IUserService
     {
-        Task<AppUserDTO?> GetUserByOidAsync(string oid);
+        Task<AppUserDto?> GetUserByOidAsync(string oid);
 
-        Task<AppUserDTO?> GetOrCreateUserAsync(string oid, string email, string displayName);
+        Task<AppUserDto?> GetOrCreateUserAsync(string oid, string email, string displayName);
 
         Task SeedBootstrapAdminAsync();
     }

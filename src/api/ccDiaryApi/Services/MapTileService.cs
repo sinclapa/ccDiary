@@ -275,7 +275,7 @@ namespace ccDiaryApi.Services
             }
             else
             {
-                _context.MapTileCache.Add(new MapTileCacheDTO
+                _context.MapTileCache.Add(new MapTileCacheDto
                 {
                     Source = source,
                     Z = z,
@@ -312,7 +312,7 @@ namespace ccDiaryApi.Services
             }
             else
             {
-                _context.GeocodingCache.Add(new GeocodingCacheDTO
+                _context.GeocodingCache.Add(new GeocodingCacheDto
                 {
                     Query = query,
                     Lat = lat,
@@ -348,7 +348,7 @@ namespace ccDiaryApi.Services
             }
             else
             {
-                _context.RoutingCache.Add(new RoutingCacheDTO
+                _context.RoutingCache.Add(new RoutingCacheDto
                 {
                     FromLat = fromLat,
                     FromLon = fromLon,
@@ -382,7 +382,7 @@ namespace ccDiaryApi.Services
             public string Code { get; set; } = string.Empty;
 
 #pragma warning disable SA1011
-            public OsrmRoute[]? Routes { get; set; }
+            public OsrmRoute[]? Routes { get; init; }
 #pragma warning restore SA1011
         }
 

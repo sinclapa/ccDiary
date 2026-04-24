@@ -20,13 +20,13 @@ namespace ccDiaryApi.Services
             _configuration = configuration;
         }
 
-        public async Task<AppUserDTO?> GetUserByOidAsync(string oid)
+        public async Task<AppUserDto?> GetUserByOidAsync(string oid)
         {
             return await _context.AppUsers
                 .FirstOrDefaultAsync(u => u.EntraObjectId == oid);
         }
 
-        public async Task<AppUserDTO?> GetOrCreateUserAsync(string oid, string email, string displayName)
+        public async Task<AppUserDto?> GetOrCreateUserAsync(string oid, string email, string displayName)
         {
             var existing = await _context.AppUsers
                 .FirstOrDefaultAsync(u => u.EntraObjectId == oid);
@@ -42,7 +42,7 @@ namespace ccDiaryApi.Services
                 return null;
             }
 
-            var newUser = new AppUserDTO
+            var newUser = new AppUserDto
             {
                 UserId = Guid.NewGuid(),
                 EntraObjectId = oid,
@@ -76,7 +76,7 @@ namespace ccDiaryApi.Services
             var email = _configuration["BootstrapAdmin:Email"] ?? string.Empty;
             var displayName = _configuration["BootstrapAdmin:DisplayName"] ?? email;
 
-            _context.AppUsers.Add(new AppUserDTO
+            _context.AppUsers.Add(new AppUserDto
             {
                 UserId = Guid.NewGuid(),
                 EntraObjectId = objectId,

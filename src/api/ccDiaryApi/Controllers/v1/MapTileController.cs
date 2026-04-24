@@ -8,7 +8,6 @@ namespace ccDiaryApi.Controllers.v1
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.Extensions.Logging.Abstractions;
     using Microsoft.Net.Http.Headers;
 
     [ApiController]
@@ -18,14 +17,10 @@ namespace ccDiaryApi.Controllers.v1
     public class MapTileController : ControllerBase
     {
         private readonly IMapTileService _mapTileService;
-        private readonly ILogger<MapTileController> _logger;
 
-        public MapTileController(
-            IMapTileService mapTileService,
-            ILogger<MapTileController>? logger = null)
+        public MapTileController(IMapTileService mapTileService)
         {
             _mapTileService = mapTileService;
-            _logger = logger ?? NullLogger<MapTileController>.Instance;
         }
 
         [HttpGet("{source}/{z:int}/{x:int}/{y:int}")]

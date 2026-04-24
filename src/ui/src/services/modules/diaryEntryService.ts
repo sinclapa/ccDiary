@@ -34,7 +34,7 @@ export default class DiaryEntryAPIService {
       requestInit = { headers: { 'x-utc-offset': `${utcOffsetMinutes}` } }
     }
     let output : number[] | null = null
-    await (requestInit !== undefined ? fetch(api, requestInit) : fetch(api))
+    await (requestInit ? fetch(api, requestInit) : fetch(api))
       .then(response => response.json())
       .then(data => output = data as number[])
     return output

@@ -11,6 +11,9 @@ namespace ccDiaryApi.Services
 
     public class GraphService : IGraphService
     {
+        private const string GraphInvitationsEndpoint = "https://graph.microsoft.com/v1.0/invitations";
+        private const string DefaultInviteRedirectUrl = "https://localhost:5173";
+
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<GraphService> _logger;
@@ -30,7 +33,7 @@ namespace ccDiaryApi.Services
             var tenantId = _configuration["Graph:TenantId"];
             var clientId = _configuration["Graph:ClientId"];
             var clientSecret = _configuration["Graph:ClientSecret"];
-            var redirectUrl = _configuration["Graph:InviteRedirectUrl"] ?? "https://localhost:5173";
+            var redirectUrl = _configuration["Graph:InviteRedirectUrl"] ?? DefaultInviteRedirectUrl;
 
             if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
@@ -63,7 +66,7 @@ namespace ccDiaryApi.Services
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             var response = await client.PostAsync(
-                "https://graph.microsoft.com/v1.0/invitations",
+                GraphInvitationsEndpoint,
                 new StringContent(json, Encoding.UTF8, "application/json"));
 
             var body = await response.Content.ReadAsStringAsync();
@@ -79,24 +82,6 @@ namespace ccDiaryApi.Services
             return doc.RootElement.TryGetProperty("inviteRedeemUrl", out var urlProp)
                 ? urlProp.GetString() ?? string.Empty
                 : string.Empty;
-        }
-
-        private static string MaskEmail(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                return "***";
-            }
-
-            var atIndex = email.IndexOf('@');
-            if (atIndex <= 0 || atIndex == email.Length - 1)
-            {
-                return "***";
-            }
-
-            var localPartFirstChar = email[0];
-            var domain = email[(atIndex + 1) ..];
-            return $"{localPartFirstChar}***@{domain}";
         }
 
         private static async Task<string> AcquireTokenAsync(string tenantId, string clientId, string clientSecret)

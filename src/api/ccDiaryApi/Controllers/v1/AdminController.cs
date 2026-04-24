@@ -25,7 +25,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<AccessRequestDTO>>> Requests()
+        public async Task<ActionResult<IEnumerable<AccessRequestDto>>> Requests()
         {
             var requests = await _accessRequestService.GetPendingAsync();
             return Ok(requests);

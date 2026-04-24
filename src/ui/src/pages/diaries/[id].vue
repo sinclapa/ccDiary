@@ -618,34 +618,40 @@
     await selectDate(newDate)
   })
 
+  function resolveDateFromParam (
+    dateParam: unknown,
+    minDate: Date | null,
+    maxDate: Date | null | undefined,
+  ): Date | null {
+    if (!dateParam || typeof dateParam !== 'string') return null
+    const parsed = dayjs(dateParam, 'YYYY-MM-DD', true)
+    if (!parsed.isValid()) return null
+    const paramDate = parsed.toDate()
+    if (maxDate && paramDate > maxDate) return maxDate
+    if (minDate && paramDate < minDate) return null
+    return paramDate
+  }
+
+  function resolveDateFromStorage (
+    id: string,
+    minDate: Date | null,
+    maxDate: Date | null | undefined,
+  ): Date | null {
+    const storedDate = localStorage.getItem(`diary.${id}.lastDate`)
+    if (!storedDate || !dayjs(storedDate, 'YYYY-MM-DD', true).isValid()) return null
+    const stored = dayjs(storedDate).toDate()
+    if (maxDate && stored > maxDate) return maxDate
+    if (minDate && stored < minDate) return minDate
+    return stored
+  }
+
   function loadDiaryData () {
     loading.value = true
     loadDiary(diaryId)
     loadCalendar(diaryId).then(async x => {
-      let startDate = x
-      const dateParam = route.query.date
-      if (dateParam && typeof dateParam === 'string') {
-        const parsed = dayjs(dateParam, 'YYYY-MM-DD', true)
-        if (parsed.isValid()) {
-          const paramDate = parsed.toDate()
-          if (maxDate.value && paramDate > maxDate.value) {
-            startDate = maxDate.value
-          } else if (x && paramDate < x) {
-            startDate = x
-          } else {
-            startDate = paramDate
-          }
-        }
-      }
-      if (startDate === x) {
-        const storedDate = localStorage.getItem(`diary.${diaryId}.lastDate`)
-        if (storedDate && dayjs(storedDate, 'YYYY-MM-DD', true).isValid()) {
-          const stored = dayjs(storedDate).toDate()
-          startDate = maxDate.value && stored > maxDate.value ? maxDate.value
-            : x && stored < x ? x
-              : stored
-        }
-      }
+      const startDate = resolveDateFromParam(route.query.date, x, maxDate.value) ??
+        resolveDateFromStorage(diaryId, x, maxDate.value) ??
+        x
       selectedDate.value = startDate
       calendarMonth.value = dayjs(startDate).month()
       calendarYear.value = dayjs(startDate).year()

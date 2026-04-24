@@ -10,7 +10,7 @@ namespace ccDiaryApi.Services
     {
         Task SubmitAsync(string displayName, string email);
 
-        Task<IEnumerable<AccessRequestDTO>> GetPendingAsync();
+        Task<IEnumerable<AccessRequestDto>> GetPendingAsync();
 
         Task<string?> ApproveAsync(Guid requestId, string adminOid);
 

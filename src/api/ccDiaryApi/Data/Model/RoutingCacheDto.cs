@@ -1,4 +1,4 @@
-// <copyright file="RoutingCacheDTO.cs" company="CookingCode">
+// <copyright file="RoutingCacheDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,7 +8,7 @@ namespace ccDiaryApi.Data.Model
     using System.ComponentModel.DataAnnotations.Schema;
 
     [Table("RoutingCache")]
-    public class RoutingCacheDTO
+    public class RoutingCacheDto
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

@@ -41,7 +41,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var db = GetMemoryContext();
             var tileData = new byte[] { 0x89, 0x50 };
-            db.MapTileCache.Add(new MapTileCacheDTO
+            db.MapTileCache.Add(new MapTileCacheDto
             {
                 Source = "osm",
                 Z = 10,
@@ -70,7 +70,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            db.MapTileCache.Add(new MapTileCacheDTO
+            db.MapTileCache.Add(new MapTileCacheDto
             {
                 Source = "osm",
                 Z = 10,
@@ -164,7 +164,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            db.GeocodingCache.Add(new GeocodingCacheDTO
+            db.GeocodingCache.Add(new GeocodingCacheDto
             {
                 Query = "london",
                 Lat = 51.5074,
@@ -191,7 +191,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            db.GeocodingCache.Add(new GeocodingCacheDTO
+            db.GeocodingCache.Add(new GeocodingCacheDto
             {
                 Query = "paris, france",
                 Lat = 48.8566,
@@ -216,7 +216,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            db.GeocodingCache.Add(new GeocodingCacheDTO
+            db.GeocodingCache.Add(new GeocodingCacheDto
             {
                 Query = "berlin",
                 Lat = 52.52,
@@ -288,7 +288,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            db.RoutingCache.Add(new RoutingCacheDTO
+            db.RoutingCache.Add(new RoutingCacheDto
             {
                 FromLat = 51.5,
                 FromLon = -0.1,
@@ -317,7 +317,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var db = GetMemoryContext();
-            db.RoutingCache.Add(new RoutingCacheDTO
+            db.RoutingCache.Add(new RoutingCacheDto
             {
                 FromLat = 51.500001,
                 FromLon = -0.100001,
@@ -409,7 +409,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange — seed an expired row so PersistRoutingAsync takes the update branch
             var db = GetMemoryContext();
-            db.RoutingCache.Add(new RoutingCacheDTO
+            db.RoutingCache.Add(new RoutingCacheDto
             {
                 FromLat = 51.5,
                 FromLon = -0.1,

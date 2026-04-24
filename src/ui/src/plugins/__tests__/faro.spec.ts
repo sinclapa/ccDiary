@@ -184,7 +184,7 @@ describe('initFaro', () => {
         ['uppercases the HTTP method', 'https://api.example.com/v1/DiaryEntry/Update', undefined, 'put', 'PUT /v1/DiaryEntry/Update'],
       ])('%s', (_, urlFull, httpUrl, method, expected) => {
         const span = makeSpan(urlFull, httpUrl)
-        cb(span, method !== undefined ? { method } : {}, {})
+        cb(span, method ? { method } : {}, {})
         expect(span.updateName).toHaveBeenCalledWith(expected)
       })
 

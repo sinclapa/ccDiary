@@ -29,7 +29,7 @@ namespace ccDiaryApi.Services
                 throw new InvalidOperationException("A pending request already exists for this email address.");
             }
 
-            _context.AccessRequests.Add(new AccessRequestDTO
+            _context.AccessRequests.Add(new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = displayName,
@@ -41,7 +41,7 @@ namespace ccDiaryApi.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<AccessRequestDTO>> GetPendingAsync()
+        public async Task<IEnumerable<AccessRequestDto>> GetPendingAsync()
         {
             return await _context.AccessRequests
                 .Where(r => r.Status == RequestStatus.Pending)
