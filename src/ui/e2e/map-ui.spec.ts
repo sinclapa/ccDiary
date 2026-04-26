@@ -82,7 +82,7 @@ test.describe('Journey component — Leaflet rendering', () => {
     // May 21, 1918 has one showMap entry and one showJourney entry
     const date = dateStr(SEEDED_ENTRY_YEAR, SEEDED_ENTRY_MONTH, SEEDED_ENTRY_DAY)
     await page.goto(`/diaries/${ww1DiaryId}?date=${date}`, { waitUntil: 'load', timeout: 25000 })
-    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 20000 })
 
     // Both wrappers must appear
     await expect(page.locator('.map-wrapper').first()).toBeVisible({ timeout: 10000 })

@@ -8,6 +8,7 @@ namespace ccDiaryApi.Controllers.v1
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -48,8 +49,18 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [HttpPost]
-        public ActionResult<DiaryDTO> Import(DiaryArchiveDTO diaryArchive)
+        [AllowAnonymous]
+        public ActionResult<DiaryDTO> Import([FromServices] IWebHostEnvironment env, DiaryArchiveDTO diaryArchive)
         {
+            bool isLocalEnvironment = env.IsEnvironment("local")
+                || env.IsEnvironment("LocalContainer")
+                || env.IsEnvironment("LocalCompose");
+
+            if (!isLocalEnvironment && !(User.Identity?.IsAuthenticated ?? false))
+            {
+                return Unauthorized();
+            }
+
             var diary = _diaryArchiveService.Import(diaryArchive);
             _logger.LogInformation(
                 "Import succeeded. DiaryId={DiaryId} EntryCount={EntryCount}",
