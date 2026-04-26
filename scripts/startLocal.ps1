@@ -106,7 +106,8 @@ if ($uiRunning) {
 }
 else {
     Write-Host 'UI is not running. Starting UI...' -ForegroundColor Yellow
-    $uiProcess = Start-Process -FilePath 'npm.cmd' -ArgumentList @('run', 'dev') -WorkingDirectory $uiPath -PassThru
+    $npmScript = if ($Compose) { 'devcompose' } else { 'dev' }
+    $uiProcess = Start-Process -FilePath 'npm.cmd' -ArgumentList @('run', $npmScript) -WorkingDirectory $uiPath -PassThru
     Write-Host "UI process started (PID $($uiProcess.Id)). Waiting for port..." -ForegroundColor Cyan
 
     if (-not (Wait-ForAnyPort -Ports @($UiPort) -TimeoutSeconds $StartupTimeoutSeconds)) {
