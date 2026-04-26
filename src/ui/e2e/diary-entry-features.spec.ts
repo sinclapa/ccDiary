@@ -6,6 +6,10 @@ const SEEDED_DIARY_TITLE = 'Integration Test Diary'
 const SEEDED_ENTRY_YEAR = 1918
 const SEEDED_ENTRY_MONTH = 5
 const SEEDED_ENTRY_DAY = 21
+// Seeded entry with imageData set
+const SEEDED_IMAGE_YEAR = 1918
+const SEEDED_IMAGE_MONTH = 6
+const SEEDED_IMAGE_DAY = 2
 
 async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
@@ -512,6 +516,20 @@ test.describe('DiaryEntry API — imageData and imageContentType fields', () => 
     expect(entry).toHaveProperty('imageContentType')
   })
 
+  test('seeded June 2nd entry returns non-null imageData and imageContentType', async ({ request }) => {
+    const response = await request.get(
+      `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_IMAGE_YEAR}/${SEEDED_IMAGE_MONTH}/${SEEDED_IMAGE_DAY}`,
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+    )
+    expect(response.ok()).toBeTruthy()
+    const entries: Array<{ imageData: string | null; imageContentType: string | null }> = await response.json()
+    expect(entries.length).toBeGreaterThan(0)
+    const imageEntry = entries.find(e => e.imageData !== null)
+    expect(imageEntry).toBeDefined()
+    expect(imageEntry?.imageData).toBeTruthy()
+    expect(imageEntry?.imageContentType).toBe('image/png')
+  })
+
   test('POST create with imageData requires authentication', async ({ request }) => {
     const response = await request.post(`${API_BASE}/api/v1/DiaryEntry/Create`, {
       ignoreHTTPSErrors: true,
@@ -525,5 +543,30 @@ test.describe('DiaryEntry API — imageData and imageContentType fields', () => 
       },
     })
     expect(response.status()).toBe(401)
+  })
+})
+
+// ─── Image display on diary entries ───────────────────────────────────────────
+
+test.describe('Image display on diary entries', () => {
+  let ww1DiaryId: string
+
+  test.beforeAll(async ({ request }) => {
+    ww1DiaryId = await getIntegrationDiaryId(request)
+  })
+
+  test('image renders in timeline for a seeded entry with imageData set', async ({ page }) => {
+    const dateWithImage = `${SEEDED_IMAGE_YEAR}-${String(SEEDED_IMAGE_MONTH).padStart(2, '0')}-${String(SEEDED_IMAGE_DAY).padStart(2, '0')}`
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateWithImage}`, { waitUntil: 'load', timeout: 25000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(page.locator('.v-timeline-item .v-img').first()).toBeVisible({ timeout: 10000 })
+  })
+
+  test('no image is shown for entries without imageData', async ({ page }) => {
+    // May 21 entries have no imageData set
+    const dateNoImage = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateNoImage}`, { waitUntil: 'load', timeout: 25000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(page.locator('.v-timeline-item .v-img')).toHaveCount(0)
   })
 })

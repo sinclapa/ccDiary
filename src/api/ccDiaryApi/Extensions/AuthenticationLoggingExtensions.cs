@@ -31,7 +31,7 @@ namespace ccDiaryApi.Extensions
                 OnChallenge = context =>
                 {
                     var sanitizedPath = context.Request.Path.ToString().Replace("\r", string.Empty).Replace("\n", string.Empty);
-                    Log.Logger.Warning("JWT authentication challenge for {Path}", sanitizedPath);
+                    Log.Logger.Information("JWT authentication challenge for {Path}", sanitizedPath);
                     return Task.CompletedTask;
                 },
                 OnForbidden = context =>
