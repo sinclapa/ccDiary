@@ -101,17 +101,28 @@ function Stop-PortOwner([int[]]$Ports, [string]$Role) {
     return $false
 }
 
+$composeApiStopped = $false
+if (Get-Command -Name 'docker' -ErrorAction SilentlyContinue) {
+    $running = docker ps --filter 'name=^ccdiaryapi$' --filter 'status=running' --format '{{.Names}}' 2>$null
+    if ($running -eq 'ccdiaryapi') {
+        Write-Host "API container (ccdiaryapi) running — stopping..." -ForegroundColor Yellow
+        docker stop ccdiaryapi | Out-Null
+        Write-Host "  Stopped [API container] ccdiaryapi" -ForegroundColor Cyan
+        $composeApiStopped = $true
+    }
+}
+
 $apiStopped = Stop-PortOwner -Ports @($ApiHttpPort, $ApiHttpsPort) -Role 'API'
 $uiStopped  = Stop-PortOwner -Ports @($UiPort) -Role 'UI'
 
-if (-not $apiStopped) {
-    Write-Host "API not running on ports $ApiHttpPort/$ApiHttpsPort — nothing to stop." -ForegroundColor DarkGray
+if (-not $composeApiStopped -and -not $apiStopped) {
+    Write-Host "API not running on ports $ApiHttpPort/$ApiHttpsPort and no API container found — nothing to stop." -ForegroundColor DarkGray
 }
 
 if (-not $uiStopped) {
     Write-Host "UI not running on port $UiPort — nothing to stop." -ForegroundColor DarkGray
 }
 
-if ($apiStopped -or $uiStopped) {
+if ($composeApiStopped -or $apiStopped -or $uiStopped) {
     Write-Host "`nDone." -ForegroundColor Green
 }

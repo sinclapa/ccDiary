@@ -12,7 +12,6 @@ namespace ccDiaryApi.Services
     public class GraphService : IGraphService
     {
         private const string GraphInvitationsEndpoint = "https://graph.microsoft.com/v1.0/invitations";
-        private const string DefaultInviteRedirectUrl = "https://localhost:5173";
 
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -33,7 +32,7 @@ namespace ccDiaryApi.Services
             var tenantId = _configuration["Graph:TenantId"];
             var clientId = _configuration["Graph:ClientId"];
             var clientSecret = _configuration["Graph:ClientSecret"];
-            var redirectUrl = _configuration["Graph:InviteRedirectUrl"] ?? DefaultInviteRedirectUrl;
+            var redirectUrl = _configuration["Graph:InviteRedirectUrl"];
 
             if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {

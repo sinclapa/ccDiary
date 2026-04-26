@@ -298,6 +298,7 @@ if ($otlpEndpoint) {
 $apiProject = "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj"
 dotnet user-secrets -p $apiProject init
 dotnet user-secrets -p $apiProject set "SA_PASSWORD" "$localDBPassword"
+dotnet user-secrets -p $apiProject set "Kestrel:Certificates:Development:Password" "$httpsCertPassword"
 dotnet user-secrets -p $apiProject set "Entra:TenantId" "$tenantId"
 if ($entraClientId) {
     dotnet user-secrets -p $apiProject set "Entra:ClientId" "$entraClientId"

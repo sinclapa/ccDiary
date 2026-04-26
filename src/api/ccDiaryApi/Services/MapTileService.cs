@@ -382,7 +382,7 @@ namespace ccDiaryApi.Services
             public string Code { get; set; } = string.Empty;
 
 #pragma warning disable SA1011
-            public OsrmRoute[]? Routes { get; init; }
+            public OsrmRoute[]? Routes { get; set; }
 #pragma warning restore SA1011
         }
 
