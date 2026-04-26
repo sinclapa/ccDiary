@@ -1,0 +1,30 @@
+{
+    "folders": [
+        {
+            "path": "src/api"
+        },
+        {
+            "path": "src/ui"
+        },
+        {
+            "path": "deploy"
+        },
+        {
+            "path": "scripts"
+        },
+        {
+            "path": "data"
+        }
+    ],
+    "settings": {
+        "cSpell.words": [
+            "BUILDNUMBER",
+            "cobertura",
+            "msal",
+            "pinia",
+            "unplugin",
+            "VITE",
+            "vuetify"
+        ]
+    }
+}

@@ -96,7 +96,7 @@ else {
 
 Write-Host 'Local API and UI are ready.' -ForegroundColor Green
 
-# ── Seed test data if not already present ──────────────────────────────────────
+# ── Seed test data (always re-imports to pick up changes) ──────────────────────
 $apiBase = "https://localhost:$ApiHttpsPort"
 $dataFile = Join-Path $repoRoot 'data/test_data.json'
 
@@ -104,83 +104,17 @@ if (-not (Test-Path $dataFile)) {
     Write-Host "Seed data file not found: $dataFile — skipping." -ForegroundColor Yellow
 }
 else {
+    Write-Host 'Seeding test data...' -ForegroundColor Cyan
     try {
-        $diaries = Invoke-RestMethod -Uri "$apiBase/api/v1/Diary/Get" -SkipCertificateCheck
-        $alreadySeeded = $diaries | Where-Object { $_.title -eq 'Integration Test Diary' }
+        $response = Invoke-RestMethod `
+            -Uri "$apiBase/api/v1/DiaryArchive/Import" `
+            -Method Post `
+            -Headers @{ 'Content-Type' = 'application/json' } `
+            -Body (Get-Content $dataFile -Raw) `
+            -SkipCertificateCheck
+        Write-Host "Test data seeded. DiaryId=$($response.diaryId)" -ForegroundColor Green
     }
     catch {
-        $alreadySeeded = $null
-    }
-
-    if ($alreadySeeded) {
-        Write-Host 'Test data already seeded — skipping import.' -ForegroundColor Green
-    }
-    else {
-        Write-Host 'Seeding test data...' -ForegroundColor Cyan
-
-        # Read Entra config from the API .env file written by setuplocal.ps1
-        $envFile = Join-Path $repoRoot 'src/api/.env'
-        $appIdUri = $null
-        $clientId = $null
-        $tenantId = $null
-        if (Test-Path $envFile) {
-            $envLines = Get-Content $envFile
-            foreach ($line in $envLines) {
-                if ($line -match '^Entra__ApplicationIdUri=(.+)') { $appIdUri = $Matches[1] }
-                if ($line -match '^Entra__ClientId=(.+)')         { $clientId = $Matches[1] }
-                if ($line -match '^Entra__TenantId=(.+)')         { $tenantId = $Matches[1] }
-            }
-        }
-
-        if (-not $appIdUri -or -not $clientId -or -not $tenantId) {
-            Write-Host 'Missing Entra config in src/api/.env — skipping seed.' -ForegroundColor Yellow
-        }
-        else {
-            $scope = "${appIdUri}/Diary.Update"
-
-            # Use the app's own client ID with MSAL device code flow.
-            # Azure CLI cannot request tokens for this API, but the app's own public client can.
-            $tokenFile = [System.IO.Path]::GetTempFileName()
-            $pythonScript = @"
-import sys, msal
-token_file = sys.argv[1]
-app = msal.PublicClientApplication('$clientId', authority='https://login.microsoftonline.com/$tenantId')
-accounts = app.get_accounts()
-result = app.acquire_token_silent(['$scope'], account=accounts[0]) if accounts else None
-if not result:
-    flow = app.initiate_device_flow(scopes=['$scope'])
-    print(flow['message'], flush=True)
-    result = app.acquire_token_by_device_flow(flow)
-token = ''
-if result and 'access_token' in result:
-    token = result['access_token']
-else:
-    err = result.get('error_description') or result.get('error') if result else 'no result'
-    print('MSAL error: ' + str(err), flush=True)
-with open(token_file, 'w') as f:
-    f.write(token)
-"@
-            python -c $pythonScript $tokenFile
-            $rawToken = Get-Content $tokenFile -Raw -ErrorAction SilentlyContinue
-            Remove-Item $tokenFile -Force -ErrorAction SilentlyContinue
-            $token = if ($rawToken) { $rawToken.Trim() } else { '' }
-            if (-not $token) {
-                Write-Host 'Could not acquire access token — skipping seed.' -ForegroundColor Yellow
-            }
-            else {
-                try {
-                    $response = Invoke-RestMethod `
-                        -Uri "$apiBase/api/v1/DiaryArchive/Import" `
-                        -Method Post `
-                        -Headers @{ Authorization = "Bearer $token"; 'Content-Type' = 'application/json' } `
-                        -Body (Get-Content $dataFile -Raw) `
-                        -SkipCertificateCheck
-                    Write-Host "Test data seeded. DiaryId=$($response.diaryId)" -ForegroundColor Green
-                }
-                catch {
-                    Write-Host "Seed failed: $_" -ForegroundColor Red
-                }
-            }
-        }
+        Write-Host "Seed failed: $_" -ForegroundColor Red
     }
 }
