@@ -76,7 +76,10 @@ if ($apiRunning) {
 }
 elseif ($Compose) {
     Write-Host 'API is not running. Starting API container via docker compose...' -ForegroundColor Yellow
-    Start-Process -FilePath 'docker' -ArgumentList @('compose', '-p', 'ccdiary', 'up', '-d', 'ccdiaryapi') -WorkingDirectory $apiPath -Wait -NoNewWindow
+    $composeProcess = Start-Process -FilePath 'docker' -ArgumentList @('compose', '-p', 'ccdiary', 'up', '-d', 'ccdiaryapi') -WorkingDirectory $apiPath -Wait -NoNewWindow -PassThru
+    if ($composeProcess.ExitCode -ne 0) {
+        throw "docker compose exited with code $($composeProcess.ExitCode). Check for missing .env values or image build failures."
+    }
     Write-Host "API container started. Waiting for port..." -ForegroundColor Cyan
 
     if (-not (Wait-ForAnyPort -Ports @($ApiHttpPort, $ApiHttpsPort) -TimeoutSeconds $StartupTimeoutSeconds)) {

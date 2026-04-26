@@ -282,7 +282,7 @@ try {
     # Entra allows a maximum of 2 secrets per app; remove the oldest if already at the limit
     $existingSecrets = az ad app credential list --id $appId --output json | ConvertFrom-Json
     if ($existingSecrets.Count -ge 2) {
-        $oldest = $existingSecrets | Sort-Object -Property endDateTime | Select-Object -First 1
+        $oldest = $existingSecrets | Sort-Object -Property startDateTime | Select-Object -First 1
         Write-Host "  Secret limit reached — removing oldest secret ($($oldest.displayName))..."
         az ad app credential delete --id $appId --key-id $oldest.keyId
     }
