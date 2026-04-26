@@ -278,6 +278,15 @@ try {
 
     # Create a client secret for the app (used by the API to call Graph)
     Write-Host "  Creating client secret for Graph API access..."
+
+    # Entra allows a maximum of 2 secrets per app; remove the oldest if already at the limit
+    $existingSecrets = az ad app credential list --id $appId --output json | ConvertFrom-Json
+    if ($existingSecrets.Count -ge 2) {
+        $oldest = $existingSecrets | Sort-Object -Property endDateTime | Select-Object -First 1
+        Write-Host "  Secret limit reached — removing oldest secret ($($oldest.displayName))..."
+        az ad app credential delete --id $appId --key-id $oldest.keyId
+    }
+
     $secretBody = @{
         passwordCredential = @{
             displayName = "Local Dev - $(Get-Date -Format 'yyyy-MM-dd')"

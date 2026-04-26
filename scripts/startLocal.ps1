@@ -3,7 +3,8 @@ param(
     [int]$ApiHttpPort = 5120,
     [int]$ApiHttpsPort = 7183,
     [int]$UiPort = 8080,
-    [int]$StartupTimeoutSeconds = 60
+    [int]$StartupTimeoutSeconds = 60,
+    [switch]$Compose
 )
 
 Set-StrictMode -Version Latest
@@ -51,7 +52,14 @@ function Ensure-Command {
     }
 }
 
-Ensure-Command -Name 'dotnet'
+if ($Compose) {
+    Ensure-Command -Name 'docker'
+    $ApiHttpPort = 5121
+    $ApiHttpsPort = 7184
+}
+else {
+    Ensure-Command -Name 'dotnet'
+}
 Ensure-Command -Name 'npm.cmd'
 
 if (-not (Test-Path -Path $apiProject)) {
@@ -65,6 +73,17 @@ if (-not (Test-Path -Path $uiPath)) {
 $apiRunning = (Test-PortListening -Port $ApiHttpPort) -or (Test-PortListening -Port $ApiHttpsPort)
 if ($apiRunning) {
     Write-Host "API already running on localhost:$ApiHttpPort or localhost:$ApiHttpsPort" -ForegroundColor Green
+}
+elseif ($Compose) {
+    Write-Host 'API is not running. Starting API container via docker compose...' -ForegroundColor Yellow
+    Start-Process -FilePath 'docker' -ArgumentList @('compose', '-p', 'ccdiary', 'up', '-d', 'ccdiaryapi') -WorkingDirectory $apiPath -Wait -NoNewWindow
+    Write-Host "API container started. Waiting for port..." -ForegroundColor Cyan
+
+    if (-not (Wait-ForAnyPort -Ports @($ApiHttpPort, $ApiHttpsPort) -TimeoutSeconds $StartupTimeoutSeconds)) {
+        throw "API container did not start listening on ports $ApiHttpPort/$ApiHttpsPort within $StartupTimeoutSeconds seconds."
+    }
+
+    Write-Host "API is now listening on localhost:$ApiHttpPort or localhost:$ApiHttpsPort" -ForegroundColor Green
 }
 else {
     Write-Host 'API is not running. Starting API...' -ForegroundColor Yellow

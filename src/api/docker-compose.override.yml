@@ -16,6 +16,10 @@ services:
       - "7184:443"
     volumes:
       - type: bind
+        source: ${HTTPS_CERTS_PATH}
+        target: /home/app/.aspnet/https
+        read_only: true
+      - type: bind
         source: ${USER_SECRETS_PATH}
         target: /home/app/.microsoft/usersecrets
         read_only: true
