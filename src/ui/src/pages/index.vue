@@ -15,5 +15,11 @@
 </template>
 
 <script lang="ts" setup>
-  import logo from '@/assets/logo.png'
+  import { computed } from 'vue'
+  import { useTheme } from 'vuetify'
+  import logoLight from '@/assets/logo-light.svg'
+  import logoDark from '@/assets/logo-dark.svg'
+
+  const theme = useTheme()
+  const logo = computed(() => theme.global.name.value === 'dark' ? logoDark : logoLight)
 </script>

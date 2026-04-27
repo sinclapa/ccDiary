@@ -4,6 +4,16 @@
       <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
     </div>
     <a
+      class="d-inline-block mx-2 social-link brand-link"
+      href="https://cookingcode.com"
+      rel="noopener noreferrer"
+      target="_blank"
+      title="CookingCode"
+    >
+      <img :src="brandLogo" alt="CookingCode" height="16" />
+    </a>
+
+    <a
       v-for="item in items"
       :key="item.title"
       class="d-inline-block mx-2 social-link"
@@ -28,17 +38,19 @@
 </template>
 
 <script setup lang="ts">
+  import { computed } from 'vue'
+  import { useTheme } from 'vuetify'
   import { getAppConfigField } from '@/utils/appConfig'
+  import logoSimpleLight from '@/assets/logo-simple-light.svg'
+  import logoSimpleDark from '@/assets/logo-simple-dark.svg'
+
+  const theme = useTheme()
+  const brandLogo = computed(() => theme.global.name.value === 'dark' ? logoSimpleDark : logoSimpleLight)
 
   const version = __APP_VERSION__
   const environment = getAppConfigField('VITE_ENVIRONMENT', { defaultValue: '' })
   const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
   const items = [
-    {
-      title: 'Vuetify Documentation',
-      icon: `$vuetify`,
-      href: 'https://vuetifyjs.com/',
-    },
     {
       title: 'GitHub',
       icon: '$mdi-github',
@@ -72,4 +84,15 @@
 
     &:hover
       color: rgba(25, 118, 210, 1)
+
+  .brand-link
+    display: inline-flex !important
+    align-items: center
+    opacity: var(--v-disabled-opacity)
+    text-decoration: none
+    color: rgba(var(--v-theme-on-background), 1)
+    transition: .2s ease-in-out
+
+    &:hover
+      opacity: 1
 </style>
