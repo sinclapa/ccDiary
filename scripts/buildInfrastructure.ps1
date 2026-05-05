@@ -404,21 +404,30 @@ $existingConnection = az containerapp connection list `
     --source-id $containerAppId `
     --query "[?name=='$connectionName'] | [0].name" -o tsv 2>$null
 if ($existingConnection -eq $connectionName) {
-    Write-Host "  Service Connector '$connectionName' already exists, skipping." -ForegroundColor Gray
-} else {
-    az containerapp connection create sql `
+    Write-Host "  Service Connector '$connectionName' already exists, deleting and recreating to refresh database user..." -ForegroundColor Gray
+    az containerapp connection delete `
         --connection $connectionName `
-        --source-id $containerAppId `
-        --target-id $databaseId `
-        --client-type dotnet `
-        --system-identity `
-        -c $containerAppName
+        --name $containerAppName `
+        --resource-group $resourceGroupName `
+        --yes `
+        --output none
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to create Service Connector. The Container App cannot connect to SQL without it. Aborting."
+        Write-Error "Failed to delete existing Service Connector. Aborting."
         exit 1
     }
-    Write-Host "  Service Connector '$connectionName' created successfully." -ForegroundColor Green
 }
+az containerapp connection create sql `
+    --connection $connectionName `
+    --source-id $containerAppId `
+    --target-id $databaseId `
+    --client-type dotnet `
+    --system-identity `
+    -c $containerAppName
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to create Service Connector. The Container App cannot connect to SQL without it. Aborting."
+    exit 1
+}
+Write-Host "  Service Connector '$connectionName' created successfully." -ForegroundColor Green
 
 Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
 
