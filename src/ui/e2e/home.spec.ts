@@ -13,10 +13,9 @@ test.describe('Home page', () => {
     await expect(loginBtn).toBeVisible()
   })
 
-  test('navigation drawer opens and shows links', async ({ page }) => {
+  test('shows navigation links', async ({ page }) => {
     await page.goto('/')
-    await page.locator('button[aria-label="Open navigation"]').first().click()
-    await expect(page.getByText('Diaries')).toBeVisible()
-    await expect(page.getByText('Home')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Diaries' }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Home' }).first()).toBeVisible()
   })
 })

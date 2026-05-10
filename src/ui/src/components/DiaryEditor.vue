@@ -5,6 +5,11 @@
         prepend-icon="$mdi-book-open-variant-outline"
         :title="addMode ? 'Add Diary' : 'Edit Diary'"
       >
+        <template #append>
+          <v-btn aria-label="Cancel" icon variant="text" @click="close">
+            <v-icon>$mdi-close</v-icon>
+          </v-btn>
+        </template>
         <v-card-text>
           <v-text-field
             id="title"
@@ -20,10 +25,12 @@
             :rules="authorRules"
           />
 
-          <v-text-field
+          <v-textarea
             id="description"
             v-model="description"
+            auto-grow
             label="Description"
+            rows="3"
           />
         </v-card-text>
         <v-divider />

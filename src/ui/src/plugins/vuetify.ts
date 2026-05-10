@@ -22,6 +22,7 @@ import {
   mdiCheckCircle,
   mdiChevronDown,
   mdiChevronUp,
+  mdiClose,
   mdiDelete,
   mdiFastForward,
   mdiFerry,
@@ -68,6 +69,7 @@ export default createVuetify({
       'mdi-check-circle': mdiCheckCircle,
       'mdi-chevron-down': mdiChevronDown,
       'mdi-chevron-up': mdiChevronUp,
+      'mdi-close': mdiClose,
       'mdi-delete': mdiDelete,
       'mdi-fast-forward': mdiFastForward,
       'mdi-ferry': mdiFerry,
@@ -91,6 +93,30 @@ export default createVuetify({
   },
   theme: {
     defaultTheme: getSystemTheme(),
+    themes: {
+      dark: {
+        dark: true,
+        colors: {
+          background: '#0f0f12',
+          surface: '#18181f',
+          'surface-variant': '#1e1e2a',
+          primary: '#ff6b35',
+          'primary-darken-1': '#e05520',
+          secondary: '#7c5cbf',
+        },
+      },
+      light: {
+        dark: false,
+        colors: {
+          background: '#f6f6fb',
+          surface: '#ffffff',
+          'surface-variant': '#ededf5',
+          primary: '#e05520',
+          'primary-darken-1': '#c04010',
+          secondary: '#6b4db0',
+        },
+      },
+    },
   },
   locale: {
     locale: 'en',

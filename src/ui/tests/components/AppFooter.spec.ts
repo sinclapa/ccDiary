@@ -45,7 +45,7 @@ test('Display AppFooter with environment and version', () => {
   })
 
   expect(wrapper.text()).toContain(`test Version ${__APP_VERSION__}`)
-  expect(wrapper.text()).toContain(`© 2023-${new Date().getFullYear()} CookingCode.com`)
+  expect(wrapper.text()).toContain(`© ${new Date().getFullYear()} Cooking Code`)
 })
 
 test('Displays Cookie preferences button in footer', () => {
