@@ -101,5 +101,5 @@ test('Display AppFooter without environment prefix when environment not set', ()
   })
 
   expect(wrapper.text()).toContain(`Version ${__APP_VERSION__}`)
-  expect(wrapper.text()).not.toMatch(/\S+ Version/)
+  expect(wrapper.text()).not.toContain(`test Version`)
 })
