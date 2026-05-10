@@ -60,6 +60,12 @@ describe('initFaro', () => {
     expect(mockInitializeFaro).not.toHaveBeenCalled()
   })
 
+  it('does not initialize when VITE_FARO_URL is set but consent has not been given', () => {
+    vi.mocked(getAppConfigField).mockReturnValue('https://faro-collector.example.com/collect/abc123')
+    initFaro()
+    expect(mockInitializeFaro).not.toHaveBeenCalled()
+  })
+
   describe('when VITE_FARO_URL is set', () => {
     const faroUrl = 'https://faro-collector.example.com/collect/abc123'
 

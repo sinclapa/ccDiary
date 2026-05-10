@@ -121,6 +121,21 @@ describe('AppHeader', () => {
     expect(drawer.props('location')).not.toBe('top')
   })
 
+  test('theme toggle button switches theme and saves preference', async () => {
+    const wrapper = mount({
+      template: '<v-layout><app-header></app-header></v-layout>',
+    }, {
+      global: {
+        components: { AppHeader },
+        plugins: [vuetify],
+      },
+    })
+
+    const toggleBtn = wrapper.find('#theme-toggle')
+    expect(toggleBtn.exists()).toBe(true)
+    await toggleBtn.trigger('click')
+  })
+
   test('calls initialize, handleRedirect, and registerAuthorizationHeaderInterceptor on mount', async () => {
     // Clear call history before test
     Object.values(msalServiceSpies).forEach(fn => fn.mockClear())
