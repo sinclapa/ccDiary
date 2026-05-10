@@ -4,6 +4,7 @@
       <AppHeader />
 
       <v-main>
+        <ConsentBanner />
         <ApiStatusBanner />
         <router-view />
       </v-main>

@@ -4,6 +4,8 @@ import type { UserActionInternalInterface } from '@grafana/faro-core/dist/bundle
 import { getDefaultOTELInstrumentations, TracingInstrumentation } from '@grafana/faro-web-tracing'
 import { getAppConfigField } from '@/utils/appConfig'
 
+export const FARO_CONSENT_KEY = 'faro-consent'
+
 let faroInstance: Faro | undefined
 let currentUserAction: UserActionInternalInterface | undefined
 
@@ -13,6 +15,7 @@ export function initFaro () {
   faroInstance = undefined
   const url = getAppConfigField('VITE_FARO_URL')
   if (!url || url === 'NOT_SET') return
+  if (localStorage.getItem(FARO_CONSENT_KEY) !== 'true') return
 
   const apiUrl = getAppConfigField('VITE_API')
   const propagateUrls =
