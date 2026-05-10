@@ -4,6 +4,14 @@
     <v-app-bar-title style="flex-shrink: 0">Cooking Code Diary</v-app-bar-title>
     <div v-if="state.isAuthenticated" id="username" class="text-truncate mr-2 d-none d-sm-block" style="min-width: 0">{{ state.user?.name }}</div>
     <v-btn
+      id="theme-toggle"
+      icon
+      :aria-label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+      @click="toggleTheme"
+    >
+      <v-icon>{{ themeIcon }}</v-icon>
+    </v-btn>
+    <v-btn
       v-if="state.isAuthenticated"
       id="logout"
       v-tooltip="state.user?.name"
@@ -31,14 +39,25 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted } from 'vue'
+  import { computed, onMounted } from 'vue'
+  import { useTheme } from 'vuetify'
   import { useRouter } from 'vue-router'
   import { msalService } from '@/services/authentication/msalService'
   import { state } from '@/services/authentication/msalConfig'
   import { useAuthStore } from '@/stores/auth'
+  import { saveTheme } from '@/utils/browserTheme'
 
   const drawer = ref(false)
   const router = useRouter()
+  const theme = useTheme()
+  const isDark = computed(() => theme.global.name.value === 'dark')
+  const themeIcon = computed(() => isDark.value ? '$mdi-weather-sunny' : '$mdi-weather-night')
+
+  const toggleTheme = () => {
+    const next = isDark.value ? 'light' : 'dark'
+    theme.global.name.value = next
+    saveTheme(next)
+  }
   const authStore = useAuthStore()
   const { initializeInstance, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor } = msalService()
 
