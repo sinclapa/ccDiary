@@ -82,6 +82,7 @@ test('Uses dark logo when theme is dark', () => {
   expect(img.attributes('src')).toContain('logo-simple-dark')
 })
 
+
 test('Display AppFooter without environment prefix when environment not set', () => {
   vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
     if (field === 'VITE_ENVIRONMENT') return ''
