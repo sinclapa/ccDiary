@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { endFaroUserAction, initFaro, pushFaroEvent, startFaroUserAction } from '../faro'
+import { endFaroUserAction, FARO_CONSENT_KEY, initFaro, pushFaroEvent, startFaroUserAction } from '../faro'
 import { getAppConfigField } from '@/utils/appConfig'
 
 const mockPushEvent = vi.fn()
@@ -45,6 +45,7 @@ function makeSpan (urlFull?: string, httpUrl?: string) {
 describe('initFaro', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(FARO_CONSENT_KEY)
   })
 
   it('does not initialize when VITE_FARO_URL is NOT_SET', () => {
@@ -63,6 +64,7 @@ describe('initFaro', () => {
     const faroUrl = 'https://faro-collector.example.com/collect/abc123'
 
     function setupMocks (overrides: Record<string, string> = {}) {
+      localStorage.setItem(FARO_CONSENT_KEY, 'true')
       vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
         const values: Record<string, string> = {
           VITE_FARO_URL: faroUrl,
@@ -210,9 +212,11 @@ describe('initFaro', () => {
 describe('pushFaroEvent', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(FARO_CONSENT_KEY)
   })
 
   it('calls faro.api.pushEvent with the given name and attributes', () => {
+    localStorage.setItem(FARO_CONSENT_KEY, 'true')
     vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
     mockInitializeFaro.mockReturnValue({ api: { pushEvent: mockPushEvent } })
     initFaro()
@@ -221,6 +225,7 @@ describe('pushFaroEvent', () => {
   })
 
   it('calls faro.api.pushEvent with no attributes when omitted', () => {
+    localStorage.setItem(FARO_CONSENT_KEY, 'true')
     vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
     mockInitializeFaro.mockReturnValue({ api: { pushEvent: mockPushEvent } })
     initFaro()
@@ -239,9 +244,11 @@ describe('pushFaroEvent', () => {
 describe('startFaroUserAction', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(FARO_CONSENT_KEY)
   })
 
   it('calls faro.api.startUserAction with name and attributes', () => {
+    localStorage.setItem(FARO_CONSENT_KEY, 'true')
     vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
     mockInitializeFaro.mockReturnValue({ api: { startUserAction: mockStartUserAction } })
     initFaro()
@@ -250,6 +257,7 @@ describe('startFaroUserAction', () => {
   })
 
   it('calls faro.api.startUserAction with empty attributes when omitted', () => {
+    localStorage.setItem(FARO_CONSENT_KEY, 'true')
     vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
     mockInitializeFaro.mockReturnValue({ api: { startUserAction: mockStartUserAction } })
     initFaro()
@@ -268,9 +276,11 @@ describe('startFaroUserAction', () => {
 describe('endFaroUserAction', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.removeItem(FARO_CONSENT_KEY)
   })
 
   it('calls end() on the action returned by startUserAction', () => {
+    localStorage.setItem(FARO_CONSENT_KEY, 'true')
     vi.mocked(getAppConfigField).mockReturnValue('https://faro.example.com')
     mockStartUserAction.mockReturnValue({ end: mockEndUserAction })
     mockInitializeFaro.mockReturnValue({ api: { startUserAction: mockStartUserAction } })

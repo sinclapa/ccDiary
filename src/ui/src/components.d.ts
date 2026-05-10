@@ -10,6 +10,7 @@ declare module 'vue' {
     ApiStatusBanner: typeof import('./components/ApiStatusBanner.vue')['default']
     AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppHeader: typeof import('./components/AppHeader.vue')['default']
+    ConsentBanner: typeof import('./components/ConsentBanner.vue')['default']
     DiaryEditor: typeof import('./components/DiaryEditor.vue')['default']
     DiaryEntryEditor: typeof import('./components/DiaryEntryEditor.vue')['default']
     JourneyView: typeof import('./components/JourneyView.vue')['default']

@@ -11,6 +11,10 @@ vi.mock('@/utils/appConfig', () => ({
   getAppConfigField: vi.fn(),
 }))
 
+vi.mock('@/composables/useConsent', () => ({
+  useConsent: () => ({ openPreferences: vi.fn(), bannerVisible: { value: false } }),
+}))
+
 const vuetify = createVuetify({
   components,
   directives,
@@ -42,6 +46,22 @@ test('Display AppFooter with environment and version', () => {
 
   expect(wrapper.text()).toContain(`test Version ${__APP_VERSION__}`)
   expect(wrapper.text()).toContain(`© 2023-${new Date().getFullYear()} CookingCode.com`)
+})
+
+test('Displays Cookie preferences button in footer', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    props: {},
+    global: {
+      components: { AppFooter },
+      plugins: [vuetify],
+    },
+  })
+
+  expect(wrapper.text()).toContain('Cookie preferences')
 })
 
 test('Display AppFooter without environment prefix when environment not set', () => {
