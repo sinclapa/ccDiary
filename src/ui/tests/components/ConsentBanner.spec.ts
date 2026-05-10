@@ -13,8 +13,9 @@ vi.mock('@/plugins/faro', () => ({
 
 vi.mock('@/composables/useConsent', () => {
   const bannerVisible = { value: true }
+  const currentStatus = { value: null }
   return {
-    useConsent: () => ({ bannerVisible }),
+    useConsent: () => ({ bannerVisible, currentStatus }),
   }
 })
 
@@ -40,8 +41,7 @@ describe('ConsentBanner', () => {
 
   test('accept stores consent, initialises Faro, and hides banner', async () => {
     const wrapper = mountBanner()
-    const buttons = document.querySelectorAll('.v-snackbar .v-btn')
-    const acceptBtn = Array.from(buttons).find(b => b.textContent?.includes('Accept')) as HTMLElement
+    const acceptBtn = document.getElementById('consent-accept') as HTMLElement
     acceptBtn.click()
     wrapper.unmount()
 
@@ -51,8 +51,7 @@ describe('ConsentBanner', () => {
 
   test('decline stores refusal and hides banner without initialising Faro', async () => {
     const wrapper = mountBanner()
-    const buttons = document.querySelectorAll('.v-snackbar .v-btn')
-    const declineBtn = Array.from(buttons).find(b => b.textContent?.includes('Decline')) as HTMLElement
+    const declineBtn = document.getElementById('consent-decline') as HTMLElement
     declineBtn.click()
     wrapper.unmount()
 

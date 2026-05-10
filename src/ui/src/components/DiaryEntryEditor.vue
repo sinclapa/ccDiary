@@ -3,8 +3,13 @@
     <v-form @submit.prevent="submit">
       <v-card
         prepend-icon="$mdi-pen"
-        title="Add Diary Entry"
+        :title="isEdit ? 'Edit Diary Entry' : 'Add Diary Entry'"
       >
+        <template #append>
+          <v-btn :aria-label="'Cancel'" icon variant="text" @click="close">
+            <v-icon>$mdi-close</v-icon>
+          </v-btn>
+        </template>
         <v-card-text>
           <v-row>
             <v-col>
@@ -209,7 +214,7 @@
     { label: 'Boat', value: 'boat', icon: '$mdi-ferry' },
   ]
 
-  const props = defineProps<{date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()
+  const props = defineProps<{isEdit?: boolean, date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const location = ref<string>(props.location)

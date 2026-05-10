@@ -15,7 +15,7 @@
       </div>
     </v-row>
     <v-row>
-      <v-col cols="auto">
+      <v-col class="calendar-col" cols="auto">
         <v-row>
           <v-date-picker
             v-model="selectedDate"
@@ -31,7 +31,7 @@
             <template #title>
               <v-btn
                 :aria-label="isDatePickerExpanded ? 'Collapse date picker' : 'Expand date picker'"
-                :color="isDatePickerExpanded ? 'primary' : 'secondary'"
+                color="primary"
                 size="small"
                 :variant="isDatePickerExpanded ? 'flat' : 'outlined'"
                 @click="onToggleDatePickerHeight"
@@ -48,7 +48,7 @@
             </template>
             <template #day="{ item, props }">
               <div class="diary-day-content">
-                <v-btn v-bind="props" />
+                <v-btn v-bind="props" :color="item.isoDate === selectedDateIso ? 'primary' : undefined" />
                 <span v-if="hasDiaryEntryOnDate(item.isoDate)" class="diary-day-marker" />
               </div>
             </template>
@@ -101,6 +101,7 @@
                 :from-location="editedItem.fromLocation"
                 :image-content-type="editedItem.imageContentType"
                 :image-data="editedItem.imageData"
+                :is-edit="editedItem.diaryEntryId !== undefined"
                 :journey-mode="editedItem.journeyMode"
                 :location="editedItem.location"
                 :map-location="editedItem.mapLocation"
@@ -156,31 +157,35 @@
           <v-timeline-item
             v-for="(diaryEntry, i) in diaryEntries"
             :key="i"
-            :dot-color="'red'"
+            dot-color="primary"
             size="small"
           >
             <template #opposite>
-              <div :class="`pt-1 headline font-weight-light text-${'red'}`" style="width: 80px;">
+              <div class="pt-1 headline font-weight-light text-primary" style="width: 80px;">
                 {{ dayjs(diaryEntry.date).format('ddd HH:mm') }}
               </div>
             </template>
             <div>
-              <h2 :class="`mt-n1 headline font-weight-light mb-4 text-${'red'}`">
+              <h2 class="mt-n1 headline font-weight-light mb-4 text-primary">
                 {{ diaryEntry.location }}
                 <div v-if="canEditDiary">
                   <v-btn
                     aria-label="Edit entry"
-                    :color="'red'"
+                    class="action-btn"
+                    color="primary"
                     icon="$mdi-pencil"
                     size="x-small"
+                    variant="outlined"
                     @click="onEditEntry(diaryEntry)"
                   />
                   &nbsp;
                   <v-btn
                     aria-label="Delete entry"
-                    :color="'red'"
+                    class="action-btn"
+                    color="primary"
                     icon="$mdi-delete"
                     size="x-small"
+                    variant="outlined"
                     @click="onDeleteEntry(diaryEntry)"
                   />
                 </div>
@@ -236,6 +241,10 @@
   const route = useRoute('/diaries/[id]')
   const diaryId = route.params.id
   const diary = ref(new Diary('', '', '') as Diary | undefined)
+
+  const selectedDateIso = computed(() =>
+    selectedDate.value ? dayjs(selectedDate.value).format('YYYY-MM-DD') : null
+  )
 
   const canEditDiary = computed(() => {
     if (authStore.isAdmin) return true
@@ -683,7 +692,7 @@
   }
   .author {
     font-size: 16px;
-    font-style: italic;
+    color: rgb(var(--v-theme-primary));
   }
 
   :deep(.diary-day-content) {
@@ -693,6 +702,28 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+  }
+
+  @media (max-width: 599px) {
+    :deep(.calendar-col) {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+
+  :deep(.action-btn) {
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  :deep(.action-btn:hover) {
+    background-color: rgb(var(--v-theme-primary)) !important;
+    color: white !important;
+  }
+
+  :deep(.action-btn:hover .v-btn__overlay) {
+    opacity: 0 !important;
   }
 
   :deep(.diary-day-marker) {

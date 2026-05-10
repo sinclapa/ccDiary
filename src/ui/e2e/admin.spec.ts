@@ -117,25 +117,9 @@ test.describe('Access Request API', () => {
 
 // ─── Navigation links ─────────────────────────────────────────────────────────
 
-test.describe('Navigation drawer — unauthenticated state', () => {
-  test('Admin link is not shown in the navigation drawer when not authenticated', async ({ page }) => {
+test.describe('Navigation — unauthenticated state', () => {
+  test('Admin link is not shown in the header when not authenticated', async ({ page }) => {
     await page.goto('/', { waitUntil: 'load', timeout: 25000 })
-    await page.click('[aria-label="Open navigation"]')
-    await expect(page.getByRole('link', { name: 'Diaries' })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0)
-  })
-
-  test('Register link is visible in the navigation drawer when not authenticated', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'load', timeout: 25000 })
-    await page.click('[aria-label="Open navigation"]')
-    await expect(page.getByRole('link', { name: 'Register' })).toBeVisible({ timeout: 5000 })
-  })
-
-  test('clicking the Register navigation link goes to the register page', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'load', timeout: 25000 })
-    await page.click('[aria-label="Open navigation"]')
-    await page.getByRole('link', { name: 'Register' }).click()
-    await expect(page).toHaveURL(/\/register/, { timeout: 8000 })
-    await expect(page.getByText('Request Access')).toBeVisible({ timeout: 8000 })
   })
 })

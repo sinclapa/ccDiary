@@ -70,55 +70,12 @@ describe('AppHeader', () => {
       },
     })
     expect(wrapper.find('#username').text()).toContain(`Jane Doe`)
-    expect(wrapper.findComponent('.v-app-bar-title').text()).toContain(`Cooking Code Diary`)
+    const logoLink = wrapper.find('.logo-link')
+    expect(logoLink.find('.logo-cc').text()).toBe('cc')
+    expect(logoLink.find('.logo-diary').text()).toBe('Diary')
     const logoutButton = wrapper.findAllComponents('#logout')
     expect(logoutButton.length).equals(1)
     logoutButton[0].trigger('click')
-  })
-
-  test('ShowDrawer', async () => {
-    const wrapper = mount({
-      template: '<v-layout><app-header></app-header></v-layout>',
-    }, {
-      props: {},
-      global: {
-        components: {
-          AppHeader,
-        },
-        plugins: [vuetify],
-      },
-    })
-
-    const drawerButton = wrapper.findComponent('.v-app-bar-nav-icon')
-    drawerButton.trigger('click')
-  })
-
-  test('drawer location is "top" on mobile', async () => {
-    const wrapper = mount({
-      template: '<v-layout><app-header></app-header></v-layout>',
-    }, {
-      global: {
-        components: { AppHeader },
-        plugins: [vuetify],
-        mocks: { $vuetify: { display: { mobile: true } } },
-      },
-    })
-    const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
-    expect(drawer.props('location')).toBe('top')
-  })
-
-  test('drawer location is not "top" on non-mobile', async () => {
-    const wrapper = mount({
-      template: '<v-layout><app-header></app-header></v-layout>',
-    }, {
-      global: {
-        components: { AppHeader },
-        plugins: [vuetify],
-        mocks: { $vuetify: { display: { mobile: false } } },
-      },
-    })
-    const drawer = wrapper.findComponent({ name: 'VNavigationDrawer' })
-    expect(drawer.props('location')).not.toBe('top')
   })
 
   test('theme toggle button switches theme and saves preference', async () => {
@@ -137,7 +94,6 @@ describe('AppHeader', () => {
   })
 
   test('calls initialize, handleRedirect, and registerAuthorizationHeaderInterceptor on mount', async () => {
-    // Clear call history before test
     Object.values(msalServiceSpies).forEach(fn => fn.mockClear())
     mount({
       template: '<v-layout><app-header></app-header></v-layout>',

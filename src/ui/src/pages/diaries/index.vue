@@ -57,29 +57,27 @@
         </a>
       </template>
       <template #item.actions="{ item }">
-        <div class="d-flex justify-end">
+        <div class="d-flex justify-end gap-1">
           <v-btn
             v-if="canEdit(item)"
             :id="item.diaryId + '_edit'"
-            icon
-            size="small"
+            class="action-btn"
+            color="primary"
+            icon="$mdi-pencil"
+            size="x-small"
+            variant="outlined"
             @click="editItem(item)"
-          >
-            <v-icon>
-              $mdi-pencil
-            </v-icon>
-          </v-btn>
+          />
           <v-btn
             v-if="canEdit(item)"
             :id="item.diaryId + '_delete'"
-            icon
-            size="small"
+            class="action-btn"
+            color="primary"
+            icon="$mdi-delete"
+            size="x-small"
+            variant="outlined"
             @click="deleteItem(item)"
-          >
-            <v-icon>
-              $mdi-delete
-            </v-icon>
-          </v-btn>
+          />
         </div>
       </template>
     </v-data-table>
@@ -189,3 +187,18 @@
   })
 
 </script>
+
+<style scoped>
+.action-btn {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.action-btn:hover {
+  background-color: rgb(var(--v-theme-primary)) !important;
+  color: white !important;
+}
+
+.action-btn:hover :deep(.v-btn__overlay) {
+  opacity: 0 !important;
+}
+</style>

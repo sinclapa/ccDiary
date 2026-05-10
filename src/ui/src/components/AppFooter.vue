@@ -1,10 +1,7 @@
 <template>
-  <v-footer app class="app-footer py-0" height="auto">
-    <div class="d-flex flex-column w-100">
-      <div class="d-flex align-center w-100 footer-row">
-        <div class="text-caption text-disabled">
-          <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
-        </div>
+  <footer class="app-footer py-0">
+    <div class="d-flex flex-column footer-inner">
+      <div class="d-flex align-center justify-center w-100 footer-row">
         <a
           class="d-inline-block mx-2 social-link brand-link"
           href="https://cookingcode.com"
@@ -12,7 +9,7 @@
           target="_blank"
           title="CookingCode"
         >
-          <img :src="brandLogo" alt="CookingCode" height="16" />
+          <img alt="CookingCode" height="16" :src="brandLogo">
         </a>
 
         <a
@@ -29,9 +26,17 @@
             :size="16"
           />
         </a>
+      </div>
 
-        <div class="text-caption text-disabled ms-auto">
-          &copy; 2023-{{ (new Date()).getFullYear() }} <span class="d-none d-sm-inline-block">CookingCode.com</span>
+      <div class="d-flex align-center justify-center w-100 footer-row">
+        <div class="text-caption text-disabled text-center">
+          &copy; {{ (new Date()).getFullYear() }} Cooking Code. Designed by Humans built by Claude
+        </div>
+      </div>
+
+      <div class="d-flex align-center justify-center w-100 footer-row">
+        <div class="text-caption text-disabled text-center">
+          <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
         </div>
       </div>
 
@@ -41,7 +46,7 @@
         </button>
       </div>
     </div>
-  </v-footer>
+  </footer>
 </template>
 
 <script setup lang="ts">
@@ -81,12 +86,12 @@
 
 <style scoped lang="sass">
   .app-footer
-    position: fixed !important
-    bottom: 0
-    left: 0
-    right: 0
-    z-index: 1004
     border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity))
+
+  .footer-inner
+    max-width: 1100px
+    width: 100%
+    margin: 0 auto
 
   .footer-row
     min-height: 28px
@@ -101,7 +106,7 @@
     transition: .2s ease-in-out
 
     &:hover
-      color: rgba(25, 118, 210, 1)
+      color: #ff9800
 
   .brand-link
     display: inline-flex !important
