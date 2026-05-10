@@ -37,6 +37,8 @@ import {
   mdiSkipForward,
   mdiTrain,
   mdiWalk,
+  mdiWeatherNight,
+  mdiWeatherSunny,
 } from '@mdi/js'
 
 // Utilities
@@ -82,6 +84,8 @@ export default createVuetify({
       'mdi-skip-forward': mdiSkipForward,
       'mdi-train': mdiTrain,
       'mdi-walk': mdiWalk,
+      'mdi-weather-night': mdiWeatherNight,
+      'mdi-weather-sunny': mdiWeatherSunny,
     },
     sets: { mdi },
   },

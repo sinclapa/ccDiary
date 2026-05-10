@@ -64,6 +64,24 @@ test('Displays Cookie preferences button in footer', () => {
   expect(wrapper.text()).toContain('Cookie preferences')
 })
 
+test('Uses dark logo when theme is dark', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const darkVuetify = createVuetify({ components, directives, theme: { defaultTheme: 'dark' } })
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    global: {
+      components: { AppFooter },
+      plugins: [darkVuetify],
+    },
+  })
+
+  const img = wrapper.find('img[alt="CookingCode"]')
+  expect(img.attributes('src')).toContain('logo-simple-dark')
+})
+
 test('Display AppFooter without environment prefix when environment not set', () => {
   vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
     if (field === 'VITE_ENVIRONMENT') return ''
