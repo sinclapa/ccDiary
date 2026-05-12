@@ -42,8 +42,10 @@ test.describe('Admin page — non-admin access', () => {
 
   test('no approve or decline buttons are shown when not authenticated', async ({ page }) => {
     await page.goto('/admin', { waitUntil: 'load', timeout: 25000 })
+    // Router guard redirects non-admins to / — verify the redirect and absence of admin actions
+    await expect(page).toHaveURL('/', { timeout: 10000 })
     await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Decline' })).toHaveCount(0)
+    // Note: only Approve is checked — the consent banner may render its own 'Decline' button
   })
 })
 

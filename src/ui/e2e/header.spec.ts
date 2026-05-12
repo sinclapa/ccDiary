@@ -3,22 +3,26 @@ import { expect, test } from '@playwright/test'
 // ─── Environment badge ─────────────────────────────────────────────────────────
 
 test.describe('Environment badge', () => {
-  test('LOCAL badge is visible in the header bar when running on localhost', async ({ page }) => {
+  test('badge is visible in the header bar', async ({ page }) => {
     await page.goto('/', { waitUntil: 'load', timeout: 25000 })
     const badge = page.locator('.app-header__bar .env-badge')
     await expect(badge).toBeVisible({ timeout: 10000 })
   })
 
-  test('badge text is "local" when running on localhost', async ({ page }) => {
+  test('badge text matches the current environment', async ({ page }) => {
     await page.goto('/', { waitUntil: 'load', timeout: 25000 })
     const badge = page.locator('.app-header__bar .env-badge')
-    await expect(badge).toHaveText('local', { timeout: 10000 })
+    const hostname = new URL(page.url()).hostname
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+    await expect(badge).toHaveText(isLocal ? 'local' : 'preview', { timeout: 10000 })
   })
 
-  test('badge has the local variant class', async ({ page }) => {
+  test('badge has the variant class matching the current environment', async ({ page }) => {
     await page.goto('/', { waitUntil: 'load', timeout: 25000 })
     const badge = page.locator('.app-header__bar .env-badge')
-    await expect(badge).toHaveClass(/env-badge--local/, { timeout: 10000 })
+    const hostname = new URL(page.url()).hostname
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+    await expect(badge).toHaveClass(isLocal ? /env-badge--local/ : /env-badge--preview/, { timeout: 10000 })
   })
 
   test('badge appears between the logo and the desktop nav', async ({ page }) => {
