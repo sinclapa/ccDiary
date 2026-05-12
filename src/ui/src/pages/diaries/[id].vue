@@ -96,7 +96,7 @@
                 >
                   Add
                 </v-btn>
-                <span v-else class="add-entry-spacer mb-2" aria-hidden="true" />
+                <span v-else aria-hidden="true" class="add-entry-spacer mb-2" />
               </template>
               <diary-entry-editor
                 :date="editedItem.date"
@@ -184,7 +184,7 @@
             >
               <div class="entry-text-col">
                 <h2 class="mt-n1 headline font-weight-light mb-4 text-primary">
-                    {{ diaryEntry.location }}
+                  {{ diaryEntry.location }}
                   <div v-if="canEditDiary">
                     <v-btn
                       aria-label="Edit entry"
@@ -236,7 +236,7 @@
     </v-row>
 
     <v-row class="mt-6">
-      <v-col cols="12" class="d-flex align-center justify-space-between">
+      <v-col class="d-flex align-center justify-space-between" cols="12">
         <v-btn
           aria-label="Previous day"
           class="day-nav-btn"
@@ -901,7 +901,6 @@
     max-width: 100%;
     display: block;
   }
-
 
   :deep(.timeline-col .v-timeline-item__body) {
     min-width: 0;

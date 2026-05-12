@@ -46,13 +46,13 @@ test('Display AppFooter with centered layout and icon row', () => {
 
   // Check that footer renders
   expect(wrapper.find('.app-footer').exists()).toBe(true)
-  
+
   // Check that version row exists
   expect(wrapper.text()).toContain(`test Version ${__APP_VERSION__}`)
-  
+
   // Check that copyright row exists
   expect(wrapper.text()).toContain(`© ${new Date().getFullYear()} Cooking Code`)
-  
+
   // Check that cookie preferences button exists
   expect(wrapper.text()).toContain('Cookie preferences')
 })

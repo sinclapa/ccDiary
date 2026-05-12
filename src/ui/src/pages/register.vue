@@ -46,7 +46,7 @@
   import { submitAccessRequest } from '@/services/modules/accessRequestService'
 
   const router = useRouter()
-  watch(() => state.isAuthenticated, (isAuth) => {
+  watch(() => state.isAuthenticated, isAuth => {
     if (isAuth) router.replace('/')
   }, { immediate: true })
 

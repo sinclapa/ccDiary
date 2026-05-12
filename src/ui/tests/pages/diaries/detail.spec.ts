@@ -1,11 +1,7 @@
 import { mount, VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import dayjs from 'dayjs'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
-import { state } from '@/services/authentication/msalConfig'
-import { useApiStatusStore } from '@/stores/apiStatus'
-import { useAuthStore } from '@/stores/auth'
 import { diaryAPI } from '@/services/modules/diaryService'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
 
@@ -80,10 +76,10 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
     };
 
     (diaryAPI.getDiary as any).mockResolvedValueOnce(mockDiary)
-    
+
     const today = new Date()
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
 
     ;(diaryEntryAPI.getMaxDate as any).mockResolvedValueOnce(endOfMonth)
     ;(diaryEntryAPI.getMinDate as any).mockResolvedValueOnce(startOfMonth)
@@ -100,7 +96,7 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
 
   it('renders navigation buttons with left/right arrows', async () => {
     const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-    
+
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -124,7 +120,7 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
 
   it('renders Next button on the right', async () => {
     const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-    
+
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -146,7 +142,7 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
 
   it('renders Back to Diaries button', async () => {
     const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-    
+
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -169,7 +165,7 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
 
   it('Back to Diaries button is left aligned', async () => {
     const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-    
+
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -191,7 +187,7 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
 
   it('Previous and Next buttons maintain primary color', async () => {
     const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-    
+
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
