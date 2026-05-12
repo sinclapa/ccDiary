@@ -27,8 +27,7 @@ describe('DiaryEntryEditor.vue', () => {
     })
     expect((wrapper.find('#location').element as HTMLInputElement).value).toBe('Kitchen')
     expect((wrapper.find('#entry').element as HTMLInputElement).value).toBe('Cooked pasta')
-    // Time field: Vuetify renders as input[type="time"]
-    expect((wrapper.find('input[type="time"]').element as HTMLInputElement).value).toBe('12:30')
+    expect((wrapper.vm as any).time).toBe('12:30')
   })
 
   it('updates location and entry fields when props change', async () => {

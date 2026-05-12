@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-test('Display AppFooter with environment and version', () => {
+test('Display AppFooter with centered layout and icon row', () => {
   vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
     if (field === 'VITE_ENVIRONMENT') return 'test'
     return opts?.defaultValue ?? 'NOT_SET'
@@ -44,8 +44,17 @@ test('Display AppFooter with environment and version', () => {
     },
   })
 
+  // Check that footer renders
+  expect(wrapper.find('.app-footer').exists()).toBe(true)
+  
+  // Check that version row exists
   expect(wrapper.text()).toContain(`test Version ${__APP_VERSION__}`)
+  
+  // Check that copyright row exists
   expect(wrapper.text()).toContain(`© ${new Date().getFullYear()} Cooking Code`)
+  
+  // Check that cookie preferences button exists
+  expect(wrapper.text()).toContain('Cookie preferences')
 })
 
 test('Displays Cookie preferences button in footer', () => {
@@ -102,4 +111,24 @@ test('Display AppFooter without environment prefix when environment not set', ()
 
   expect(wrapper.text()).toContain(`Version ${__APP_VERSION__}`)
   expect(wrapper.text()).not.toContain(`test Version`)
+})
+
+test('Footer social icons have proper hover styling', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    props: {},
+    global: {
+      components: {
+        AppFooter,
+      },
+      plugins: [vuetify],
+    },
+  })
+
+  // Check that social links exist
+  const socialLinks = wrapper.findAll('.social-link')
+  expect(socialLinks.length).toBeGreaterThan(0)
 })

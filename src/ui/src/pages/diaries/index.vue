@@ -18,6 +18,8 @@
           <v-spacer />
           <v-dialog
             v-model="dialog"
+            max-width="560px"
+            scrim-clickable
           >
             <template #activator="{ props }">
               <v-btn
@@ -38,14 +40,23 @@
               @submit="onAddDiary"
             />
           </v-dialog>
-          <v-dialog v-model="dialogDelete" max-width="500px">
-            <v-card>
-              <v-card-title class="text-h7">Are you sure you want to delete this diary?</v-card-title>
-              <v-card-actions>
+          <v-dialog v-model="dialogDelete" max-width="560px">
+            <v-card class="delete-diary-dialog" rounded="xl">
+              <v-card-title class="d-flex align-center gap-2 text-h6 text-primary">
+                <v-icon icon="$mdi-alert-circle-outline" />
+                Delete Diary
+              </v-card-title>
+              <v-card-text>
+                <p class="mb-3">Are you sure you want to permanently delete this diary?</p>
+                <div class="delete-diary-meta pa-3">
+                  <div><strong>Title:</strong> {{ editedItem?.title || 'Untitled diary' }}</div>
+                  <div><strong>Author:</strong> {{ editedItem?.author || 'Unknown author' }}</div>
+                </div>
+              </v-card-text>
+              <v-card-actions class="px-4 pb-4">
                 <v-spacer />
                 <v-btn variant="text" @click="closeDelete">Cancel</v-btn>
-                <v-btn variant="text" @click="deleteItemConfirm">OK</v-btn>
-                <v-spacer />
+                <v-btn color="primary" variant="flat" @click="deleteItemConfirm">Delete Diary</v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -200,5 +211,16 @@
 
 .action-btn:hover :deep(.v-btn__overlay) {
   opacity: 0 !important;
+}
+
+.delete-diary-dialog {
+  border-color: rgba(var(--v-theme-primary), 0.25);
+  background: rgb(var(--v-theme-surface));
+}
+
+.delete-diary-meta {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 12px;
+  background: rgb(var(--v-theme-surface));
 }
 </style>

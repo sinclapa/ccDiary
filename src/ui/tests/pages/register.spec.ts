@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import Component from '@/pages/register.vue'
 import { submitAccessRequest } from '@/services/modules/accessRequestService'
+import { state } from '@/services/authentication/msalConfig'
+
+const mockRouterReplace = vi.fn()
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    replace: mockRouterReplace,
+    currentRoute: { value: { path: '/register' } },
+  }),
+}))
 
 vi.mock('@/services/modules/accessRequestService')
 
@@ -11,11 +22,13 @@ describe('register.vue', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    state.isAuthenticated = false
     vi.mocked(submitAccessRequest).mockResolvedValue(undefined)
     wrapper = mount(Component, { global: { plugins: [vuetify] } })
   })
 
   afterEach(() => {
+    state.isAuthenticated = false
     wrapper.unmount()
   })
 
@@ -65,5 +78,26 @@ describe('register.vue', () => {
     await vm.submit()
     await flushPromises()
     expect(vm.error).toBe('An error occurred. Please try again.')
+  })
+
+  describe('redirect — authenticated users', () => {
+    it('redirects to / immediately when already authenticated on mount', () => {
+      wrapper.unmount()
+      state.isAuthenticated = true
+      mount(Component, { global: { plugins: [vuetify] } })
+      expect(mockRouterReplace).toHaveBeenCalledWith('/')
+    })
+
+    it('redirects to / when state.isAuthenticated changes to true after mount', async () => {
+      expect(mockRouterReplace).not.toHaveBeenCalled()
+      state.isAuthenticated = true
+      await nextTick()
+      expect(mockRouterReplace).toHaveBeenCalledWith('/')
+    })
+
+    it('does not redirect when state.isAuthenticated stays false', async () => {
+      await nextTick()
+      expect(mockRouterReplace).not.toHaveBeenCalled()
+    })
   })
 })

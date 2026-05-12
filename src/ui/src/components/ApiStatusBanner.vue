@@ -1,23 +1,16 @@
 <template>
-  <v-banner
-    v-if="!apiStatus.available"
-    color="warning"
-    icon="$mdi-server-network-off"
-    lines="one"
-    sticky
-  >
-    <v-banner-text>
-      <span class="spotlight-text">
-        <span
-          v-for="(char, i) in messageChars"
-          :key="i"
-          class="spotlight-char"
-          :style="{ animationDelay: `${i * 0.06}s` }"
-        >{{ char === ' ' ? '\u00A0' : char }}</span>
-      </span>
-      <span class="ml-2 wait-counter">({{ elapsedSeconds }}s)</span>
-    </v-banner-text>
-  </v-banner>
+  <div v-if="!apiStatus.available" class="api-status-bar">
+    <v-icon icon="$mdi-server-network-off" size="small" />
+    <span class="spotlight-text ml-2">
+      <span
+        v-for="(char, i) in messageChars"
+        :key="i"
+        class="spotlight-char"
+        :style="{ animationDelay: `${i * 0.06}s` }"
+      >{{ char === ' ' ? ' ' : char }}</span>
+    </span>
+    <span class="ml-2 wait-counter">({{ elapsedSeconds }}s)</span>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -61,6 +54,22 @@
 </script>
 
 <style scoped>
+  .api-status-bar {
+    display: flex;
+    align-items: center;
+    padding: 6px 16px;
+    background: rgba(var(--v-theme-warning), 0.15);
+    border-bottom: 1px solid rgba(var(--v-theme-warning), 0.4);
+    color: rgb(var(--v-theme-on-surface));
+    font-size: 0.875rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
   .spotlight-text {
     display: inline-flex;
     flex-wrap: wrap;
