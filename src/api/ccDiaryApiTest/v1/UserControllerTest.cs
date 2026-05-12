@@ -143,5 +143,78 @@ namespace ccDiaryApiTest.v1
 
             Assert.AreEqual("alt-oid-123", oid);
         }
+
+        [TestMethod]
+        public async Task Me_UsesClaimTypesEmail_WhenPreferredUsernameMissing()
+        {
+            var mock = new Mock<IUserService>();
+            mock.Setup(s => s.GetOrCreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new AppUserDto { UserId = Guid.NewGuid(), EntraObjectId = "oid", DisplayName = "Name", Email = "email@claims.com", Role = AppRole.DiaryContributor });
+
+            var claims = new Claim[] { new Claim("oid", "some-oid"), new Claim(ClaimTypes.Email, "email@claims.com"), new Claim("name", "Display Name") };
+            var controller = CreateControllerWithClaims(mock.Object, claims);
+
+            await controller.Me();
+
+            mock.Verify(s => s.GetOrCreateUserAsync("some-oid", "email@claims.com", "Display Name"), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task Me_UsesEmptyEmail_WhenAllEmailClaimsMissing()
+        {
+            var mock = new Mock<IUserService>();
+            mock.Setup(s => s.GetOrCreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new AppUserDto { UserId = Guid.NewGuid(), EntraObjectId = "oid", DisplayName = "Name", Email = string.Empty, Role = AppRole.DiaryContributor });
+
+            var claims = new Claim[] { new Claim("oid", "some-oid"), new Claim("name", "Display Name") };
+            var controller = CreateControllerWithClaims(mock.Object, claims);
+
+            await controller.Me();
+
+            mock.Verify(s => s.GetOrCreateUserAsync("some-oid", string.Empty, "Display Name"), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task Me_UsesClaimTypesName_WhenNameClaimMissing()
+        {
+            var mock = new Mock<IUserService>();
+            mock.Setup(s => s.GetOrCreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new AppUserDto { UserId = Guid.NewGuid(), EntraObjectId = "oid", DisplayName = "Name", Email = string.Empty, Role = AppRole.DiaryContributor });
+
+            var claims = new Claim[] { new Claim("oid", "some-oid"), new Claim(ClaimTypes.Name, "Claimtype Name") };
+            var controller = CreateControllerWithClaims(mock.Object, claims);
+
+            await controller.Me();
+
+            mock.Verify(s => s.GetOrCreateUserAsync("some-oid", string.Empty, "Claimtype Name"), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task Me_UsesEmailAsDisplayName_WhenAllNameClaimsMissing()
+        {
+            var mock = new Mock<IUserService>();
+            mock.Setup(s => s.GetOrCreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new AppUserDto { UserId = Guid.NewGuid(), EntraObjectId = "oid", DisplayName = "user@example.com", Email = "user@example.com", Role = AppRole.DiaryContributor });
+
+            var claims = new Claim[] { new Claim("oid", "some-oid"), new Claim("preferred_username", "user@example.com") };
+            var controller = CreateControllerWithClaims(mock.Object, claims);
+
+            await controller.Me();
+
+            mock.Verify(s => s.GetOrCreateUserAsync("some-oid", "user@example.com", "user@example.com"), Times.Once);
+        }
+
+        private static UserController CreateControllerWithClaims(IUserService userService, Claim[] claims)
+        {
+            var controller = new UserController(userService);
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test")),
+                },
+            };
+            return controller;
+        }
     }
 }
