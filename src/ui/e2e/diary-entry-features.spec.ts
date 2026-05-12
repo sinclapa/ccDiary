@@ -314,6 +314,7 @@ test.describe('Journey map display on diary entries', () => {
 
     const dateStr = `${SEEDED_ENTRY_YEAR}-${String(SEEDED_ENTRY_MONTH).padStart(2, '0')}-${String(SEEDED_ENTRY_DAY).padStart(2, '0')}`
     await page.goto(`/diaries/${ww1DiaryId}?date=${dateStr}`, { waitUntil: 'load', timeout: 25000 })
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
     await expect(page.locator('.journey-wrapper').first()).toBeVisible({ timeout: 5000 })
   })
 })
@@ -348,6 +349,7 @@ test.describe('URL date bookmarking', () => {
   test('forward navigation updates the URL date', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await expect(page).toHaveURL(/[?&]date=\d{4}-\d{2}-\d{2}/, { timeout: 5000 })
 
     const initialUrl = page.url()
     const initialDateMatch = initialUrl.match(/[?&]date=(\d{4}-\d{2}-\d{2})/)

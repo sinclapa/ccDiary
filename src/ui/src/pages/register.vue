@@ -40,8 +40,15 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { ref, watch } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { state } from '@/services/authentication/msalConfig'
   import { submitAccessRequest } from '@/services/modules/accessRequestService'
+
+  const router = useRouter()
+  watch(() => state.isAuthenticated, isAuth => {
+    if (isAuth) router.replace('/')
+  }, { immediate: true })
 
   const form = ref()
   const displayName = ref('')

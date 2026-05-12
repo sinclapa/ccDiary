@@ -199,6 +199,45 @@ namespace ccDiaryApiTest.v1
             Assert.IsNull(activity.GetTagItem("enduser.id"));
         }
 
+        [TestMethod]
+        public async Task UseObservabilityUserContext_NullIdentity_NoActivity_DoesNotThrow()
+        {
+            // Arrange — no activity running (Activity.Current is null) and user has no identities
+            var app = BuildApplicationBuilder();
+            app.UseObservabilityUserContext();
+            var pipeline = app.Build();
+
+            var context = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(), // Identity property returns null when no identities present
+            };
+
+            // Act — should not throw even when Activity.Current is null
+            await pipeline(context);
+
+            // Assert — verified implicitly: no exception, next() was called
+        }
+
+        [TestMethod]
+        public async Task UseObservabilityUserContext_AuthenticatedUser_NoActivity_DoesNotThrow()
+        {
+            // Arrange — no activity running; Activity.Current?.SetTag(...) must handle null gracefully
+            var app = BuildApplicationBuilder();
+            app.UseObservabilityUserContext();
+            var pipeline = app.Build();
+
+            var context = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(
+                    new ClaimsIdentity(
+                        new[] { new Claim("oid", "oid-123") },
+                        "test")),
+            };
+
+            // Act — no Activity.Current, but SetTag calls use ?. so they should no-op
+            await pipeline(context);
+        }
+
         private static ApplicationBuilder BuildApplicationBuilder()
         {
             var services = new ServiceCollection();

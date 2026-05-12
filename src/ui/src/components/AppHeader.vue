@@ -5,9 +5,12 @@
         <span class="logo-cc">cc</span><span class="logo-diary">Diary</span>
       </router-link>
 
+      <span v-if="envBadge" :class="['env-badge', envBadge.class]">{{ envBadge.label }}</span>
+
       <nav class="desktop-nav">
         <v-btn to="/" variant="text">Home</v-btn>
         <v-btn to="/diaries" variant="text">Diaries</v-btn>
+        <v-btn v-if="!state.isAuthenticated" to="/register" variant="text">Join</v-btn>
         <v-btn v-if="authStore.isAdmin" to="/admin" variant="text">Admin</v-btn>
       </nav>
 
@@ -36,6 +39,7 @@
     <nav class="mobile-nav px-2 pb-1">
       <v-btn size="small" to="/" variant="text">Home</v-btn>
       <v-btn size="small" to="/diaries" variant="text">Diaries</v-btn>
+      <v-btn v-if="!state.isAuthenticated" size="small" to="/register" variant="text">Join</v-btn>
       <v-btn v-if="authStore.isAdmin" size="small" to="/admin" variant="text">Admin</v-btn>
     </nav>
   </header>
@@ -49,6 +53,13 @@
   import { state } from '@/services/authentication/msalConfig'
   import { useAuthStore } from '@/stores/auth'
   import { saveTheme } from '@/utils/browserTheme'
+
+  const envBadge = computed(() => {
+    const hostname = window.location.hostname
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return { label: 'local', class: 'env-badge--local' }
+    if (hostname.endsWith('.azurestaticapps.net')) return { label: 'preview', class: 'env-badge--preview' }
+    return null
+  })
 
   const router = useRouter()
   const theme = useTheme()
@@ -95,11 +106,17 @@
     await login()
     if (state.isAuthenticated) {
       await authStore.fetchAppUser()
+      if (router.currentRoute.value.path === '/register') {
+        await router.replace('/')
+      }
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     authStore.clearAppUser()
+    if (router.currentRoute.value.path.startsWith('/admin')) {
+      await router.replace('/')
+    }
     logout()
   }
 
@@ -115,7 +132,8 @@
     window.addEventListener('scroll', onScroll, { passive: true })
     await initialize()
     const redirectPath = await handleRedirect()
-    if (redirectPath) await router.replace(redirectPath)
+    const destination = redirectPath === '/register' ? '/' : redirectPath
+    if (destination) await router.replace(destination)
     await registerAuthorizationHeaderInterceptor()
     if (state.isAuthenticated) {
       await authStore.fetchAppUser()
@@ -222,6 +240,31 @@
 
 .tooltip-wrap:hover .user-tooltip {
   opacity: 1;
+}
+
+.env-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-family: monospace;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.env-badge--local {
+  color: #06b6d4;
+  border-color: rgba(6, 182, 212, 0.35);
+  background: rgba(6, 182, 212, 0.14);
+}
+
+.env-badge--preview {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(74, 222, 128, 0.08);
 }
 
 @media (max-width: 599px) {

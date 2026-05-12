@@ -1,8 +1,10 @@
 <template>
-  <v-sheet class="mx-auto" width="400">
+  <v-sheet rounded="xl">
     <v-form @submit.prevent="submit">
       <v-card
         prepend-icon="$mdi-pen"
+        rounded="xl"
+        style="display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;"
         :title="isEdit ? 'Edit Diary Entry' : 'Add Diary Entry'"
       >
         <template #append>
@@ -10,21 +12,44 @@
             <v-icon>$mdi-close</v-icon>
           </v-btn>
         </template>
-        <v-card-text>
+        <v-card-text style="overflow-y: auto; flex: 1 1 auto;">
           <v-row>
             <v-col>
               <v-date-input
                 v-model="date"
+                color="primary"
                 :min="new Date(1900, 0, 1)"
                 prepend-icon=""
                 prepend-inner-icon="$calendar"
               />
             </v-col>
             <v-col>
-              <v-text-field
-                v-model="time"
-                type="time"
-              />
+              <v-menu
+                v-model="timeMenu"
+                :close-on-content-click="false"
+                location="bottom"
+              >
+                <template #activator="{ props: menuProps }">
+                  <v-text-field
+                    v-model="time"
+                    color="primary"
+                    prepend-inner-icon="$mdi-clock-outline"
+                    readonly
+                    v-bind="menuProps"
+                  />
+                </template>
+                <v-card rounded="lg">
+                  <v-time-picker
+                    v-model="time"
+                    color="primary"
+                    format="24hr"
+                  />
+                  <v-card-actions>
+                    <v-spacer />
+                    <v-btn color="primary" variant="text" @click="timeMenu = false">OK</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-menu>
             </v-col>
           </v-row>
           <v-text-field
@@ -217,6 +242,7 @@
   const props = defineProps<{isEdit?: boolean, date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
+  const timeMenu = ref<boolean>(false)
   const location = ref<string>(props.location)
   const entry = ref<string>(props.entry)
   const mapLocation = ref<string>(props.mapLocation)

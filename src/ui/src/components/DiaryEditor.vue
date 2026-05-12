@@ -1,8 +1,10 @@
 <template>
-  <v-sheet class="mx-auto" width="300">
+  <v-sheet rounded="xl">
     <v-form @submit.prevent="submit">
       <v-card
         prepend-icon="$mdi-book-open-variant-outline"
+        rounded="xl"
+        style="display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;"
         :title="addMode ? 'Add Diary' : 'Edit Diary'"
       >
         <template #append>
@@ -10,10 +12,11 @@
             <v-icon>$mdi-close</v-icon>
           </v-btn>
         </template>
-        <v-card-text>
+        <v-card-text style="overflow-y: auto; flex: 1 1 auto;">
           <v-text-field
             id="title"
             v-model="title"
+            color="primary"
             label="Title"
             :rules="titleRules"
           />
@@ -21,6 +24,7 @@
           <v-text-field
             id="author"
             v-model="author"
+            color="primary"
             label="Author"
             :rules="authorRules"
           />
@@ -29,6 +33,7 @@
             id="description"
             v-model="description"
             auto-grow
+            color="primary"
             label="Description"
             rows="3"
           />

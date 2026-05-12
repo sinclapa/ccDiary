@@ -84,6 +84,8 @@
           <v-col style="margin: 0; padding: 0;">
             <v-dialog
               v-model="dialog"
+              max-width="560px"
+              scrim-clickable
             >
               <template #activator="{ props }">
                 <v-btn
@@ -94,6 +96,7 @@
                 >
                   Add
                 </v-btn>
+                <span v-else aria-hidden="true" class="add-entry-spacer mb-2" />
               </template>
               <diary-entry-editor
                 :date="editedItem.date"
@@ -140,19 +143,29 @@
             </v-btn>
           </v-col>
         </v-row>
-        <v-dialog v-model="dialogDelete" max-width="500px">
-          <v-card>
-            <v-card-title class="text-h7">Are you sure you want to delete this diary entry?</v-card-title>
-            <v-card-actions>
+        <v-dialog v-model="dialogDelete" max-width="560px">
+          <v-card class="delete-entry-dialog" rounded="xl">
+            <v-card-title class="d-flex align-center gap-2 text-h6 text-primary">
+              <v-icon icon="$mdi-alert-circle-outline" />
+              Delete Diary Entry
+            </v-card-title>
+            <v-card-text>
+              <p class="mb-3">Are you sure you want to permanently delete this diary entry?</p>
+              <div class="delete-entry-meta pa-3">
+                <div><strong>Date:</strong> {{ editedItem?.date ? dayjs(editedItem.date).format('ddd D MMM YYYY') : 'Unknown date' }}</div>
+                <div><strong>Time:</strong> {{ editedItem?.date ? dayjs(editedItem.date).format('HH:mm') : 'Unknown time' }}</div>
+                <div><strong>Location:</strong> {{ editedItem?.location || 'Unknown location' }}</div>
+              </div>
+            </v-card-text>
+            <v-card-actions class="px-4 pb-4">
               <v-spacer />
               <v-btn variant="text" @click="closeDelete">Cancel</v-btn>
-              <v-btn variant="text" @click="deleteItemConfirm">OK</v-btn>
-              <v-spacer />
+              <v-btn color="primary" variant="flat" @click="deleteItemConfirm">Delete Entry</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
       </v-col>
-      <v-col>
+      <v-col class="timeline-col pr-0">
         <v-timeline :align="'start'" side="end" style="justify-content: start; height: fit-content;">
           <v-timeline-item
             v-for="(diaryEntry, i) in diaryEntries"
@@ -165,51 +178,98 @@
                 {{ dayjs(diaryEntry.date).format('ddd HH:mm') }}
               </div>
             </template>
-            <div>
-              <h2 class="mt-n1 headline font-weight-light mb-4 text-primary">
-                {{ diaryEntry.location }}
-                <div v-if="canEditDiary">
-                  <v-btn
-                    aria-label="Edit entry"
-                    class="action-btn"
-                    color="primary"
-                    icon="$mdi-pencil"
-                    size="x-small"
-                    variant="outlined"
-                    @click="onEditEntry(diaryEntry)"
-                  />
-                  &nbsp;
-                  <v-btn
-                    aria-label="Delete entry"
-                    class="action-btn"
-                    color="primary"
-                    icon="$mdi-delete"
-                    size="x-small"
-                    variant="outlined"
-                    @click="onDeleteEntry(diaryEntry)"
-                  />
+            <div
+              class="entry-content"
+              :class="{ 'entry-content--with-map': (diaryEntry.showMap && diaryEntry.mapLocation) || (diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation) }"
+            >
+              <div class="entry-text-col">
+                <h2 class="mt-n1 headline font-weight-light mb-4 text-primary">
+                  {{ diaryEntry.location }}
+                  <div v-if="canEditDiary">
+                    <v-btn
+                      aria-label="Edit entry"
+                      class="action-btn"
+                      color="primary"
+                      icon="$mdi-pencil"
+                      size="x-small"
+                      variant="outlined"
+                      @click="onEditEntry(diaryEntry)"
+                    />
+                    &nbsp;
+                    <v-btn
+                      aria-label="Delete entry"
+                      class="action-btn"
+                      color="primary"
+                      icon="$mdi-delete"
+                      size="x-small"
+                      variant="outlined"
+                      @click="onDeleteEntry(diaryEntry)"
+                    />
+                  </div>
+                </h2>
+                <div>
+                  {{ diaryEntry.entry }}
                 </div>
-              </h2>
-              <div>
-                {{ diaryEntry.entry }}
+                <v-img
+                  v-if="diaryEntry.imageData && diaryEntry.imageContentType"
+                  class="mt-2 diary-entry-media"
+                  :max-height="400"
+                  :src="`data:${diaryEntry.imageContentType};base64,${diaryEntry.imageData}`"
+                />
               </div>
-              <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" class="mt-2" :location="diaryEntry.mapLocation" />
-              <journey-view
-                v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation"
-                class="mt-2"
-                :from-location="diaryEntry.fromLocation"
-                :journey-mode="diaryEntry.journeyMode"
-                :to-location="diaryEntry.toLocation"
-              />
-              <v-img
-                v-if="diaryEntry.imageData && diaryEntry.imageContentType"
-                class="mt-2"
-                :max-height="400"
-                :src="`data:${diaryEntry.imageContentType};base64,${diaryEntry.imageData}`"
-              />
+              <div
+                v-if="(diaryEntry.showMap && diaryEntry.mapLocation) || (diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation)"
+                class="entry-map-col"
+              >
+                <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" :location="diaryEntry.mapLocation" />
+                <journey-view
+                  v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation"
+                  :from-location="diaryEntry.fromLocation"
+                  :journey-mode="diaryEntry.journeyMode"
+                  :to-location="diaryEntry.toLocation"
+                />
+              </div>
             </div>
           </v-timeline-item>
         </v-timeline>
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-6">
+      <v-col class="d-flex align-center justify-space-between" cols="12">
+        <v-btn
+          aria-label="Previous day"
+          class="day-nav-btn"
+          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
+          variant="text"
+          @click="onMoveBackward()"
+        >
+          ← Previous
+        </v-btn>
+        <v-btn
+          aria-label="Next day"
+          class="day-nav-btn"
+          :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
+          variant="text"
+          @click="onMoveForward()"
+        >
+          Next →
+        </v-btn>
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col cols="auto">
+        <v-btn
+          aria-label="Back to Diaries"
+          class="back-to-diaries-btn"
+          color="primary"
+          prepend-icon="$mdi-arrow-left"
+          variant="outlined"
+          @click="onBackToDiaries"
+        >
+          ← Back to Diaries
+        </v-btn>
       </v-col>
     </v-row>
 
@@ -315,6 +375,15 @@
     startFaroUserAction('diary-navigation-end')
     try {
       await moveEnd()
+    } finally {
+      endFaroUserAction()
+    }
+  }
+
+  const onBackToDiaries = async () => {
+    startFaroUserAction('diary-navigation-back-to-list')
+    try {
+      await router.push('/diaries')
     } finally {
       endFaroUserAction()
     }
@@ -695,6 +764,12 @@
     color: rgb(var(--v-theme-primary));
   }
 
+  .add-entry-spacer {
+    display: inline-block;
+    width: 64px;
+    height: 36px;
+  }
+
   :deep(.diary-day-content) {
     position: relative;
     display: inline-flex;
@@ -736,5 +811,124 @@
     clip-path: polygon(100% 0, 100% 100%, 0 0);
     pointer-events: none;
     filter: drop-shadow(0 0 1px rgb(var(--v-theme-on-surface)));
+  }
+
+  .day-nav-card {
+    border: 1px solid rgba(var(--v-theme-primary), 0.25);
+    background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.12), rgba(var(--v-theme-background), 0.9));
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .day-nav-card__content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .day-nav-btn {
+    color: rgb(var(--v-theme-primary)) !important;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .day-nav-btn:hover {
+    color: rgb(var(--v-theme-primary), 0.7) !important;
+  }
+
+  .day-nav-btn:active,
+  .day-nav-btn:focus {
+    color: rgb(var(--v-theme-primary)) !important;
+  }
+
+  .day-nav-btn:disabled {
+    color: rgba(var(--v-theme-primary), 0.5) !important;
+  }
+
+  :deep(.day-nav-btn.v-btn--active) {
+    color: rgb(var(--v-theme-primary)) !important;
+  }
+
+  .back-to-diaries-btn {
+    margin-left: -8px;
+  }
+
+  .entry-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .entry-text-col {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .entry-map-col {
+    flex: 0 0 300px;
+    min-width: 0;
+  }
+
+  .entry-content--with-map {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .entry-content--with-map .entry-text-col {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  @media (max-width: 599px) {
+    .entry-content--with-map {
+      flex-direction: column;
+    }
+    .entry-content--with-map .entry-text-col {
+      width: 100%;
+    }
+    .entry-map-col {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+  }
+
+  :deep(.diary-entry-media) {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+
+  :deep(.timeline-col .v-timeline-item__body) {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  :deep(.timeline-col .v-timeline-item__content) {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+
+  @media (min-width: 600px) {
+    :deep(.timeline-col .v-timeline-item__body) {
+      padding-right: 0;
+    }
+  }
+
+  .delete-entry-dialog {
+    border-color: rgba(var(--v-theme-primary), 0.25);
+    background: rgb(var(--v-theme-surface));
+  }
+
+  .delete-entry-meta {
+    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    border-radius: 12px;
+    background: rgb(var(--v-theme-surface));
   }
 </style>

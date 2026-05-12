@@ -5,12 +5,16 @@
 namespace ccDiaryApiTest.v1
 {
     using System;
+    using System.Security.Claims;
     using ccDiaryApi.Controllers.v1;
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
+    using Moq;
 
     [TestClass]
     public class DiaryArchiveControllerTest
@@ -91,6 +95,90 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(NotFoundResult));
+        }
+
+        [TestMethod]
+        public void Import_NonLocalEnvironment_Unauthenticated_ReturnsUnauthorized()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var controller = new DiaryArchiveController(new DiaryArchiveService(db));
+            var env = new Mock<IWebHostEnvironment>();
+            env.Setup(e => e.EnvironmentName).Returns("Production");
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity()),
+                },
+            };
+
+            // Act
+            var archive = new DiaryArchiveDTO
+            {
+                Diary = new DiaryDTO { Author = "A", Title = "T", Description = "D" },
+                DiaryEntries = new List<DiaryEntryDTO>(),
+            };
+            var result = controller.Import(env.Object, archive);
+
+            // Assert
+            Assert.IsInstanceOfType(result.Result, typeof(UnauthorizedResult));
+        }
+
+        [TestMethod]
+        public void Import_LocalEnvironment_Unauthenticated_ReturnsOk()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var controller = new DiaryArchiveController(new DiaryArchiveService(db));
+            var env = new Mock<IWebHostEnvironment>();
+            env.Setup(e => e.EnvironmentName).Returns("local");
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity()),
+                },
+            };
+            var archive = new DiaryArchiveDTO
+            {
+                Diary = new DiaryDTO { Author = "Author", Title = "Title", Description = "Desc" },
+                DiaryEntries = new List<DiaryEntryDTO>(),
+            };
+
+            // Act
+            var result = controller.Import(env.Object, archive);
+
+            // Assert
+            Assert.IsInstanceOfType(result.Result, typeof(OkObjectResult));
+        }
+
+        [TestMethod]
+        public void Import_LocalContainerEnvironment_Unauthenticated_ReturnsOk()
+        {
+            // Arrange — covers the env.IsEnvironment("LocalContainer") == true branch
+            var db = GetMemoryContext();
+            var controller = new DiaryArchiveController(new DiaryArchiveService(db));
+            var env = new Mock<IWebHostEnvironment>();
+            env.Setup(e => e.EnvironmentName).Returns("LocalContainer");
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity()),
+                },
+            };
+            var archive = new DiaryArchiveDTO
+            {
+                Diary = new DiaryDTO { Author = "Author", Title = "Title", Description = "Desc" },
+                DiaryEntries = new List<DiaryEntryDTO>(),
+            };
+
+            // Act
+            var result = controller.Import(env.Object, archive);
+
+            // Assert
+            Assert.IsInstanceOfType(result.Result, typeof(OkObjectResult));
         }
     }
 }
