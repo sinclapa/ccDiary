@@ -79,7 +79,8 @@ namespace ccDiaryApiTest.v1
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
-            Assert.AreEqual(3, result.Count());
+            Assert.AreEqual(3, result.TotalCount);
+            Assert.AreEqual(3, result.Items.Count());
         }
 
         [TestMethod]
@@ -98,9 +99,10 @@ namespace ccDiaryApiTest.v1
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
-            Assert.AreEqual(1, result.Count());
-            Assert.AreEqual("Paul's Diary", result.First().Title);
-            Assert.AreNotEqual(Guid.Empty, result.First().DiaryId);
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual(1, result.Items.Count());
+            Assert.AreEqual("Paul's Diary", result.Items.First().Title);
+            Assert.AreNotEqual(Guid.Empty, result.Items.First().DiaryId);
         }
 
         [TestMethod]
@@ -145,7 +147,7 @@ namespace ccDiaryApiTest.v1
             var preGetResponse = controller.Get();
             var preGetResult = preGetResponse.GetObjectResult();
             Assert.IsNotNull(preGetResult);
-            Assert.AreEqual(3, preGetResult.Count());
+            Assert.AreEqual(3, preGetResult.TotalCount);
 
             // Act
             var response = controller.Delete(createResult.DiaryId!.Value);
@@ -155,7 +157,7 @@ namespace ccDiaryApiTest.v1
             var postGetResponse = controller.Get();
             var postGetResult = postGetResponse.GetObjectResult();
             Assert.IsNotNull(postGetResult);
-            Assert.AreEqual(2, postGetResult.Count());
+            Assert.AreEqual(2, postGetResult.TotalCount);
         }
 
         [TestMethod]
@@ -216,7 +218,34 @@ namespace ccDiaryApiTest.v1
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.Count());
+            Assert.AreEqual(0, result.TotalCount);
+            Assert.AreEqual(0, result.Items.Count());
+        }
+
+        [TestMethod]
+        public void GetPaged_ReturnsCorrectPage()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+            var controller = CreateController(diaryService);
+
+            for (int i = 1; i <= 15; i++)
+            {
+                controller.Create(new DiaryDTO { Author = $"Author{i:D2}", Title = $"Diary{i:D2}" });
+            }
+
+            // Act — page 2 with page size 5
+            var response = controller.Get(page: 2, pageSize: 5);
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(15, result.TotalCount);
+            Assert.AreEqual(5, result.Items.Count());
+            Assert.AreEqual(2, result.Page);
+            Assert.AreEqual(5, result.PageSize);
         }
 
         [TestMethod]

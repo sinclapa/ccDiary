@@ -29,14 +29,11 @@
       </div>
 
       <div class="d-flex align-center justify-center w-100 footer-row">
-        <div class="text-caption text-disabled text-center">
-          &copy; {{ (new Date()).getFullYear() }} Cooking Code. Designed by Humans built by Claude
-        </div>
-      </div>
-
-      <div class="d-flex align-center justify-center w-100 footer-row">
-        <div class="text-caption text-disabled text-center">
-          <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
+        <div class="text-body-2 text-disabled text-center">
+          &copy; {{ (new Date()).getFullYear() }} Cooking Code. Designed by
+          <a class="footer-copy-link" href="https://en.wikipedia.org/wiki/Human" rel="noopener noreferrer" target="_blank">Humans</a>
+          built by
+          <a class="footer-copy-link" href="https://claude.ai/login" rel="noopener noreferrer" target="_blank">Claude</a>
         </div>
       </div>
 
@@ -60,8 +57,6 @@
   const theme = useTheme()
   const brandLogo = computed(() => theme.global.name.value === 'dark' ? logoSimpleDark : logoSimpleLight)
 
-  const version = __APP_VERSION__
-  const environment = getAppConfigField('VITE_ENVIRONMENT', { defaultValue: '' })
   const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
   const items = [
     {
@@ -106,7 +101,7 @@
     transition: .2s ease-in-out
 
     &:hover
-      color: #ff9800
+      color: rgb(var(--v-theme-primary))
 
   .brand-link
     display: inline-flex !important
@@ -118,6 +113,14 @@
 
     &:hover
       opacity: 1
+
+  .footer-copy-link
+    color: rgb(var(--v-theme-primary))
+    text-decoration: none
+    transition: .2s ease-in-out
+
+    &:hover
+      text-decoration: underline
 
   .cookie-pref-btn
     background: none

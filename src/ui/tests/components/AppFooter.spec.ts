@@ -27,10 +27,7 @@ beforeEach(() => {
 })
 
 test('Display AppFooter with centered layout and icon row', () => {
-  vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
-    if (field === 'VITE_ENVIRONMENT') return 'test'
-    return opts?.defaultValue ?? 'NOT_SET'
-  })
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
 
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
@@ -46,9 +43,6 @@ test('Display AppFooter with centered layout and icon row', () => {
 
   // Check that footer renders
   expect(wrapper.find('.app-footer').exists()).toBe(true)
-
-  // Check that version row exists
-  expect(wrapper.text()).toContain(`test Version ${__APP_VERSION__}`)
 
   // Check that copyright row exists
   expect(wrapper.text()).toContain(`© ${new Date().getFullYear()} Cooking Code`)
@@ -91,11 +85,8 @@ test('Uses dark logo when theme is dark', () => {
   expect(img.attributes('src')).toContain('logo-simple-dark')
 })
 
-test('Display AppFooter without environment prefix when environment not set', () => {
-  vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
-    if (field === 'VITE_ENVIRONMENT') return ''
-    return opts?.defaultValue ?? 'NOT_SET'
-  })
+test('Copyright line has Humans and Claude as links', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
 
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
@@ -109,8 +100,13 @@ test('Display AppFooter without environment prefix when environment not set', ()
     },
   })
 
-  expect(wrapper.text()).toContain(`Version ${__APP_VERSION__}`)
-  expect(wrapper.text()).not.toContain(`test Version`)
+  const humansLink = wrapper.find('a.footer-copy-link[href="https://en.wikipedia.org/wiki/Human"]')
+  expect(humansLink.exists()).toBe(true)
+  expect(humansLink.text()).toBe('Humans')
+
+  const claudeLink = wrapper.find('a.footer-copy-link[href="https://claude.ai/login"]')
+  expect(claudeLink.exists()).toBe(true)
+  expect(claudeLink.text()).toBe('Claude')
 })
 
 test('Footer social icons have proper hover styling', () => {

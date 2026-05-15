@@ -29,11 +29,19 @@ namespace ccDiaryApi.Services
             _context.SaveChanges();
         }
 
-        public IEnumerable<DiaryDTO> GetDiaries()
+        public PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize)
         {
-            var diaries = _context.Diaries
+            var query = _context.Diaries
                 .OrderBy(x => x.Author).ThenBy(x => x.Title);
-            return diaries;
+            var totalCount = query.Count();
+            var items = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return new PagedResultDTO<DiaryDTO>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+            };
         }
 
         public DiaryDTO? GetDiary(Guid diaryId)

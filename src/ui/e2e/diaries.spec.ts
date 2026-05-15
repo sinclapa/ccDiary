@@ -14,7 +14,7 @@ async function getIntegrationDiaryId (request: import('@playwright/test').APIReq
 
 async function gotoDiaries (page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/diaries')
-  await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('.v-row .v-card, .v-toolbar-title').first()).toBeVisible({ timeout: 10000 })
 }
 
 async function gotoDiaryDetail (page: import('@playwright/test').Page, diaryId: string): Promise<void> {
@@ -27,11 +27,10 @@ test.describe('Diaries list', () => {
     await gotoDiaries(page)
   })
 
-  test('loads data table with diary rows', async ({ page }) => {
-    // v-data-table renders rows with diary titles as links
-    const diaryLinks = page.locator('table a[href*="diaries/"]')
-    await expect(diaryLinks.first()).toBeVisible({ timeout: 10000 })
-    const count = await diaryLinks.count()
+  test('loads diary cards', async ({ page }) => {
+    const diaryCards = page.locator('.v-row .v-card[href*="diaries/"]')
+    await expect(diaryCards.first()).toBeVisible({ timeout: 10000 })
+    const count = await diaryCards.count()
     expect(count).toBeGreaterThan(0)
   })
 
@@ -53,10 +52,10 @@ test.describe('Diaries list', () => {
     await expect(page.locator('button[aria-label="Delete entry"]')).toHaveCount(0)
   })
 
-  test('clicking diary title navigates to detail page', async ({ page }) => {
-    const firstLink = page.locator('table a[href*="diaries/"]').first()
-    await expect(firstLink).toBeVisible({ timeout: 10000 })
-    await firstLink.click()
+  test('clicking diary card navigates to detail page', async ({ page }) => {
+    const firstCard = page.locator('.v-row .v-card[href*="diaries/"]').first()
+    await expect(firstCard).toBeVisible({ timeout: 10000 })
+    await firstCard.click()
     await expect(page).toHaveURL(/\/diaries\/[a-f0-9-]+/, { timeout: 10000 })
   })
 })
@@ -166,9 +165,9 @@ test.describe('Diary detail page', () => {
 
   test('navigating to diary from list page works', async ({ page }) => {
     await gotoDiaries(page)
-    const diaryLink = page.locator(`table a[href*="${ww1DiaryId}"]`)
-    await expect(diaryLink).toBeVisible({ timeout: 10000 })
-    await diaryLink.click()
+    const diaryCard = page.locator(`.v-row .v-card[href*="${ww1DiaryId}"]`)
+    await expect(diaryCard).toBeVisible({ timeout: 10000 })
+    await diaryCard.click()
     await expect(page).toHaveURL(new RegExp(ww1DiaryId), { timeout: 10000 })
     await expect(page.locator('.v-date-picker')).toBeVisible({ timeout: 12000 })
   })

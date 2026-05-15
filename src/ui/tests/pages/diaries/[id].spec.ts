@@ -115,7 +115,7 @@ describe('[id].vue', () => {
     const authStore = useAuthStore()
     authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
     await flushPromises()
-    const addBtn = wrapper.findAll('button').find(btn => btn.text() === 'Add')
+    const addBtn = wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Add entry')
     expect(addBtn).toBeTruthy()
     if (addBtn) await addBtn.trigger('click')
     expect((wrapper.vm as any).dialog).toBe(true)

@@ -434,8 +434,8 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
 
   test('Show Map toggle is not visible without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
-    // The Add button is hidden without auth, so the editor never opens
-    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    // The Add entry button is hidden without auth, so the editor never opens
+    await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0)
     // Therefore the Show Map switch (id="show-map") is never in the DOM
     await expect(page.locator('#show-map')).toHaveCount(0)
   })
@@ -454,7 +454,7 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
 
   test('Show Journey toggle is not visible without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
-    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0)
     await expect(page.locator('#show-journey')).toHaveCount(0)
   })
 
@@ -466,7 +466,7 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
 
   test('Add Image toggle is not visible without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
-    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0)
     await expect(page.locator('#show-image')).toHaveCount(0)
   })
 
