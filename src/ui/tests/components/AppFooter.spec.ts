@@ -67,22 +67,20 @@ test('Displays Cookie preferences button in footer', () => {
   expect(wrapper.text()).toContain('Cookie preferences')
 })
 
-test('Uses dark logo when theme is dark', () => {
+test('Brand logo renders as inline SVG', () => {
   vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
-
-  const darkVuetify = createVuetify({ components, directives, theme: { defaultTheme: 'dark' } })
 
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
   }, {
     global: {
       components: { AppFooter },
-      plugins: [darkVuetify],
+      plugins: [vuetify],
     },
   })
 
-  const img = wrapper.find('img[alt="CookingCode"]')
-  expect(img.attributes('src')).toContain('logo-simple-dark')
+  const brandLink = wrapper.find('a.brand-link')
+  expect(brandLink.find('svg').exists()).toBe(true)
 })
 
 test('Copyright line has Humans and Claude as links', () => {
@@ -127,4 +125,39 @@ test('Footer social icons have proper hover styling', () => {
   // Check that social links exist
   const socialLinks = wrapper.findAll('.social-link')
   expect(socialLinks.length).toBeGreaterThan(0)
+})
+
+test('displays app version in footer', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    global: {
+      components: { AppFooter },
+      plugins: [vuetify],
+    },
+  })
+
+  const versionSpan = wrapper.find('.footer-row--secondary span')
+  expect(versionSpan.exists()).toBe(true)
+  expect(versionSpan.text().length).toBeGreaterThan(0)
+})
+
+test('brand link points to cookingcode.com with correct attributes', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    global: {
+      components: { AppFooter },
+      plugins: [vuetify],
+    },
+  })
+
+  const brandLink = wrapper.find('a.brand-link')
+  expect(brandLink.attributes('href')).toBe('https://cookingcode.com')
+  expect(brandLink.attributes('title')).toBe('CookingCode')
+  expect(brandLink.attributes('target')).toBe('_blank')
 })

@@ -9,7 +9,7 @@
           target="_blank"
           title="CookingCode"
         >
-          <img alt="CookingCode" height="16" :src="brandLogo">
+          <LogoBrand class="brand-logo" />
         </a>
 
         <a
@@ -51,15 +51,9 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue'
-  import { useTheme } from 'vuetify'
   import { getAppConfigField } from '@/utils/appConfig'
   import { useConsent } from '@/composables/useConsent'
-  import logoSimpleLight from '@/assets/logo-simple-light.svg'
-  import logoSimpleDark from '@/assets/logo-simple-dark.svg'
-
-  const theme = useTheme()
-  const brandLogo = computed(() => theme.global.name.value === 'dark' ? logoSimpleDark : logoSimpleLight)
+  import LogoBrand from '@/components/LogoBrand.vue'
 
   const version = __APP_VERSION__
   const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
@@ -108,6 +102,10 @@
     &:hover
       color: rgb(var(--v-theme-primary))
 
+  .brand-logo
+    height: 16px
+    width: auto
+
   .brand-link
     display: inline-flex !important
     align-items: center
@@ -118,6 +116,7 @@
 
     &:hover
       opacity: 1
+      color: rgb(var(--v-theme-primary))
 
   .footer-copy-link
     color: rgb(var(--v-theme-primary))

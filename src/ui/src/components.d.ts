@@ -14,6 +14,7 @@ declare module 'vue' {
     DiaryEditor: typeof import('./components/DiaryEditor.vue')['default']
     DiaryEntryEditor: typeof import('./components/DiaryEntryEditor.vue')['default']
     JourneyView: typeof import('./components/JourneyView.vue')['default']
+    LogoBrand: typeof import('./components/LogoBrand.vue')['default']
     MapView: typeof import('./components/MapView.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
