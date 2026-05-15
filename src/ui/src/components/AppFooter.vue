@@ -38,6 +38,10 @@
       </div>
 
       <div class="d-flex align-center justify-center w-100 footer-row--secondary">
+        <span class="text-caption text-disabled">{{ version }}</span>
+      </div>
+
+      <div class="d-flex align-center justify-center w-100 footer-row--secondary">
         <button class="text-caption text-disabled cookie-pref-btn" @click="openPreferences">
           Cookie preferences
         </button>
@@ -57,6 +61,7 @@
   const theme = useTheme()
   const brandLogo = computed(() => theme.global.name.value === 'dark' ? logoSimpleDark : logoSimpleLight)
 
+  const version = __APP_VERSION__
   const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
   const items = [
     {
