@@ -14,8 +14,8 @@ const SEEDED_IMAGE_DAY = 2
 async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
-  const diaries: Array<{ diaryId: string; title: string }> = await response.json()
-  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ?? diaries[0]
+  const result: { items: Array<{ diaryId: string; title: string }> } = await response.json()
+  const match = result.items.find(d => d.title === SEEDED_DIARY_TITLE) ?? result.items[0]
   return match.diaryId
 }
 
@@ -398,8 +398,8 @@ test.describe('URL date bookmarking', () => {
   test('forward nav button uses replace — back skips over intermediate dates to the list', async ({ page }) => {
     // Navigate from list so the list page is the history entry behind the diary
     await page.goto('/diaries')
-    await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
-    await page.locator(`table a[href*="${ww1DiaryId}"]`).click()
+    await expect(page.locator('.v-row .v-card[href*="diaries/"]').first()).toBeVisible({ timeout: 10000 })
+    await page.locator(`.v-row .v-card[href*="${ww1DiaryId}"]`).click()
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Use forward navigation (router.replace — should not add a history entry)

@@ -7,8 +7,8 @@ const SEEDED_DIARY_AUTHOR = 'Claude Sonnet'
 async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
-  const diaries: Array<{ diaryId: string; title: string; author: string }> = await response.json()
-  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ?? diaries[0]
+  const result: { items: Array<{ diaryId: string; title: string; author: string }> } = await response.json()
+  const match = result.items.find(d => d.title === SEEDED_DIARY_TITLE) ?? result.items[0]
   return match.diaryId
 }
 
