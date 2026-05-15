@@ -14,8 +14,8 @@ const SEEDED_IMAGE_DAY = 2
 async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
-  const diaries: Array<{ diaryId: string; title: string }> = await response.json()
-  const match = diaries.find(d => d.title === SEEDED_DIARY_TITLE) ?? diaries[0]
+  const result: { items: Array<{ diaryId: string; title: string }> } = await response.json()
+  const match = result.items.find(d => d.title === SEEDED_DIARY_TITLE) ?? result.items[0]
   return match.diaryId
 }
 
@@ -398,8 +398,8 @@ test.describe('URL date bookmarking', () => {
   test('forward nav button uses replace — back skips over intermediate dates to the list', async ({ page }) => {
     // Navigate from list so the list page is the history entry behind the diary
     await page.goto('/diaries')
-    await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
-    await page.locator(`table a[href*="${ww1DiaryId}"]`).click()
+    await expect(page.locator('.v-row .v-card[href*="diaries/"]').first()).toBeVisible({ timeout: 10000 })
+    await page.locator(`.v-row .v-card[href*="${ww1DiaryId}"]`).click()
     await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
 
     // Use forward navigation (router.replace — should not add a history entry)
@@ -434,8 +434,8 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
 
   test('Show Map toggle is not visible without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
-    // The Add button is hidden without auth, so the editor never opens
-    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    // The Add entry button is hidden without auth, so the editor never opens
+    await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0)
     // Therefore the Show Map switch (id="show-map") is never in the DOM
     await expect(page.locator('#show-map')).toHaveCount(0)
   })
@@ -454,7 +454,7 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
 
   test('Show Journey toggle is not visible without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
-    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0)
     await expect(page.locator('#show-journey')).toHaveCount(0)
   })
 
@@ -466,7 +466,7 @@ test.describe('DiaryEntry editor — unauthenticated access', () => {
 
   test('Add Image toggle is not visible without authentication', async ({ page }) => {
     await gotoDiaryDetail(page, ww1DiaryId)
-    await expect(page.getByRole('button', { name: 'Add' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Add entry' })).toHaveCount(0)
     await expect(page.locator('#show-image')).toHaveCount(0)
   })
 

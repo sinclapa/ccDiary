@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import { diaryAPI } from '@/services/modules/diaryService'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
+import DiaryDetail from '@/pages/diaries/[id].vue'
 
 globalThis.ResizeObserver = require('resize-observer-polyfill')
 
@@ -95,8 +96,6 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
   })
 
   it('renders navigation buttons with left/right arrows', async () => {
-    const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -119,8 +118,6 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
   })
 
   it('renders Next button on the right', async () => {
-    const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -141,8 +138,6 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
   })
 
   it('renders Back to Diaries button', async () => {
-    const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -164,8 +159,6 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
   })
 
   it('Back to Diaries button is left aligned', async () => {
-    const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],
@@ -186,8 +179,6 @@ describe('pages/diaries/[id].vue - Navigation Controls', () => {
   })
 
   it('Previous and Next buttons maintain primary color', async () => {
-    const DiaryDetail = (await import('@/pages/diaries/[id].vue')).default
-
     wrapper = mount(DiaryDetail, {
       global: {
         plugins: [vuetify],

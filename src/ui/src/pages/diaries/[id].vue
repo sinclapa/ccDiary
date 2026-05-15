@@ -54,95 +54,93 @@
             </template>
           </v-date-picker>
         </v-row>
-        <v-row>
-          <v-col style="margin: 0; padding: 0;">
+        <v-row class="pt-1">
+          <v-col class="pa-0" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));">
             <v-btn
               aria-label="Go to start"
-              class="mb-2"
-              :color="'white'"
+              color="primary"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
+              rounded="sm"
+              size="default"
+              style="min-width: 0; width: 100%"
+              variant="outlined"
               @click="onMoveStart()"
             >
-              <v-icon>
-                $mdi-skip-backward
-              </v-icon>
+              <v-icon>$mdi-skip-backward</v-icon>
             </v-btn>
-          </v-col>
-          <v-col style="margin: 0; padding: 0;">
             <v-btn
               aria-label="Move backward"
-              class="mb-2"
-              :color="'white'"
+              color="primary"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(minDate).format('YYYY-MM-DD')"
+              rounded="sm"
+              size="default"
+              style="min-width: 0; width: 100%"
+              variant="outlined"
               @click="onMoveBackward()"
             >
-              <v-icon>
-                $mdi-rewind
-              </v-icon>
+              <v-icon>$mdi-rewind</v-icon>
             </v-btn>
-          </v-col>
-          <v-col style="margin: 0; padding: 0;">
-            <v-dialog
-              v-model="dialog"
-              max-width="560px"
-              scrim-clickable
+            <v-btn
+              v-if="canEditDiary"
+              aria-label="Add entry"
+              color="primary"
+              rounded="sm"
+              size="default"
+              style="min-width: 0; width: 100%"
+              variant="outlined"
+              @click="onAddEntry()"
             >
-              <template #activator="{ props }">
-                <v-btn
-                  v-if="canEditDiary"
-                  class="mb-2"
-                  v-bind="props"
-                  @click="onAddEntry()"
-                >
-                  Add
-                </v-btn>
-                <span v-else aria-hidden="true" class="add-entry-spacer mb-2" />
-              </template>
-              <diary-entry-editor
-                :date="editedItem.date"
-                :entry="editedItem.entry"
-                :from-location="editedItem.fromLocation"
-                :image-content-type="editedItem.imageContentType"
-                :image-data="editedItem.imageData"
-                :is-edit="editedItem.diaryEntryId !== undefined"
-                :journey-mode="editedItem.journeyMode"
-                :location="editedItem.location"
-                :map-location="editedItem.mapLocation"
-                :show-journey="editedItem.showJourney"
-                :show-map="editedItem.showMap"
-                :to-location="editedItem.toLocation"
-                @close="close"
-                @submit="onSubmitDiaryEntry"
-              />
-            </v-dialog>
-          </v-col>
-          <v-col style="margin: 0; padding: 0;">
+              Add
+            </v-btn>
+            <span v-else aria-hidden="true" />
             <v-btn
               aria-label="Move forward"
-              class="mb-2"
-              :color="'white'"
+              color="primary"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
+              rounded="sm"
+              size="default"
+              style="min-width: 0; width: 100%"
+              variant="outlined"
               @click="onMoveForward()"
             >
-              <v-icon>
-                $mdi-fast-forward
-              </v-icon>
+              <v-icon>$mdi-fast-forward</v-icon>
             </v-btn>
-          </v-col>
-          <v-col style="margin: 0; padding: 0;">
             <v-btn
               aria-label="Go to end"
-              class="mb-2"
-              :color="'white'"
+              color="primary"
               :disabled="dayjs(selectedDate).format('YYYY-MM-DD') == dayjs(maxDate).format('YYYY-MM-DD')"
+              rounded="sm"
+              size="default"
+              style="min-width: 0; width: 100%"
+              variant="outlined"
               @click="onMoveEnd()"
             >
-              <v-icon>
-                $mdi-skip-forward
-              </v-icon>
+              <v-icon>$mdi-skip-forward</v-icon>
             </v-btn>
           </v-col>
         </v-row>
+        <v-dialog
+          v-model="dialog"
+          max-width="560px"
+          scrim-clickable
+        >
+          <diary-entry-editor
+            :date="editedItem.date"
+            :entry="editedItem.entry"
+            :from-location="editedItem.fromLocation"
+            :image-content-type="editedItem.imageContentType"
+            :image-data="editedItem.imageData"
+            :is-edit="editedItem.diaryEntryId !== undefined"
+            :journey-mode="editedItem.journeyMode"
+            :location="editedItem.location"
+            :map-location="editedItem.mapLocation"
+            :show-journey="editedItem.showJourney"
+            :show-map="editedItem.showMap"
+            :to-location="editedItem.toLocation"
+            @close="close"
+            @submit="onSubmitDiaryEntry"
+          />
+        </v-dialog>
         <v-dialog v-model="dialogDelete" max-width="560px">
           <v-card class="delete-entry-dialog" rounded="xl">
             <v-card-title class="d-flex align-center gap-2 text-h6 text-primary">
@@ -264,7 +262,6 @@
           aria-label="Back to Diaries"
           class="back-to-diaries-btn"
           color="primary"
-          prepend-icon="$mdi-arrow-left"
           variant="outlined"
           @click="onBackToDiaries"
         >
@@ -762,12 +759,6 @@
   .author {
     font-size: 16px;
     color: rgb(var(--v-theme-primary));
-  }
-
-  .add-entry-spacer {
-    display: inline-block;
-    width: 64px;
-    height: 36px;
   }
 
   :deep(.diary-day-content) {

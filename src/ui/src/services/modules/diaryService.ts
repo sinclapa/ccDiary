@@ -1,4 +1,5 @@
 import Diary from '@/services/models/diary'
+import PagedResult from '@/services/models/pagedResult'
 import { getAppConfigField } from '@/utils/appConfig'
 
 export default class DiaryAPIService {
@@ -47,12 +48,14 @@ export default class DiaryAPIService {
     return output
   }
 
-  async getDiaries () : Promise<Diary[]> {
+  async getDiaries (page: number = 1, pageSize: number = 12) : Promise<PagedResult<Diary>> {
     const api = new URL('v1/Diary/Get', getAppConfigField('VITE_API'))
-    let output : Diary[] = []
+    api.searchParams.set('page', String(page))
+    api.searchParams.set('pageSize', String(pageSize))
+    let output : PagedResult<Diary> = { items: [], totalCount: 0, page, pageSize }
     await fetch(api)
       .then(response => response.json())
-      .then(data => output = data as Diary[])
+      .then(data => output = data as PagedResult<Diary>)
     return output
   }
 

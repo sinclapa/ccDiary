@@ -53,11 +53,13 @@
   import { state } from '@/services/authentication/msalConfig'
   import { useAuthStore } from '@/stores/auth'
   import { saveTheme } from '@/utils/browserTheme'
+  import { getAppConfigField } from '@/utils/appConfig'
 
   const envBadge = computed(() => {
-    const hostname = window.location.hostname
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return { label: 'local', class: 'env-badge--local' }
-    if (hostname.endsWith('.azurestaticapps.net')) return { label: 'preview', class: 'env-badge--preview' }
+    const env = getAppConfigField('VITE_ENVIRONMENT').toLowerCase()
+    if (env.includes('local')) return { label: env, class: 'env-badge--local' }
+    if (env === 'dev') return { label: 'dev', class: 'env-badge--dev' }
+    if (env === 'staging') return { label: 'staging', class: 'env-badge--staging' }
     return null
   })
 
@@ -261,10 +263,16 @@
   background: rgba(6, 182, 212, 0.14);
 }
 
-.env-badge--preview {
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
-  background: rgba(74, 222, 128, 0.08);
+.env-badge--dev {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.env-badge--staging {
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.35);
+  background: rgba(251, 146, 60, 0.12);
 }
 
 @media (max-width: 599px) {

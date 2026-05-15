@@ -14,14 +14,37 @@ describe('Diary Service', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       statusText: 'OK',
-      json: async () => ({}),
+      json: async () => ({ items: [], totalCount: 0, page: 1, pageSize: 12 }),
     } as Response)
 
     // Act
-    await diaryAPI.getDiaries()
+    const result = await diaryAPI.getDiaries()
 
     // Assert
-    expect(fetchSpy).toHaveBeenCalledWith(new URL('v1/Diary/Get', baseUrl))
+    const expectedUrl = new URL('v1/Diary/Get', baseUrl)
+    expectedUrl.searchParams.set('page', '1')
+    expectedUrl.searchParams.set('pageSize', '12')
+    expect(fetchSpy).toHaveBeenCalledWith(expectedUrl)
+    expect(result.items).toEqual([])
+    expect(result.totalCount).toBe(0)
+  })
+
+  it('Get Diaries with page params', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({ items: [], totalCount: 50, page: 3, pageSize: 6 }),
+    } as Response)
+
+    // Act
+    await diaryAPI.getDiaries(3, 6)
+
+    // Assert
+    const expectedUrl = new URL('v1/Diary/Get', baseUrl)
+    expectedUrl.searchParams.set('page', '3')
+    expectedUrl.searchParams.set('pageSize', '6')
+    expect(fetchSpy).toHaveBeenCalledWith(expectedUrl)
   })
 
   it('Get Diary', async () => {

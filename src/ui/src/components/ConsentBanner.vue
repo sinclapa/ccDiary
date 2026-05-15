@@ -2,8 +2,7 @@
   <Teleport to="body">
     <div v-if="bannerVisible" aria-label="Cookie consent" class="consent-banner" role="dialog">
       <p class="consent-text">
-        We use analytics to monitor performance and improve the app.
-        No personal data is sold or shared.
+        We use <a href="https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/" rel="noopener noreferrer" target="_blank">Grafana Faro</a> to collect anonymous telemetry — errors, performance, and page loads — to improve this site. No advertising, no third-party sharing.
       </p>
       <div class="consent-actions">
         <span v-if="currentStatus" class="consent-current-status">Current: {{ currentStatus }}</span>
@@ -63,6 +62,10 @@
 .consent-text {
   margin: 0;
   flex: 1;
+}
+
+.consent-text a {
+  color: rgb(var(--v-theme-primary));
 }
 
 .consent-actions {

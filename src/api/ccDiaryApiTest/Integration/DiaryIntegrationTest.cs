@@ -6,6 +6,7 @@ namespace ccDiaryApiTest.Integration
 {
     using System.Net;
     using System.Net.Http.Json;
+    using System.Text.Json;
     using ccDiaryApi.Data.Model;
 
     [TestClass]
@@ -49,9 +50,10 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryDTO>>();
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.Count());
+            Assert.AreEqual(0, result.TotalCount);
+            Assert.AreEqual(0, result.Items.Count());
         }
 
         [TestMethod]
@@ -67,9 +69,32 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryDTO>>();
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
-            Assert.AreEqual(3, result.Count());
+            Assert.AreEqual(3, result.TotalCount);
+            Assert.AreEqual(3, result.Items.Count());
+        }
+
+        [TestMethod]
+        public async Task GetPaged()
+        {
+            // Arrange — create 5 diaries, fetch page 2 with pageSize 2
+            for (int i = 0; i < 5; i++)
+            {
+                await CreateDiary(_httpClient);
+            }
+
+            // Act
+            var response = await _httpClient.GetAsync("/api/v1/Diary/Get?page=2&pageSize=2");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.IsNotNull(result);
+            Assert.AreEqual(5, result.TotalCount);
+            Assert.AreEqual(2, result.Items.Count());
+            Assert.AreEqual(2, result.Page);
+            Assert.AreEqual(2, result.PageSize);
         }
 
         [TestMethod]

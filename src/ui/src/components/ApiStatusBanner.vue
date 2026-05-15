@@ -7,7 +7,7 @@
         :key="i"
         class="spotlight-char"
         :style="{ animationDelay: `${i * 0.06}s` }"
-      >{{ char === ' ' ? ' ' : char }}</span>
+      >{{ char === ' ' ? ' ' : char }}</span>
     </span>
     <span class="ml-2 wait-counter">({{ elapsedSeconds }}s)</span>
   </div>

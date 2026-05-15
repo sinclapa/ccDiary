@@ -27,10 +27,7 @@ beforeEach(() => {
 })
 
 test('Display AppFooter with centered layout and icon row', () => {
-  vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
-    if (field === 'VITE_ENVIRONMENT') return 'test'
-    return opts?.defaultValue ?? 'NOT_SET'
-  })
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
 
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
@@ -46,9 +43,6 @@ test('Display AppFooter with centered layout and icon row', () => {
 
   // Check that footer renders
   expect(wrapper.find('.app-footer').exists()).toBe(true)
-
-  // Check that version row exists
-  expect(wrapper.text()).toContain(`test Version ${__APP_VERSION__}`)
 
   // Check that copyright row exists
   expect(wrapper.text()).toContain(`© ${new Date().getFullYear()} Cooking Code`)
@@ -73,29 +67,24 @@ test('Displays Cookie preferences button in footer', () => {
   expect(wrapper.text()).toContain('Cookie preferences')
 })
 
-test('Uses dark logo when theme is dark', () => {
+test('Brand logo renders as inline SVG', () => {
   vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
-
-  const darkVuetify = createVuetify({ components, directives, theme: { defaultTheme: 'dark' } })
 
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
   }, {
     global: {
       components: { AppFooter },
-      plugins: [darkVuetify],
+      plugins: [vuetify],
     },
   })
 
-  const img = wrapper.find('img[alt="CookingCode"]')
-  expect(img.attributes('src')).toContain('logo-simple-dark')
+  const brandLink = wrapper.find('a.brand-link')
+  expect(brandLink.find('svg').exists()).toBe(true)
 })
 
-test('Display AppFooter without environment prefix when environment not set', () => {
-  vi.mocked(getAppConfigField).mockImplementation((field, opts) => {
-    if (field === 'VITE_ENVIRONMENT') return ''
-    return opts?.defaultValue ?? 'NOT_SET'
-  })
+test('Copyright line has Humans and Claude as links', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
 
   const wrapper = mount({
     template: '<v-layout><app-footer></app-footer></v-layout>',
@@ -109,8 +98,13 @@ test('Display AppFooter without environment prefix when environment not set', ()
     },
   })
 
-  expect(wrapper.text()).toContain(`Version ${__APP_VERSION__}`)
-  expect(wrapper.text()).not.toContain(`test Version`)
+  const humansLink = wrapper.find('a.footer-copy-link[href="https://en.wikipedia.org/wiki/Human"]')
+  expect(humansLink.exists()).toBe(true)
+  expect(humansLink.text()).toBe('Humans')
+
+  const claudeLink = wrapper.find('a.footer-copy-link[href="https://claude.ai/login"]')
+  expect(claudeLink.exists()).toBe(true)
+  expect(claudeLink.text()).toBe('Claude')
 })
 
 test('Footer social icons have proper hover styling', () => {
@@ -131,4 +125,39 @@ test('Footer social icons have proper hover styling', () => {
   // Check that social links exist
   const socialLinks = wrapper.findAll('.social-link')
   expect(socialLinks.length).toBeGreaterThan(0)
+})
+
+test('displays app version in footer', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    global: {
+      components: { AppFooter },
+      plugins: [vuetify],
+    },
+  })
+
+  const versionSpan = wrapper.find('.footer-row--secondary span')
+  expect(versionSpan.exists()).toBe(true)
+  expect(versionSpan.text().length).toBeGreaterThan(0)
+})
+
+test('brand link points to cookingcode.com with correct attributes', () => {
+  vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
+
+  const wrapper = mount({
+    template: '<v-layout><app-footer></app-footer></v-layout>',
+  }, {
+    global: {
+      components: { AppFooter },
+      plugins: [vuetify],
+    },
+  })
+
+  const brandLink = wrapper.find('a.brand-link')
+  expect(brandLink.attributes('href')).toBe('https://cookingcode.com')
+  expect(brandLink.attributes('title')).toBe('CookingCode')
+  expect(brandLink.attributes('target')).toBe('_blank')
 })

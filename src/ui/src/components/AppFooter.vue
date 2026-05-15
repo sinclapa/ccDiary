@@ -9,7 +9,7 @@
           target="_blank"
           title="CookingCode"
         >
-          <img alt="CookingCode" height="16" :src="brandLogo">
+          <LogoBrand class="brand-logo" />
         </a>
 
         <a
@@ -29,15 +29,16 @@
       </div>
 
       <div class="d-flex align-center justify-center w-100 footer-row">
-        <div class="text-caption text-disabled text-center">
-          &copy; {{ (new Date()).getFullYear() }} Cooking Code. Designed by Humans built by Claude
+        <div class="text-body-2 text-disabled text-center">
+          &copy; {{ (new Date()).getFullYear() }} Cooking Code. Designed by
+          <a class="footer-copy-link" href="https://en.wikipedia.org/wiki/Human" rel="noopener noreferrer" target="_blank">Humans</a>
+          built by
+          <a class="footer-copy-link" href="https://claude.ai/login" rel="noopener noreferrer" target="_blank">Claude</a>
         </div>
       </div>
 
-      <div class="d-flex align-center justify-center w-100 footer-row">
-        <div class="text-caption text-disabled text-center">
-          <span>{{ environment ? `${environment} ` : '' }}Version {{ version }}</span>
-        </div>
+      <div class="d-flex align-center justify-center w-100 footer-row--secondary">
+        <span class="text-caption text-disabled">{{ version }}</span>
       </div>
 
       <div class="d-flex align-center justify-center w-100 footer-row--secondary">
@@ -50,18 +51,11 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue'
-  import { useTheme } from 'vuetify'
   import { getAppConfigField } from '@/utils/appConfig'
   import { useConsent } from '@/composables/useConsent'
-  import logoSimpleLight from '@/assets/logo-simple-light.svg'
-  import logoSimpleDark from '@/assets/logo-simple-dark.svg'
-
-  const theme = useTheme()
-  const brandLogo = computed(() => theme.global.name.value === 'dark' ? logoSimpleDark : logoSimpleLight)
+  import LogoBrand from '@/components/LogoBrand.vue'
 
   const version = __APP_VERSION__
-  const environment = getAppConfigField('VITE_ENVIRONMENT', { defaultValue: '' })
   const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
   const items = [
     {
@@ -106,7 +100,11 @@
     transition: .2s ease-in-out
 
     &:hover
-      color: #ff9800
+      color: rgb(var(--v-theme-primary))
+
+  .brand-logo
+    height: 16px
+    width: auto
 
   .brand-link
     display: inline-flex !important
@@ -118,6 +116,15 @@
 
     &:hover
       opacity: 1
+      color: rgb(var(--v-theme-primary))
+
+  .footer-copy-link
+    color: rgb(var(--v-theme-primary))
+    text-decoration: none
+    transition: .2s ease-in-out
+
+    &:hover
+      text-decoration: underline
 
   .cookie-pref-btn
     background: none

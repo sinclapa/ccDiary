@@ -40,17 +40,18 @@ describe('pages/diaries/index.vue', () => {
 
   it('should render the component', () => {
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.findComponent({ name: 'VDataTable' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'VContainer' }).exists()).toBe(true)
   })
 
   it('should fetch diaries on mount', async () => {
     const mockDiaries = [
       { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
     ];
-    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 1, page: 1, pageSize: 12 })
     await wrapper.vm.data()
     expect(diaryAPI.getDiaries).toHaveBeenCalled()
     expect(wrapper.vm.diaries).toEqual(mockDiaries)
+    expect(wrapper.vm.totalCount).toBe(1)
   })
 
   it('should open the dialog for adding a diary', async () => {
@@ -128,7 +129,7 @@ describe('pages/diaries/index.vue', () => {
     const mockDiaries = [
       { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1', ownerId: 'oid-1' },
     ];
-    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 1, page: 1, pageSize: 12 })
 
     // Set user as admin so canEdit returns true
     const authStore = useAuthStore()
@@ -157,12 +158,12 @@ describe('pages/diaries/index.vue', () => {
     expect((wrapper.vm as any).defaultItem.author).toBe('')
   })
 
-  it('renders the root div and table with data', async () => {
-    // Provide at least one diary so the table renders a row
+  it('renders the root div and cards with data', async () => {
+    // Provide at least one diary so a card renders
     const mockDiaries = [
       { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1' },
     ];
-    (diaryAPI.getDiaries as any).mockResolvedValueOnce(mockDiaries)
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 1, page: 1, pageSize: 12 })
 
     const wrapper = mount(Index, {
       global: { plugins: [vuetify] },

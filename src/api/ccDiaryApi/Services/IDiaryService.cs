@@ -8,7 +8,7 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryService
     {
-        IEnumerable<DiaryDTO> GetDiaries();
+        PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize);
 
         DiaryDTO? GetDiary(Guid diaryId);
 

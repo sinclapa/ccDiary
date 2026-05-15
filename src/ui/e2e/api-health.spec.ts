@@ -52,12 +52,12 @@ test.describe('Diary API', () => {
       ignoreHTTPSErrors: true,
     })
     expect(response.ok()).toBeTruthy()
-    const diaries = await response.json()
-    expect(Array.isArray(diaries)).toBeTruthy()
-    expect(diaries.length).toBeGreaterThan(0)
-    expect(diaries[0]).toHaveProperty('diaryId')
-    expect(diaries[0]).toHaveProperty('title')
-    expect(diaries[0]).toHaveProperty('author')
+    const result = await response.json()
+    expect(Array.isArray(result.items)).toBeTruthy()
+    expect(result.items.length).toBeGreaterThan(0)
+    expect(result.items[0]).toHaveProperty('diaryId')
+    expect(result.items[0]).toHaveProperty('title')
+    expect(result.items[0]).toHaveProperty('author')
   })
 
   test('GET /api/v1/Diary/Get/:id returns single diary', async ({ request }) => {
@@ -65,8 +65,8 @@ test.describe('Diary API', () => {
     const listResponse = await request.get(`${API_BASE}/api/v1/Diary/Get`, {
       ignoreHTTPSErrors: true,
     })
-    const diaries = await listResponse.json()
-    const id = diaries[0].diaryId
+    const result = await listResponse.json()
+    const id = result.items[0].diaryId
 
     const response = await request.get(`${API_BASE}/api/v1/Diary/Get/${id}`, {
       ignoreHTTPSErrors: true,
@@ -105,8 +105,8 @@ test.describe('DiaryEntry API', () => {
 
   test.beforeAll(async ({ request }) => {
     const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
-    const diaries: Array<{ diaryId: string; title: string }> = await response.json()
-    const ww1 = diaries.find(d => d.title === 'Integration Test Diary') ?? diaries[0]
+    const result: { items: Array<{ diaryId: string; title: string }> } = await response.json()
+    const ww1 = result.items.find(d => d.title === 'Integration Test Diary') ?? result.items[0]
     ww1DiaryId = ww1.diaryId
   })
 
