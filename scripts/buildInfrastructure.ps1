@@ -212,6 +212,66 @@ else {
     $grafanaFaroUrl = $params["GrafanaFaroUrl"]
 }
 
+if (-Not ($params.ContainsKey("SmtpHost"))) {
+    $smtpHost = Read-Host -Prompt "Enter the SMTP server hostname (e.g. smtp.office365.com, leave empty to use Entra invitation email)"
+    $params.Add("SmtpHost", $smtpHost)
+}
+else {
+    $smtpHost = $params["SmtpHost"]
+}
+
+if ($smtpHost) {
+    if (-Not ($params.ContainsKey("SmtpPort"))) {
+        $smtpPort = Read-Host -Prompt "Enter the SMTP port (587 for STARTTLS)"
+        if (-not $smtpPort) { $smtpPort = "587" }
+        $params.Add("SmtpPort", $smtpPort)
+    }
+    else {
+        $smtpPort = $params["SmtpPort"]
+    }
+
+    if (-Not ($params.ContainsKey("SmtpUsername"))) {
+        $smtpUsername = Read-Host -Prompt "Enter the SMTP username / email address"
+        $params.Add("SmtpUsername", $smtpUsername)
+    }
+    else {
+        $smtpUsername = $params["SmtpUsername"]
+    }
+
+    if (-Not ($params.ContainsKey("SmtpPassword"))) {
+        $smtpPasswordSecure = Read-Host -Prompt "Enter the SMTP password" -AsSecureString
+        $smtpPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($smtpPasswordSecure))
+        $params.Add("SmtpPassword", $smtpPassword)
+    }
+    else {
+        $smtpPassword = $params["SmtpPassword"]
+    }
+
+    if (-Not ($params.ContainsKey("SmtpFrom"))) {
+        $smtpFrom = Read-Host -Prompt "Enter the From email address (e.g. noreply@yourdomain.com)"
+        $params.Add("SmtpFrom", $smtpFrom)
+    }
+    else {
+        $smtpFrom = $params["SmtpFrom"]
+    }
+
+    if (-Not ($params.ContainsKey("SmtpFromName"))) {
+        $smtpFromName = Read-Host -Prompt "Enter the From display name (leave empty for 'ccDiary')"
+        if (-not $smtpFromName) { $smtpFromName = "ccDiary" }
+        $params.Add("SmtpFromName", $smtpFromName)
+    }
+    else {
+        $smtpFromName = $params["SmtpFromName"]
+    }
+}
+else {
+    $smtpPort = ""
+    $smtpUsername = ""
+    $smtpPassword = ""
+    $smtpFrom = ""
+    $smtpFromName = ""
+}
+
 if (-Not ($params.ContainsKey("BootstrapAdminObjectId"))) {
     $bootstrapAdminObjectId = Read-Host -Prompt "Enter the Bootstrap Admin Entra Object ID (leave empty to skip)"
     $params.Add("BootstrapAdminObjectId", $bootstrapAdminObjectId)
@@ -385,7 +445,13 @@ $envVars = @(
         "Graph__AppDisplayName=Cooking Code Diary",
         "BootstrapAdmin__ObjectId=$bootstrapAdminObjectId",
         "BootstrapAdmin__Email=$bootstrapAdminEmail",
-        "BootstrapAdmin__DisplayName=$bootstrapAdminDisplayName"
+        "BootstrapAdmin__DisplayName=$bootstrapAdminDisplayName",
+        "Smtp__Host=$smtpHost",
+        "Smtp__Port=$smtpPort",
+        "Smtp__Username=$smtpUsername",
+        "Smtp__Password=$smtpPassword",
+        "Smtp__From=$smtpFrom",
+        "Smtp__FromName=$smtpFromName"
 )
 
 az containerapp update `
@@ -470,6 +536,14 @@ gh variable set "GRAPH_INVITE_REDIRECT_URL" --body "https://$staticSiteUrl/" --r
 gh variable set "BOOTSTRAP_ADMIN_OBJECT_ID" --body "$bootstrapAdminObjectId" --repo $gitHubRepo --env "${environment}"
 gh variable set "BOOTSTRAP_ADMIN_DISPLAY_NAME" --body "$bootstrapAdminDisplayName" --repo $gitHubRepo --env "${environment}"
 gh secret set "BOOTSTRAP_ADMIN_EMAIL" --body "$bootstrapAdminEmail" --repo $gitHubRepo --env "${environment}"
+if ($smtpHost) {
+    gh variable set "SMTP_HOST"      --body "$smtpHost"     --repo $gitHubRepo --env "${environment}"
+    gh variable set "SMTP_PORT"      --body "$smtpPort"     --repo $gitHubRepo --env "${environment}"
+    gh variable set "SMTP_USERNAME"  --body "$smtpUsername" --repo $gitHubRepo --env "${environment}"
+    gh variable set "SMTP_FROM"      --body "$smtpFrom"     --repo $gitHubRepo --env "${environment}"
+    gh variable set "SMTP_FROM_NAME" --body "$smtpFromName" --repo $gitHubRepo --env "${environment}"
+    gh secret set "SMTP_PASSWORD"    --body "$smtpPassword" --repo $gitHubRepo --env "${environment}"
+}
 
 Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan
 gh variable set "SONAR_API_PROJECT_KEY" --body "$sonarApiProjectKey" --repo $gitHubRepo
@@ -480,6 +554,24 @@ gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished ${name} ${environment}" -ForegroundColor Green
+
+if ($smtpHost) {
+    $smtpDomain = ($smtpFrom -split "@")[-1]
+    Write-Host ""
+    Write-Host "=== SPF Record ===" -ForegroundColor Yellow
+    Write-Host "Add the following DNS TXT record to the domain: $smtpDomain" -ForegroundColor Yellow
+    Write-Host "  Name:  @  (or the root domain itself)" -ForegroundColor White
+    Write-Host "  Type:  TXT" -ForegroundColor White
+    Write-Host "  Value: v=spf1 include:$smtpHost ~all" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Adjust the 'include:' value to match your SMTP provider's SPF domain:" -ForegroundColor Gray
+    Write-Host "  Office 365  ->  include:spf.protection.outlook.com" -ForegroundColor Gray
+    Write-Host "  Gmail       ->  include:_spf.google.com" -ForegroundColor Gray
+    Write-Host "  SendGrid    ->  include:sendgrid.net" -ForegroundColor Gray
+    Write-Host "  Custom      ->  ip4:{your-smtp-server-ip}" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Verify your SPF record at: https://mxtoolbox.com/spf.aspx" -ForegroundColor Gray
+}
 
 
 

@@ -404,7 +404,7 @@ namespace ccDiaryApiTest.v1
             controller.Create(new DiaryDTO { Author = "AuthorB", Title = "Diary Two" });
 
             // Act
-            var response = controller.Get(search: "");
+            var response = controller.Get(search: string.Empty);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));

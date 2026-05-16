@@ -31,5 +31,8 @@ namespace ccDiaryApi.Data.Model
 
         [ForeignKey(nameof(ProcessedByUserId))]
         public AppUserDto? ProcessedBy { get; set; }
+
+        [MaxLength(2048)]
+        public string? InviteRedeemUrl { get; set; }
     }
 }

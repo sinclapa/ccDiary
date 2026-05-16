@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { approveRequest, declineRequest, getPendingRequests } from '@/services/modules/adminService'
+import { approveRequest, declineRequest, deleteRequest, getAllRequests, resendInvitation } from '@/services/modules/adminService'
 import type { AccessRequest } from '@/services/models/accessRequest'
 
 const baseUrl = 'http://localhost'
@@ -17,14 +17,14 @@ describe('adminService', () => {
     vi.stubEnv('VITE_API', baseUrl)
   })
 
-  describe('getPendingRequests', () => {
+  describe('getAllRequests', () => {
     it('returns requests from the API on success', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: true,
         json: async () => [mockRequest],
       } as Response)
 
-      const result = await getPendingRequests()
+      const result = await getAllRequests()
 
       expect(globalThis.fetch).toHaveBeenCalledWith(new URL('v1/Admin/Requests', baseUrl))
       expect(result).toEqual([mockRequest])
@@ -33,7 +33,7 @@ describe('adminService', () => {
     it('returns empty array when response is not ok', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response)
 
-      const result = await getPendingRequests()
+      const result = await getAllRequests()
 
       expect(result).toEqual([])
     })
@@ -94,6 +94,64 @@ describe('adminService', () => {
       const result = await declineRequest('req-2')
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe('deleteRequest', () => {
+    it('returns true on success', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response)
+
+      const result = await deleteRequest('req-1')
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        new URL('v1/Admin/Delete/req-1', baseUrl),
+        { method: 'DELETE' }
+      )
+      expect(result).toBe(true)
+    })
+
+    it('returns false when response is not ok', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response)
+
+      const result = await deleteRequest('req-2')
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('resendInvitation', () => {
+    it('returns ok true and redeemUrl on success', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({ redeemUrl: 'https://example.com/invite/xyz' }),
+      } as Response)
+
+      const result = await resendInvitation('req-1')
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        new URL('v1/Admin/ResendInvitation/req-1', baseUrl),
+        { method: 'POST' }
+      )
+      expect(result).toEqual({ ok: true, redeemUrl: 'https://example.com/invite/xyz' })
+    })
+
+    it('returns ok true and null redeemUrl when redeemUrl not in response', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({}),
+      } as Response)
+
+      const result = await resendInvitation('req-2')
+
+      expect(result).toEqual({ ok: true, redeemUrl: null })
+    })
+
+    it('returns ok false when response is not ok', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false } as Response)
+
+      const result = await resendInvitation('req-1')
+
+      expect(result).toEqual({ ok: false, redeemUrl: null })
     })
   })
 })

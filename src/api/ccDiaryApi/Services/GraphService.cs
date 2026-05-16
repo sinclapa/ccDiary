@@ -42,22 +42,26 @@ namespace ccDiaryApi.Services
 
             var token = await AcquireTokenAsync(tenantId, clientId, clientSecret);
 
-            var appName = _configuration["Graph:AppDisplayName"] ?? "Cooking Code Diary";
+            // Suppress Graph's built-in email when SMTP is configured so only the
+            // branded custom email is sent, not a duplicate from invitations@microsoft.com.
+            var smtpConfigured = !string.IsNullOrEmpty(_configuration["Smtp:Host"]);
             var invitation = new
             {
                 invitedUserEmailAddress = email,
                 invitedUserDisplayName = displayName,
                 inviteRedirectUrl = redirectUrl,
-                sendInvitationMessage = true,
-                invitedUserMessageInfo = new
-                {
-                    messageLanguage = "en-US",
-                    customizedMessageBody =
-                        $"Hi {displayName},\n\n" +
-                        $"You have been invited to join {appName}.\n\n" +
-                        "Click the link below to accept your invitation and get started.\n\n" +
-                        "If you did not request access, you can ignore this email.",
-                },
+                sendInvitationMessage = !smtpConfigured,
+                invitedUserMessageInfo = smtpConfigured
+                    ? null
+                    : (object)new
+                    {
+                        messageLanguage = "en-US",
+                        customizedMessageBody =
+                            $"Hi {displayName},\n\n" +
+                            $"You have been invited to join {_configuration["Graph:AppDisplayName"] ?? "Cooking Code Diary"}.\n\n" +
+                            "Click the link below to accept your invitation and get started.\n\n" +
+                            "If you did not request access, you can ignore this email.",
+                    },
             };
 
             var json = JsonSerializer.Serialize(invitation);
