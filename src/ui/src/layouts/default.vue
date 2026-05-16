@@ -22,7 +22,7 @@
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-height: 100vh;
+  min-height: 100dvh;
   padding-top: 64px;
   background: rgb(var(--v-theme-background));
   color: rgb(var(--v-theme-on-background));
