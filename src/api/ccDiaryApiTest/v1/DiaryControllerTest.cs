@@ -326,6 +326,93 @@ namespace ccDiaryApiTest.v1
             Assert.IsInstanceOfType(response, typeof(OkResult));
         }
 
+        [TestMethod]
+        public void GetSearch_ByTitle_ReturnsFilteredResults()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+            var controller = CreateController(diaryService);
+
+            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "World War One" });
+            controller.Create(new DiaryDTO { Author = "AuthorB", Title = "World War Two" });
+            controller.Create(new DiaryDTO { Author = "AuthorC", Title = "Cold War Stories" });
+
+            // Act
+            var response = controller.Get(search: "World War");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(2, result.TotalCount);
+            Assert.AreEqual(2, result.Items.Count());
+        }
+
+        [TestMethod]
+        public void GetSearch_ByDescription_ReturnsFilteredResults()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+            var controller = CreateController(diaryService);
+
+            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "Diary One", Description = "Trench warfare in France" });
+            controller.Create(new DiaryDTO { Author = "AuthorB", Title = "Diary Two", Description = "Naval battles in the Pacific" });
+
+            // Act
+            var response = controller.Get(search: "France");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual("Diary One", result.Items.First().Title);
+        }
+
+        [TestMethod]
+        public void GetSearch_NoMatch_ReturnsEmpty()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+            var controller = CreateController(diaryService);
+
+            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "War Diary", Description = "Some description" });
+
+            // Act
+            var response = controller.Get(search: "zzznomatch");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.TotalCount);
+            Assert.AreEqual(0, result.Items.Count());
+        }
+
+        [TestMethod]
+        public void GetSearch_EmptySearch_ReturnsAll()
+        {
+            // Arrange
+            var db = GetMemoryContext();
+            var diaryService = new DiaryService(db);
+            var controller = CreateController(diaryService);
+
+            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "Diary One" });
+            controller.Create(new DiaryDTO { Author = "AuthorB", Title = "Diary Two" });
+
+            // Act
+            var response = controller.Get(search: "");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(2, result.TotalCount);
+        }
+
         private static DiaryController CreateController(IDiaryService service, string? oid = null, bool isAdmin = false)
         {
             var claims = new List<Claim>();

@@ -436,6 +436,121 @@ namespace ccDiaryApiTest.v1
             Assert.IsInstanceOfType(response, typeof(OkResult));
         }
 
+        [TestMethod]
+        public void TextSearch_ReturnsMatchingEntries()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var matchingEntry = new DiaryEntryDTO
+            {
+                DiaryEntryId = Guid.NewGuid(),
+                DiaryId = diaryId,
+                Date = new DateTime(2020, 6, 1, 9, 0, 0, DateTimeKind.Utc),
+                Location = "Ypres",
+                Entry = "Arrived at the Menin Gate.",
+            };
+            var paged = new PagedResultDTO<DiaryEntryDTO>
+            {
+                Items = [matchingEntry],
+                TotalCount = 1,
+                Page = 1,
+                PageSize = 20,
+            };
+
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock
+                .Setup(x => x.TextSearchDiaryEntries(diaryId, "Menin", 1, 20))
+                .Returns(paged);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+
+            // Act
+            var response = controller.TextSearch(diaryId, "Menin");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual("Ypres", result.Items.First().Location);
+        }
+
+        [TestMethod]
+        public void TextSearch_MatchesLocation()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var paged = new PagedResultDTO<DiaryEntryDTO>
+            {
+                Items = [new DiaryEntryDTO { DiaryId = diaryId, Location = "Passchendaele", Entry = "Quiet day.", Date = DateTime.UtcNow }],
+                TotalCount = 1,
+                Page = 1,
+                PageSize = 20,
+            };
+
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock
+                .Setup(x => x.TextSearchDiaryEntries(diaryId, "Passchendaele", 1, 20))
+                .Returns(paged);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+
+            // Act
+            var response = controller.TextSearch(diaryId, "Passchendaele");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.TotalCount);
+        }
+
+        [TestMethod]
+        public void TextSearch_EmptySearch_ReturnsBadRequest()
+        {
+            // Arrange
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+
+            // Act
+            var response = controller.TextSearch(Guid.NewGuid(), "   ");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(BadRequestObjectResult));
+        }
+
+        [TestMethod]
+        public void TextSearch_NoMatch_ReturnsEmptyPage()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var emptyPaged = new PagedResultDTO<DiaryEntryDTO>
+            {
+                Items = [],
+                TotalCount = 0,
+                Page = 1,
+                PageSize = 20,
+            };
+
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            diaryEntryServiceMock
+                .Setup(x => x.TextSearchDiaryEntries(diaryId, "zzznomatch", 1, 20))
+                .Returns(emptyPaged);
+            var diaryServiceMock = new Mock<IDiaryService>();
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+
+            // Act
+            var response = controller.TextSearch(diaryId, "zzznomatch");
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
+            var result = response.GetObjectResult();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.TotalCount);
+            Assert.AreEqual(0, result.Items.Count());
+        }
+
         private static DiaryEntryController CreateController(IDiaryEntryService entryService, IDiaryService diaryService, string? oid = null, bool isAdmin = false)
         {
             var claims = new List<Claim>();

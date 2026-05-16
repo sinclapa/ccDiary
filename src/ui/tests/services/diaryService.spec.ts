@@ -47,6 +47,41 @@ describe('Diary Service', () => {
     expect(fetchSpy).toHaveBeenCalledWith(expectedUrl)
   })
 
+  it('getDiaries with search passes search query param', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({ items: [], totalCount: 0, page: 1, pageSize: 12 }),
+    } as Response)
+
+    // Act
+    await diaryAPI.getDiaries(1, 12, 'war diary')
+
+    // Assert
+    const expectedUrl = new URL('v1/Diary/Get', baseUrl)
+    expectedUrl.searchParams.set('page', '1')
+    expectedUrl.searchParams.set('pageSize', '12')
+    expectedUrl.searchParams.set('search', 'war diary')
+    expect(fetchSpy).toHaveBeenCalledWith(expectedUrl)
+  })
+
+  it('getDiaries without search omits search query param', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({ items: [], totalCount: 0, page: 1, pageSize: 12 }),
+    } as Response)
+
+    // Act
+    await diaryAPI.getDiaries(1, 12, undefined)
+
+    // Assert
+    const calledUrl = (fetchSpy.mock.calls[0][0] as URL)
+    expect(calledUrl.searchParams.has('search')).toBe(false)
+  })
+
   it('Get Diary', async () => {
     // Arrange
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({

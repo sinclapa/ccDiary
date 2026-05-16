@@ -179,6 +179,85 @@ describe('pages/diaries/index.vue', () => {
     expect(wrapper.html()).toContain('Diary 1')
   })
 
+  it('search button renders in header row', () => {
+    const searchBtn = wrapper.findAll('button').find((btn: any) =>
+      btn.attributes('aria-label') === 'Search diaries'
+    )
+    expect(searchBtn).toBeTruthy()
+  })
+
+  it('clicking search button expands the search text field', async () => {
+    // Search field hidden before toggle
+    const inputsBefore = wrapper.findAll('input').filter((i: any) =>
+      i.attributes('placeholder')?.toLowerCase().includes('search')
+    )
+    expect(inputsBefore.length).toBe(0)
+
+    const searchBtn = wrapper.findAll('button').find((btn: any) =>
+      btn.attributes('aria-label') === 'Search diaries'
+    )
+    await searchBtn?.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const inputsAfter = wrapper.findAll('input').filter((i: any) =>
+      i.attributes('placeholder')?.toLowerCase().includes('search')
+    )
+    expect(inputsAfter.length).toBeGreaterThan(0)
+  })
+
+  it('clicking search button again collapses the search field and clears search', async () => {
+    // Open
+    await wrapper.vm.toggleSearch()
+    wrapper.vm.searchTerm = 'Wartime'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.searchExpanded).toBe(true)
+
+    // Close
+    await wrapper.vm.toggleSearch()
+    expect(wrapper.vm.searchExpanded).toBe(false)
+    expect(wrapper.vm.searchTerm).toBe('')
+  })
+
+  it('typing in search calls getDiaries with search param', async () => {
+    vi.useFakeTimers()
+    ;(diaryAPI.getDiaries as any).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 12 })
+
+    wrapper.vm.searchTerm = 'Wartime'
+    await wrapper.vm.$nextTick() // let Vue flush the watcher
+    vi.advanceTimersByTime(350) // fire the debounce setTimeout
+
+    const calls = (diaryAPI.getDiaries as any).mock.calls
+    const searchCall = calls.find((c: any[]) => c[2] === 'Wartime')
+    expect(searchCall).toBeTruthy()
+    vi.useRealTimers()
+  })
+
+  it('clearing search resets page and calls getDiaries without search param', async () => {
+    vi.useFakeTimers()
+    ;(diaryAPI.getDiaries as any).mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 12 })
+
+    // Set a search term and fire the debounce
+    wrapper.vm.searchTerm = 'Wartime'
+    wrapper.vm.currentPage = 3
+    await wrapper.vm.$nextTick()
+    vi.advanceTimersByTime(350)
+
+    // Clear the search and fire the debounce again
+    wrapper.vm.searchTerm = ''
+    await wrapper.vm.$nextTick()
+    vi.advanceTimersByTime(350)
+    await wrapper.vm.$nextTick()
+
+    // Page should be reset to 1
+    expect(wrapper.vm.currentPage).toBe(1)
+
+    // The last getDiaries call should have no search param (undefined)
+    const calls = (diaryAPI.getDiaries as any).mock.calls
+    const lastCall = calls[calls.length - 1]
+    expect(lastCall[2]).toBeUndefined()
+    vi.useRealTimers()
+  })
+
   it('reloads diaries when apiStatus.recoveryCount increases', async () => {
     const store = useApiStatusStore()
     const getDiariesSpy = diaryAPI.getDiaries as ReturnType<typeof vi.fn>
@@ -188,5 +267,71 @@ describe('pages/diaries/index.vue', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(getDiariesSpy.mock.calls.length).toBeGreaterThan(callsBefore)
+  })
+
+  it('canEdit returns true for contributor who owns the diary', async () => {
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Contributor', email: 'c@b.com', role: 'diary-contributor', entraObjectId: 'oid-1' }
+    const ownedDiary = { diaryId: '1', title: 'Diary 1', author: 'Contributor', description: 'Desc', ownerId: 'oid-1' }
+    expect(wrapper.vm.canEdit(ownedDiary)).toBe(true)
+    const otherDiary = { diaryId: '2', title: 'Diary 2', author: 'Other', description: 'Desc', ownerId: 'other-oid' }
+    expect(wrapper.vm.canEdit(otherDiary)).toBe(false)
+  })
+
+  it('collapseSearch collapses the search field and clears the search term', async () => {
+    wrapper.vm.searchExpanded = true
+    wrapper.vm.searchTerm = 'test query'
+    wrapper.vm.collapseSearch()
+    expect(wrapper.vm.searchTerm).toBe('')
+    expect(wrapper.vm.searchExpanded).toBe(false)
+  })
+
+  it('clicking edit button on a diary card opens the edit dialog with that diary', async () => {
+    const mockDiaries = [
+      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1', ownerId: 'oid-1' },
+    ];
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 1, page: 1, pageSize: 12 })
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
+    await wrapper.vm.data()
+    await wrapper.vm.$nextTick()
+
+    const editBtn = wrapper.find('[id="1_edit"]')
+    expect(editBtn.exists()).toBe(true)
+    await editBtn.trigger('click')
+
+    expect(wrapper.vm.dialog).toBe(true)
+    expect(wrapper.vm.editedItem.diaryId).toBe('1')
+  })
+
+  it('clicking delete button on a diary card opens the delete dialog with that diary', async () => {
+    const mockDiaries = [
+      { diaryId: '1', title: 'Diary 1', author: 'Author 1', description: 'Description 1', ownerId: 'oid-1' },
+    ];
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 1, page: 1, pageSize: 12 })
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
+    await wrapper.vm.data()
+    await wrapper.vm.$nextTick()
+
+    const deleteBtn = wrapper.find('[id="1_delete"]')
+    expect(deleteBtn.exists()).toBe(true)
+    await deleteBtn.trigger('click')
+
+    expect(wrapper.vm.dialogDelete).toBe(true)
+    expect(wrapper.vm.editedItem.diaryId).toBe('1')
+  })
+
+  it('renders pagination with total-visible set responsively', async () => {
+    const mockDiaries = Array.from({ length: 12 }, (_, i) => ({
+      diaryId: `${i}`, title: `Diary ${i}`, author: 'Author', description: 'Desc',
+    }));
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 25, page: 1, pageSize: 12 })
+    await wrapper.vm.data()
+    await wrapper.vm.$nextTick()
+    const pagination = wrapper.findComponent({ name: 'VPagination' })
+    expect(pagination.exists()).toBe(true)
+    // happy-dom reports innerWidth=0, so Vuetify treats this as mobile (totalVisible=3)
+    expect(pagination.props('totalVisible')).toBe(3)
   })
 })

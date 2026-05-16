@@ -48,10 +48,11 @@ export default class DiaryAPIService {
     return output
   }
 
-  async getDiaries (page: number = 1, pageSize: number = 12) : Promise<PagedResult<Diary>> {
+  async getDiaries (page: number = 1, pageSize: number = 12, search?: string) : Promise<PagedResult<Diary>> {
     const api = new URL('v1/Diary/Get', getAppConfigField('VITE_API'))
     api.searchParams.set('page', String(page))
     api.searchParams.set('pageSize', String(pageSize))
+    if (search) api.searchParams.set('search', search)
     let output : PagedResult<Diary> = { items: [], totalCount: 0, page, pageSize }
     await fetch(api)
       .then(response => response.json())

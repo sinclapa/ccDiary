@@ -402,6 +402,44 @@ describe('DiaryEntry Service', () => {
     expect(results[0].imageContentType).toBe('image/jpeg')
   })
 
+  it('textSearchDiaryEntries builds correct URL with search, page and pageSize params', async () => {
+    // Arrange
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({ items: [], totalCount: 0, page: 2, pageSize: 10 }),
+    } as Response)
+
+    // Act
+    const diaryId = crypto.randomUUID()
+    await diaryEntryAPI.textSearchDiaryEntries(diaryId, 'Sandwich', 2, 10)
+
+    // Assert
+    const expectedUrl = new URL(`v1/DiaryEntry/TextSearch/${diaryId}`, baseUrl)
+    expectedUrl.searchParams.set('search', 'Sandwich')
+    expectedUrl.searchParams.set('page', '2')
+    expectedUrl.searchParams.set('pageSize', '10')
+    expect(fetchSpy).toHaveBeenCalledWith(expectedUrl)
+  })
+
+  it('textSearchDiaryEntries returns parsed items from API response', async () => {
+    // Arrange
+    const diaryId = crypto.randomUUID()
+    const expectedItems = [{ diaryId, entry: 'walked to Sandwich', location: 'Sandwich, UK' }]
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      statusText: 'OK',
+      json: async () => ({ items: expectedItems, totalCount: 1, page: 1, pageSize: 20 }),
+    } as Response)
+
+    // Act
+    const result = await diaryEntryAPI.textSearchDiaryEntries(diaryId, 'Sandwich')
+
+    // Assert
+    expect(result.totalCount).toBe(1)
+    expect(result.items).toEqual(expectedItems)
+  })
+
   it('searchDiaryEntryForDay defaults fromLocation and toLocation to empty string when null', async () => {
     // Arrange
     const diaryId = crypto.randomUUID()

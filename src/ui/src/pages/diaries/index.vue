@@ -7,9 +7,33 @@
       indeterminate
     />
 
-    <div class="d-flex align-center mb-4">
+    <div class="d-flex align-center gap-2 mb-4">
       <h1 class="text-h5">Diaries</h1>
       <v-spacer />
+      <div class="d-flex align-center mr-3">
+        <v-expand-x-transition>
+          <v-text-field
+            v-if="searchExpanded && !display.mobile.value"
+            v-model="searchTerm"
+            autofocus
+            class="search-inline mr-2"
+            clearable
+            density="compact"
+            hide-details
+            placeholder="Search diaries…"
+            variant="outlined"
+            @click:clear="collapseSearch"
+          />
+        </v-expand-x-transition>
+        <v-btn
+          aria-label="Search diaries"
+          :color="searchExpanded ? 'primary' : undefined"
+          icon="$mdi-magnify"
+          size="small"
+          :variant="searchExpanded ? 'tonal' : 'text'"
+          @click="toggleSearch"
+        />
+      </div>
       <v-dialog
         v-model="dialog"
         max-width="560px"
@@ -58,6 +82,21 @@
       </v-dialog>
     </div>
 
+    <v-expand-transition>
+      <v-text-field
+        v-if="searchExpanded && display.mobile.value"
+        v-model="searchTerm"
+        autofocus
+        class="mb-4"
+        clearable
+        density="compact"
+        hide-details
+        placeholder="Search diaries…"
+        variant="outlined"
+        @click:clear="collapseSearch"
+      />
+    </v-expand-transition>
+
     <v-row>
       <v-col
         v-for="item in diaries"
@@ -105,17 +144,21 @@
         v-model="currentPage"
         :length="totalPages"
         rounded="circle"
+        :total-visible="display.mobile.value ? 3 : 7"
       />
     </div>
   </v-container>
 </template>
 
 <script setup lang="ts">
+  import { useDisplay } from 'vuetify'
   import { diaryAPI } from '@/services/modules/diaryService'
   import Diary from '@/services/models/diary'
   import { state } from '@/services/authentication/msalConfig'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import { useAuthStore } from '@/stores/auth'
+
+  const display = useDisplay()
 
   const PAGE_SIZE = 12
 
@@ -127,7 +170,19 @@
   const diaries = ref([] as Diary[])
   const currentPage = ref(1)
   const totalCount = ref(0)
+  const searchTerm = ref('')
+  const searchExpanded = ref(false)
   const totalPages = computed(() => Math.ceil(totalCount.value / PAGE_SIZE))
+
+  function toggleSearch () {
+    searchExpanded.value = !searchExpanded.value
+    if (!searchExpanded.value) searchTerm.value = ''
+  }
+
+  function collapseSearch () {
+    searchTerm.value = ''
+    searchExpanded.value = false
+  }
   const defaultItem = ref(new Diary('', '', '', undefined) as Diary)
   const editedItem = ref<Diary>(new Diary('', '', '', undefined) as Diary)
 
@@ -188,7 +243,7 @@
   async function data () {
     loading.value = true
     try {
-      const result = await diaryAPI.getDiaries(currentPage.value, PAGE_SIZE)
+      const result = await diaryAPI.getDiaries(currentPage.value, PAGE_SIZE, searchTerm.value || undefined)
       diaries.value = result.items
       totalCount.value = result.totalCount
     } catch {
@@ -197,6 +252,15 @@
       loading.value = false
     }
   }
+
+  let searchDebounce: ReturnType<typeof setTimeout> | null = null
+  watch(searchTerm, () => {
+    if (searchDebounce) clearTimeout(searchDebounce)
+    searchDebounce = setTimeout(() => {
+      currentPage.value = 1
+      data()
+    }, 300)
+  })
 
   watch(currentPage, () => data())
 
@@ -250,5 +314,9 @@
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 12px;
   background: rgb(var(--v-theme-surface));
+}
+
+.search-inline {
+  width: 480px;
 }
 </style>

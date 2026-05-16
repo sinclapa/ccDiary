@@ -105,6 +105,29 @@ namespace ccDiaryApi.Services
             return diaryEntry;
         }
 
+        public PagedResultDTO<DiaryEntryDTO> TextSearchDiaryEntries(Guid diaryId, string search, int page = 1, int pageSize = 20)
+        {
+            var query = _context.DiaryEntries
+                .Where(x => x.DiaryId == diaryId)
+                .Where(x => x.Entry.Contains(search) ||
+                            x.Location.Contains(search) ||
+                            (x.FromLocation != null && x.FromLocation.Contains(search)) ||
+                            (x.ToLocation != null && x.ToLocation.Contains(search)));
+
+            var totalCount = query.Count();
+            var items = query
+                .OrderBy(x => x.Date)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return new PagedResultDTO<DiaryEntryDTO>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+            };
+        }
+
         public DateTime MinDiaryEntryDate(Guid diaryId)
         {
             if (!_context.DiaryEntries.Any(x => x.DiaryId == diaryId))

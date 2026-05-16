@@ -30,9 +30,12 @@ namespace ccDiaryApi.Controllers.v1
 
         [HttpGet]
         [AllowAnonymous]
-        public ActionResult<PagedResultDTO<DiaryDTO>> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
+        public ActionResult<PagedResultDTO<DiaryDTO>> Get(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12,
+            [FromQuery] string? search = null)
         {
-            var diaries = _diaryService.GetDiaries(page, pageSize);
+            var diaries = _diaryService.GetDiaries(page, pageSize, search);
             return Ok(diaries);
         }
 
