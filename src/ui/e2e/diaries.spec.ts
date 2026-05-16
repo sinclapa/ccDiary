@@ -27,6 +27,25 @@ test.describe('Diaries list', () => {
     await gotoDiaries(page)
   })
 
+  test('search toggle button is visible', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Search diaries' })).toBeVisible()
+  })
+
+  test('clicking search button expands search field', async ({ page }) => {
+    const searchBtn = page.getByRole('button', { name: 'Search diaries' })
+    await expect(page.locator('input[placeholder*="Search diaries"]')).toHaveCount(0)
+    await searchBtn.click()
+    await expect(page.locator('input[placeholder*="Search diaries"]').first()).toBeVisible({ timeout: 3000 })
+  })
+
+  test('typing in search field filters diary cards', async ({ page }) => {
+    await page.getByRole('button', { name: 'Search diaries' }).click()
+    const searchInput = page.locator('input[placeholder*="Search diaries"]').first()
+    await expect(searchInput).toBeVisible({ timeout: 3000 })
+    await searchInput.fill(SEEDED_DIARY_TITLE)
+    await expect(page.getByText(SEEDED_DIARY_TITLE, { exact: false }).first()).toBeVisible({ timeout: 5000 })
+  })
+
   test('loads diary cards', async ({ page }) => {
     const diaryCards = page.locator('.v-row .v-card[href*="diaries/"]')
     await expect(diaryCards.first()).toBeVisible({ timeout: 10000 })
@@ -161,6 +180,19 @@ test.describe('Diary detail page', () => {
       await fwdBtn.click()
       await expect.poll(async () => (await page.locator('.v-timeline-item').first().textContent()) ?? '').not.toBe(firstEntry ?? '')
     }
+  })
+
+  test('search entries toggle button is visible on diary detail', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    await expect(page.getByRole('button', { name: 'Search entries' })).toBeVisible({ timeout: 5000 })
+  })
+
+  test('clicking search entries button expands search field on diary detail', async ({ page }) => {
+    await gotoDiaryDetail(page, ww1DiaryId)
+    const searchBtn = page.getByRole('button', { name: 'Search entries' })
+    await expect(page.locator('input[placeholder*="Search entries"]')).toHaveCount(0)
+    await searchBtn.click()
+    await expect(page.locator('input[placeholder*="Search entries"]').first()).toBeVisible({ timeout: 3000 })
   })
 
   test('navigating to diary from list page works', async ({ page }) => {

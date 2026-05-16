@@ -8,25 +8,51 @@
         indeterminate
       />
     </v-row>
-    <v-row>
-      <div>
+    <v-row class="align-center mb-2">
+      <v-col class="py-0">
         <span class="title">{{ diary?.title }}&nbsp;</span>
         <span class="author">&nbsp;by {{ diary?.author }}</span>
-      </div>
-    </v-row>
-    <v-row>
-      <v-col cols="12" class="pb-0">
-        <v-text-field
-          v-model="entrySearch"
-          clearable
-          density="compact"
-          hide-details
-          placeholder="Search entries…"
-          prepend-inner-icon="$mdi-magnify"
-          variant="outlined"
+      </v-col>
+      <v-col class="py-0 flex-grow-0 d-flex align-center" style="gap: 0">
+        <v-expand-x-transition>
+          <v-text-field
+            v-if="searchExpanded && !display.mobile.value"
+            v-model="entrySearch"
+            autofocus
+            class="search-inline mr-2"
+            clearable
+            density="compact"
+            hide-details
+            placeholder="Search entries…"
+            variant="outlined"
+            @click:clear="collapseEntrySearch"
+          />
+        </v-expand-x-transition>
+        <v-btn
+          aria-label="Search entries"
+          :color="searchExpanded ? 'primary' : undefined"
+          icon="$mdi-magnify"
+          size="small"
+          :variant="searchExpanded ? 'tonal' : 'text'"
+          @click="toggleEntrySearch"
         />
       </v-col>
     </v-row>
+
+    <v-expand-transition>
+      <v-text-field
+        v-if="searchExpanded && display.mobile.value"
+        v-model="entrySearch"
+        autofocus
+        class="mb-4"
+        clearable
+        density="compact"
+        hide-details
+        placeholder="Search entries…"
+        variant="outlined"
+        @click:clear="collapseEntrySearch"
+      />
+    </v-expand-transition>
 
     <v-row v-if="entrySearch">
       <v-col cols="12">
@@ -39,7 +65,7 @@
         <div v-if="!searchLoading && searchResults && searchResults.totalCount === 0" class="text-body-2 text-disabled pa-4">
           No entries found for "{{ entrySearch }}"
         </div>
-        <v-list v-else-if="searchResults && searchResults.items.length > 0" lines="two">
+        <v-list v-else-if="searchResults && searchResults.items.length > 0" bg-color="transparent" lines="two">
           <v-list-item
             v-for="entry in searchResults.items"
             :key="entry.diaryEntryId"
@@ -56,12 +82,12 @@
             <v-list-item-subtitle class="search-result-preview">{{ entry.entry }}</v-list-item-subtitle>
           </v-list-item>
         </v-list>
-        <div v-if="searchResults && searchResults.totalCount > 20" class="d-flex justify-center pt-2">
+        <div v-if="searchResults && searchResults.totalCount > searchPageSize" class="d-flex justify-center pb-4">
           <v-pagination
             v-model="searchPage"
-            :length="Math.ceil(searchResults.totalCount / 20)"
+            :length="Math.ceil(searchResults.totalCount / searchPageSize)"
             rounded="circle"
-            size="small"
+            :total-visible="display.mobile.value ? 3 : 7"
           />
         </div>
       </v-col>
@@ -286,7 +312,7 @@
       </v-col>
     </v-row><!-- end v-else calendar/timeline row -->
 
-    <v-row class="mt-6">
+    <v-row v-if="!entrySearch" class="mt-6">
       <v-col class="d-flex align-center justify-space-between" cols="12">
         <v-btn
           aria-label="Previous day"
@@ -327,6 +353,7 @@
 
 </template>
 <script setup lang="ts">
+  import { useDisplay } from 'vuetify'
   import { diaryAPI } from '@/services/modules/diaryService'
   import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
   import Diary from '@/services/models/diary'
@@ -373,10 +400,27 @@
   const visibleYear = ref<number>()
   const markedDays = ref<number[]>([])
   const latestMarkedDaysRequest = ref(0)
+  const display = useDisplay()
   const entrySearch = ref('')
+  const searchExpanded = ref(false)
   const searchResults = ref<PagedResult<DiaryEntry> | null>(null)
   const searchPage = ref(1)
   const searchLoading = ref(false)
+  const searchPageSize = computed(() => display.mobile.value ? 8 : 10)
+
+  function toggleEntrySearch () {
+    searchExpanded.value = !searchExpanded.value
+    if (!searchExpanded.value) {
+      entrySearch.value = ''
+      searchResults.value = null
+    }
+  }
+
+  function collapseEntrySearch () {
+    entrySearch.value = ''
+    searchResults.value = null
+    searchExpanded.value = false
+  }
 
   // Computed height
   const datePickerHeight = computed(() =>
@@ -725,7 +769,7 @@
     }
     searchLoading.value = true
     try {
-      searchResults.value = await diaryEntryAPI.textSearchDiaryEntries(diaryId, entrySearch.value, searchPage.value)
+      searchResults.value = await diaryEntryAPI.textSearchDiaryEntries(diaryId, entrySearch.value, searchPage.value, searchPageSize.value)
     } catch {
       // API unavailable — ApiStatusBanner surfaces this to the user
     } finally {
@@ -736,6 +780,7 @@
   async function goToSearchResult (entry: DiaryEntry) {
     entrySearch.value = ''
     searchResults.value = null
+    searchExpanded.value = false
     const date = new Date(entry.date)
     selectedDate.value = date
     calendarMonth.value = dayjs(date).month()
@@ -754,6 +799,10 @@
   })
 
   watch(searchPage, () => runEntrySearch())
+  watch(searchPageSize, () => {
+    searchPage.value = 1
+    runEntrySearch()
+  })
 
   watch([calendarYear, calendarMonth], async ([year, month]) => {
     if (year === undefined || month === undefined) {
@@ -1030,8 +1079,9 @@
   }
 
   .search-result-date {
-    width: 90px;
-    min-width: 90px;
+    width: 110px;
+    min-width: 110px;
+    padding-right: 16px;
     line-height: 1.4;
     white-space: nowrap;
   }
@@ -1040,5 +1090,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .search-inline {
+    width: 480px;
   }
 </style>

@@ -71,7 +71,7 @@
 
   const toggleTheme = () => {
     const next = isDark.value ? 'light' : 'dark'
-    theme.global.name.value = next
+    theme.change(next)
     saveTheme(next)
   }
 

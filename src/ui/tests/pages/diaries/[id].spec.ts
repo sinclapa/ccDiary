@@ -19,7 +19,10 @@ import dayjs from 'dayjs'
 // Shared mocks accessible to tests (vi.hoisted ensures they're available before vi.mock runs)
 const mockRouterPush = vi.hoisted(() => vi.fn())
 const mockRouterReplace = vi.hoisted(() => vi.fn())
-const mockQuery = vi.hoisted(() => ({ date: undefined as string | undefined }))
+const mockQuery = vi.hoisted(() => {
+  const { reactive } = require('vue')
+  return reactive({ date: undefined as string | undefined })
+})
 
 // Mock BEFORE importing the component!
 vi.mock('vue-router', () => ({
@@ -61,6 +64,12 @@ describe('[id].vue', () => {
 
   beforeEach(() => {
     setActivePinia(createPinia())
+    // Stub VisualViewport API — happy-dom doesn't implement it but Vuetify VOverlay needs it
+    Object.defineProperty(globalThis, 'visualViewport', {
+      value: { width: 1024, height: 768, addEventListener: vi.fn(), removeEventListener: vi.fn() },
+      configurable: true,
+      writable: true,
+    })
     // Mock localStorage
     const localStorageMock = {
       getItem: vi.fn(),
@@ -748,13 +757,12 @@ describe('[id].vue', () => {
     newWrapper.unmount()
   })
 
-  it('search input renders on diary detail page', async () => {
+  it('search toggle button renders on diary detail page', async () => {
     await flushPromises()
-    const inputs = wrapper.findAll('input')
-    const searchInput = inputs.find(i =>
-      i.attributes('placeholder')?.toLowerCase().includes('search')
+    const searchBtn = wrapper.findAll('button').find(btn =>
+      btn.attributes('aria-label') === 'Search entries'
     )
-    expect(searchInput).toBeTruthy()
+    expect(searchBtn).toBeTruthy()
   })
 
   it('entering search term hides calendar and shows results area', async () => {
@@ -808,5 +816,238 @@ describe('[id].vue', () => {
       targetDate.getMonth() + 1,
       targetDate.getDate()
     )
+  })
+
+  it('toggleEntrySearch expands search when collapsed', () => {
+    (wrapper.vm as any).searchExpanded = false
+    ;(wrapper.vm as any).toggleEntrySearch()
+    expect((wrapper.vm as any).searchExpanded).toBe(true)
+  })
+
+  it('toggleEntrySearch collapses and clears when expanded', () => {
+    (wrapper.vm as any).searchExpanded = true
+    ;(wrapper.vm as any).entrySearch = 'test query'
+    ;(wrapper.vm as any).searchResults = { items: [], totalCount: 0, page: 1, pageSize: 20 }
+    ;(wrapper.vm as any).toggleEntrySearch()
+    expect((wrapper.vm as any).searchExpanded).toBe(false)
+    expect((wrapper.vm as any).entrySearch).toBe('')
+    expect((wrapper.vm as any).searchResults).toBeNull()
+  })
+
+  it('collapseEntrySearch clears search term, results, and collapses', () => {
+    (wrapper.vm as any).searchExpanded = true
+    ;(wrapper.vm as any).entrySearch = 'test query'
+    ;(wrapper.vm as any).searchResults = { items: [], totalCount: 0, page: 1, pageSize: 20 }
+    ;(wrapper.vm as any).collapseEntrySearch()
+    expect((wrapper.vm as any).entrySearch).toBe('')
+    expect((wrapper.vm as any).searchResults).toBeNull()
+    expect((wrapper.vm as any).searchExpanded).toBe(false)
+  })
+
+  it('onMoveStart calls moveStart (Faro wrapper)', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    await (wrapper.vm as any).onMoveStart()
+    expect(dayjs((wrapper.vm as any).selectedDate).isSame(dayjs(new Date(2020, 0, 1)), 'day')).toBe(true)
+  })
+
+  it('onMoveEnd calls moveEnd (Faro wrapper)', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).maxDate = new Date(2020, 11, 31)
+    await (wrapper.vm as any).onMoveEnd()
+    expect(dayjs((wrapper.vm as any).selectedDate).isSame(dayjs(new Date(2020, 11, 31)), 'day')).toBe(true)
+  })
+
+  it('onBackToDiaries navigates to /diaries', async () => {
+    await flushPromises()
+    mockRouterPush.mockClear()
+    await (wrapper.vm as any).onBackToDiaries()
+    expect(mockRouterPush).toHaveBeenCalledWith('/diaries')
+  })
+
+  it('clicking edit button in timeline calls onEditEntry and sets editedItem', async () => {
+    const authStore = useAuthStore()
+    authStore.appUser = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin', entraObjectId: 'oid-1' }
+    await flushPromises()
+    const editBtn = wrapper.findAll('button').find((btn: any) => btn.attributes('aria-label') === 'Edit entry')
+    expect(editBtn).toBeTruthy()
+    if (editBtn) await editBtn.trigger('click')
+    expect((wrapper.vm as any).editedItem.diaryEntryId).toBe('entry-id')
+  })
+
+  it('updateMonth returns early without changing calendarMonth when month is undefined', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).calendarMonth = 5
+    await (wrapper.vm as any).updateMonth(undefined)
+    expect((wrapper.vm as any).calendarMonth).toBe(5)
+  })
+
+  it('normalizeMonth returns month unchanged when >= 12', () => {
+    expect((wrapper.vm as any).normalizeMonth(12)).toBe(12)
+    expect((wrapper.vm as any).normalizeMonth(13)).toBe(13)
+  })
+
+  it('getDatePart returns getDate() for a Date instance', () => {
+    const testDate = new Date(2020, 5, 14)
+    expect((wrapper.vm as any).getDatePart(testDate)).toBe(14)
+  })
+
+  it('getDatePart returns null for non-Date/string/number input', () => {
+    expect((wrapper.vm as any).getDatePart(null)).toBeNull()
+    expect((wrapper.vm as any).getDatePart({})).toBeNull()
+    expect((wrapper.vm as any).getDatePart(undefined)).toBeNull()
+  })
+
+  it('route.query.date watcher updates selectedDate when URL date changes', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 1)
+    await flushPromises()
+
+    mockQuery.date = '2020-06-20'
+    await flushPromises()
+
+    expect(dayjs((wrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-06-20')
+    mockQuery.date = undefined
+  })
+
+  it('moveForward refreshes marked days when crossing month boundary', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 0, 31)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 1, 15)
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 1
+    ;(wrapper.vm as any).markedDays = []
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([5])
+
+    await (wrapper.vm as any).moveForward()
+
+    expect(diaryEntryAPI.searchDiaryEntry).toHaveBeenCalledWith(diaryId, 2020, 2)
+    expect((wrapper.vm as any).selectedDate.getMonth()).toBe(1)
+    expect((wrapper.vm as any).selectedDate.getDate()).toBe(5)
+  })
+
+  it('moveBackward refreshes marked days when crossing month boundary', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).selectedDate = new Date(2020, 1, 1)
+    ;(wrapper.vm as any).minDate = new Date(2020, 0, 1)
+    ;(wrapper.vm as any).maxDate = new Date(2020, 1, 28)
+    ;(wrapper.vm as any).visibleYear = 2020
+    ;(wrapper.vm as any).visibleMonth = 2
+    ;(wrapper.vm as any).markedDays = []
+    vi.mocked(diaryEntryAPI.searchDiaryEntry).mockResolvedValue([20])
+
+    await (wrapper.vm as any).moveBackward()
+
+    expect(diaryEntryAPI.searchDiaryEntry).toHaveBeenCalledWith(diaryId, 2020, 1)
+    expect((wrapper.vm as any).selectedDate.getMonth()).toBe(0)
+    expect((wrapper.vm as any).selectedDate.getDate()).toBe(20)
+  })
+
+  it('refreshMarkedDaysForVisibleMonth returns early when visibleYear is undefined', async () => {
+    await flushPromises()
+    const searchSpy = vi.mocked(diaryEntryAPI.searchDiaryEntry)
+    const callsBefore = searchSpy.mock.calls.length
+    ;(wrapper.vm as any).visibleYear = undefined
+    ;(wrapper.vm as any).visibleMonth = 5
+    await (wrapper.vm as any).refreshMarkedDaysForVisibleMonth()
+    expect(searchSpy.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('shows JourneyView when showJourney is true with fromLocation and toLocation', async () => {
+    const entryWithJourney = new DiaryEntry(diaryId, new Date(), 'Test Location', 'Test Entry', {
+      diaryEntryId: 'journey-id',
+      showJourney: true,
+      fromLocation: 'Sandwich, UK',
+      toLocation: 'Southampton, UK',
+    })
+    vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithJourney])
+    await flushPromises()
+    await (wrapper.vm as any).selectDate(new Date())
+    await flushPromises()
+    const journeyViews = wrapper.findAllComponents({ name: 'JourneyView' })
+    expect(journeyViews.length).toBe(1)
+    expect(journeyViews[0].props('fromLocation')).toBe('Sandwich, UK')
+    expect(journeyViews[0].props('toLocation')).toBe('Southampton, UK')
+  })
+
+  it('hides Previous/Next navigation buttons when entry search is active', async () => {
+    await flushPromises()
+    const prevBefore = wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Previous day')
+    expect(prevBefore).toBeTruthy()
+    const nextBefore = wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Next day')
+    expect(nextBefore).toBeTruthy()
+
+    ;(wrapper.vm as any).entrySearch = 'test'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Previous day')).toBeUndefined()
+    expect(wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Next day')).toBeUndefined()
+  })
+
+  it('shows Previous/Next navigation buttons when entry search is cleared', async () => {
+    await flushPromises()
+    ;(wrapper.vm as any).entrySearch = 'test'
+    await wrapper.vm.$nextTick()
+
+    ;(wrapper.vm as any).entrySearch = ''
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Previous day')).toBeTruthy()
+    expect(wrapper.findAll('button').find(btn => btn.attributes('aria-label') === 'Next day')).toBeTruthy()
+  })
+
+  it('searchPageSize is 8 in the mobile test environment', async () => {
+    await flushPromises()
+    expect((wrapper.vm as any).searchPageSize).toBe(8)
+  })
+
+  it('runEntrySearch calls textSearchDiaryEntries with searchPageSize', async () => {
+    await flushPromises()
+    const pageSize = (wrapper.vm as any).searchPageSize
+    vi.spyOn(diaryEntryAPI, 'textSearchDiaryEntries').mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize })
+    ;(wrapper.vm as any).entrySearch = 'test'
+    await (wrapper.vm as any).runEntrySearch()
+    await flushPromises()
+    expect(diaryEntryAPI.textSearchDiaryEntries).toHaveBeenCalledWith(diaryId, 'test', 1, pageSize)
+  })
+
+  it('shows search pagination when totalCount exceeds searchPageSize', async () => {
+    const pageSize = (wrapper.vm as any).searchPageSize
+    const items = Array.from({ length: pageSize }, (_, i) =>
+      new DiaryEntry(diaryId, new Date(), `Location ${i}`, `Entry ${i}`, { diaryEntryId: `id-${i}` })
+    )
+    vi.spyOn(diaryEntryAPI, 'textSearchDiaryEntries').mockResolvedValue({ items, totalCount: pageSize * 3, page: 1, pageSize })
+    ;(wrapper.vm as any).entrySearch = 'test'
+    await (wrapper.vm as any).runEntrySearch()
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'VPagination' }).exists()).toBe(true)
+  })
+
+  it('hides search pagination when totalCount does not exceed searchPageSize', async () => {
+    const pageSize = (wrapper.vm as any).searchPageSize
+    const items = Array.from({ length: 5 }, (_, i) =>
+      new DiaryEntry(diaryId, new Date(), `Location ${i}`, `Entry ${i}`, { diaryEntryId: `id-${i}` })
+    )
+    vi.spyOn(diaryEntryAPI, 'textSearchDiaryEntries').mockResolvedValue({ items, totalCount: 5, page: 1, pageSize })
+    ;(wrapper.vm as any).entrySearch = 'test'
+    await (wrapper.vm as any).runEntrySearch()
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'VPagination' }).exists()).toBe(false)
+  })
+
+  it('renders entry search pagination with total-visible matching the display breakpoint', async () => {
+    const items = Array.from({ length: 10 }, (_, i) =>
+      new DiaryEntry(diaryId, new Date(), `Location ${i}`, `Entry ${i}`, { diaryEntryId: `id-${i}` })
+    )
+    vi.spyOn(diaryEntryAPI, 'textSearchDiaryEntries').mockResolvedValue({ items, totalCount: 25, page: 1, pageSize: 8 })
+    ;(wrapper.vm as any).entrySearch = 'test'
+    await (wrapper.vm as any).runEntrySearch()
+    await flushPromises()
+    const pagination = wrapper.findComponent({ name: 'VPagination' })
+    expect(pagination.exists()).toBe(true)
+    // happy-dom has innerWidth=0 so mobile=true → totalVisible=3
+    const expectedVisible = (wrapper.vm as any).display.mobile.value ? 3 : 7
+    expect(pagination.props('totalVisible')).toBe(expectedVisible)
   })
 })

@@ -10,28 +10,30 @@
     <div class="d-flex align-center gap-2 mb-4">
       <h1 class="text-h5">Diaries</h1>
       <v-spacer />
-      <v-expand-x-transition>
-        <v-text-field
-          v-if="searchExpanded"
-          v-model="searchTerm"
-          autofocus
-          class="search-inline"
-          clearable
-          density="compact"
-          hide-details
-          placeholder="Search diaries…"
-          variant="outlined"
-          @click:clear="collapseSearch"
+      <div class="d-flex align-center mr-3">
+        <v-expand-x-transition>
+          <v-text-field
+            v-if="searchExpanded && !display.mobile.value"
+            v-model="searchTerm"
+            autofocus
+            class="search-inline mr-2"
+            clearable
+            density="compact"
+            hide-details
+            placeholder="Search diaries…"
+            variant="outlined"
+            @click:clear="collapseSearch"
+          />
+        </v-expand-x-transition>
+        <v-btn
+          aria-label="Search diaries"
+          :color="searchExpanded ? 'primary' : undefined"
+          icon="$mdi-magnify"
+          size="small"
+          :variant="searchExpanded ? 'tonal' : 'text'"
+          @click="toggleSearch"
         />
-      </v-expand-x-transition>
-      <v-btn
-        :color="searchExpanded ? 'primary' : undefined"
-        :variant="searchExpanded ? 'tonal' : 'text'"
-        aria-label="Search diaries"
-        icon="$mdi-magnify"
-        size="small"
-        @click="toggleSearch"
-      />
+      </div>
       <v-dialog
         v-model="dialog"
         max-width="560px"
@@ -80,6 +82,21 @@
       </v-dialog>
     </div>
 
+    <v-expand-transition>
+      <v-text-field
+        v-if="searchExpanded && display.mobile.value"
+        v-model="searchTerm"
+        autofocus
+        class="mb-4"
+        clearable
+        density="compact"
+        hide-details
+        placeholder="Search diaries…"
+        variant="outlined"
+        @click:clear="collapseSearch"
+      />
+    </v-expand-transition>
+
     <v-row>
       <v-col
         v-for="item in diaries"
@@ -127,17 +144,21 @@
         v-model="currentPage"
         :length="totalPages"
         rounded="circle"
+        :total-visible="display.mobile.value ? 3 : 7"
       />
     </div>
   </v-container>
 </template>
 
 <script setup lang="ts">
+  import { useDisplay } from 'vuetify'
   import { diaryAPI } from '@/services/modules/diaryService'
   import Diary from '@/services/models/diary'
   import { state } from '@/services/authentication/msalConfig'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import { useAuthStore } from '@/stores/auth'
+
+  const display = useDisplay()
 
   const PAGE_SIZE = 12
 
@@ -296,6 +317,6 @@
 }
 
 .search-inline {
-  max-width: 260px;
+  width: 480px;
 }
 </style>
