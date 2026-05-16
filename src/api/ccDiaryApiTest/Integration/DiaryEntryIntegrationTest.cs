@@ -689,5 +689,93 @@ namespace ccDiaryApiTest.Integration
             Assert.IsNull(created.FromLocation);
             Assert.IsNull(created.ToLocation);
         }
+
+        [TestMethod]
+        public async Task TextSearch_ReturnsMatchingEntries()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            await CreateDiaryEntry(new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 1, 9, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Ypres",
+                Entry = "Arrived at the Menin Gate.",
+            });
+            await CreateDiaryEntry(new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 2, 10, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Passchendaele",
+                Entry = "Walked the memorial.",
+            });
+
+            // Act — search entry text
+            var response = await _httpClient.GetAsync($"/api/v1/DiaryEntry/TextSearch/{diary.DiaryId}?search=Menin");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual("Ypres", result.Items.First().Location);
+        }
+
+        [TestMethod]
+        public async Task TextSearch_MatchesLocation()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            await CreateDiaryEntry(new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 1, 9, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Passchendaele",
+                Entry = "Quiet day.",
+            });
+            await CreateDiaryEntry(new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 2, 9, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Ypres",
+                Entry = "Evening patrol.",
+            });
+
+            // Act — search location
+            var response = await _httpClient.GetAsync($"/api/v1/DiaryEntry/TextSearch/{diary.DiaryId}?search=Passchendaele");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual("Passchendaele", result.Items.First().Location);
+        }
+
+        [TestMethod]
+        public async Task TextSearch_EmptySearch_ReturnsBadRequest()
+        {
+            var diary = await CreateDiary();
+            var response = await _httpClient.GetAsync($"/api/v1/DiaryEntry/TextSearch/{diary.DiaryId}?search=");
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task TextSearch_NoMatch_ReturnsEmptyPage()
+        {
+            // Arrange
+            var diary = await CreateDiary();
+            await CreateDiaryEntry(diary.DiaryId);
+
+            // Act
+            var response = await _httpClient.GetAsync($"/api/v1/DiaryEntry/TextSearch/{diary.DiaryId}?search=zzznomatch");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.TotalCount);
+            Assert.AreEqual(0, result.Items.Count());
+        }
     }
 }

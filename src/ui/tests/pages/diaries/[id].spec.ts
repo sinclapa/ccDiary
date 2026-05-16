@@ -84,6 +84,7 @@ describe('[id].vue', () => {
     vi.spyOn(diaryEntryAPI, 'createDiaryEntry').mockResolvedValue(null)
     vi.spyOn(diaryEntryAPI, 'updateDiaryEntry').mockResolvedValue(null)
     vi.spyOn(diaryEntryAPI, 'deleteDiaryEntry').mockResolvedValue(false)
+    vi.spyOn(diaryEntryAPI, 'textSearchDiaryEntries').mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 20 })
     wrapper = mount(Component, {
       propsData: {},
       global: {
@@ -745,5 +746,67 @@ describe('[id].vue', () => {
     await flushPromises()
     expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-12-31')
     newWrapper.unmount()
+  })
+
+  it('search input renders on diary detail page', async () => {
+    await flushPromises()
+    const inputs = wrapper.findAll('input')
+    const searchInput = inputs.find(i =>
+      i.attributes('placeholder')?.toLowerCase().includes('search')
+    )
+    expect(searchInput).toBeTruthy()
+  })
+
+  it('entering search term hides calendar and shows results area', async () => {
+    vi.spyOn(diaryEntryAPI, 'textSearchDiaryEntries').mockResolvedValue({
+      items: [new DiaryEntry(diaryId, new Date(2020, 5, 14), 'Sandwich, UK', 'Walked to Sandwich', { diaryEntryId: 'result-id' })],
+      totalCount: 1,
+      page: 1,
+      pageSize: 20,
+    })
+    await flushPromises()
+
+    // Calendar should be visible when no search
+    expect(wrapper.findComponent({ name: 'VDatePicker' }).exists()).toBe(true)
+
+    // Set search term — v-if("entrySearch") hides calendar immediately
+    ;(wrapper.vm as any).entrySearch = 'Sandwich'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent({ name: 'VDatePicker' }).exists()).toBe(false)
+  })
+
+  it('clearing search returns to calendar view', async () => {
+    await flushPromises()
+
+    ;(wrapper.vm as any).entrySearch = 'Sandwich'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent({ name: 'VDatePicker' }).exists()).toBe(false)
+
+    ;(wrapper.vm as any).entrySearch = ''
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent({ name: 'VDatePicker' }).exists()).toBe(true)
+  })
+
+  it('clicking a search result navigates to that date and clears search', async () => {
+    await flushPromises()
+    const targetDate = new Date(2020, 5, 14)
+    const resultEntry = new DiaryEntry(diaryId, targetDate, 'Sandwich, UK', 'Walked to Sandwich', { diaryEntryId: 'result-id' })
+
+    ;(wrapper.vm as any).entrySearch = 'Sandwich'
+    await wrapper.vm.$nextTick()
+
+    await (wrapper.vm as any).goToSearchResult(resultEntry)
+    await flushPromises()
+
+    // Search is cleared after navigation
+    expect((wrapper.vm as any).entrySearch).toBe('')
+    // selectDate was called — calendar-driven API is triggered
+    expect(diaryEntryAPI.searchDiaryEntryForDay).toHaveBeenCalledWith(
+      diaryId,
+      targetDate.getFullYear(),
+      targetDate.getMonth() + 1,
+      targetDate.getDate()
+    )
   })
 })

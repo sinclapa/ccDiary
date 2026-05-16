@@ -283,6 +283,43 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
+        public async Task Get_WithSearch_ReturnsFilteredDiaries()
+        {
+            // Arrange
+            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorA", Title = "World War One Diary", Description = "Accounts from the trenches" });
+            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorB", Title = "World War Two Diary", Description = "Pacific theatre" });
+            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorC", Title = "Cold War Memoir", Description = "Berlin in the fifties" });
+
+            // Act
+            var response = await _httpClient.GetAsync("/api/v1/Diary/Get?search=World+War");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.IsNotNull(result);
+            Assert.AreEqual(2, result.TotalCount);
+            Assert.IsTrue(result.Items.All(d => d.Title.Contains("World War")));
+        }
+
+        [TestMethod]
+        public async Task Get_WithSearch_MatchesDescription()
+        {
+            // Arrange
+            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorA", Title = "Diary One", Description = "Trench warfare in France" });
+            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorB", Title = "Diary Two", Description = "Naval Pacific battles" });
+
+            // Act
+            var response = await _httpClient.GetAsync("/api/v1/Diary/Get?search=France");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.TotalCount);
+            Assert.AreEqual("Diary One", result.Items.First().Title);
+        }
+
+        [TestMethod]
         public async Task Contributor_CannotEditAnotherUsersDiary()
         {
             // Arrange — owner creates a diary

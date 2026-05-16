@@ -27,5 +27,7 @@ namespace ccDiaryApi.Services
         DateTime MinDiaryEntryDate(Guid diaryId);
 
         DateTime MaxDiaryEntryDate(Guid diaryId);
+
+        PagedResultDTO<DiaryEntryDTO> TextSearchDiaryEntries(Guid diaryId, string search, int page = 1, int pageSize = 20);
     }
 }

@@ -8,7 +8,7 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryService
     {
-        PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize);
+        PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize, string? search = null);
 
         DiaryDTO? GetDiary(Guid diaryId);
 

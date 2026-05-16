@@ -172,6 +172,24 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
+        public ActionResult<PagedResultDTO<DiaryEntryDTO>> TextSearch(
+            Guid diaryId,
+            [FromQuery] string search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                return BadRequest("search is required");
+            }
+
+            var results = _diaryEntryService.TextSearchDiaryEntries(diaryId, search, page, pageSize);
+            return Ok(results);
+        }
+
+        [Route("{diaryId:guid}")]
+        [AllowAnonymous]
+        [HttpGet]
         public ActionResult<DateTime> GetMinDate(Guid diaryId)
         {
             var date = _diaryEntryService.MinDiaryEntryDate(diaryId);

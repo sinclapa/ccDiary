@@ -7,9 +7,31 @@
       indeterminate
     />
 
-    <div class="d-flex align-center mb-4">
+    <div class="d-flex align-center gap-2 mb-4">
       <h1 class="text-h5">Diaries</h1>
       <v-spacer />
+      <v-expand-x-transition>
+        <v-text-field
+          v-if="searchExpanded"
+          v-model="searchTerm"
+          autofocus
+          class="search-inline"
+          clearable
+          density="compact"
+          hide-details
+          placeholder="Search diaries…"
+          variant="outlined"
+          @click:clear="collapseSearch"
+        />
+      </v-expand-x-transition>
+      <v-btn
+        :color="searchExpanded ? 'primary' : undefined"
+        :variant="searchExpanded ? 'tonal' : 'text'"
+        aria-label="Search diaries"
+        icon="$mdi-magnify"
+        size="small"
+        @click="toggleSearch"
+      />
       <v-dialog
         v-model="dialog"
         max-width="560px"
@@ -127,7 +149,19 @@
   const diaries = ref([] as Diary[])
   const currentPage = ref(1)
   const totalCount = ref(0)
+  const searchTerm = ref('')
+  const searchExpanded = ref(false)
   const totalPages = computed(() => Math.ceil(totalCount.value / PAGE_SIZE))
+
+  function toggleSearch () {
+    searchExpanded.value = !searchExpanded.value
+    if (!searchExpanded.value) searchTerm.value = ''
+  }
+
+  function collapseSearch () {
+    searchTerm.value = ''
+    searchExpanded.value = false
+  }
   const defaultItem = ref(new Diary('', '', '', undefined) as Diary)
   const editedItem = ref<Diary>(new Diary('', '', '', undefined) as Diary)
 
@@ -188,7 +222,7 @@
   async function data () {
     loading.value = true
     try {
-      const result = await diaryAPI.getDiaries(currentPage.value, PAGE_SIZE)
+      const result = await diaryAPI.getDiaries(currentPage.value, PAGE_SIZE, searchTerm.value || undefined)
       diaries.value = result.items
       totalCount.value = result.totalCount
     } catch {
@@ -197,6 +231,15 @@
       loading.value = false
     }
   }
+
+  let searchDebounce: ReturnType<typeof setTimeout> | null = null
+  watch(searchTerm, () => {
+    if (searchDebounce) clearTimeout(searchDebounce)
+    searchDebounce = setTimeout(() => {
+      currentPage.value = 1
+      data()
+    }, 300)
+  })
 
   watch(currentPage, () => data())
 
@@ -250,5 +293,9 @@
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 12px;
   background: rgb(var(--v-theme-surface));
+}
+
+.search-inline {
+  max-width: 260px;
 }
 </style>

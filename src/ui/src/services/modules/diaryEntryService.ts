@@ -1,4 +1,5 @@
 import DiaryEntry from '@/services/models/diaryEntry'
+import PagedResult from '@/services/models/pagedResult'
 import { getAppConfigField } from '@/utils/appConfig'
 import dayjs from 'dayjs'
 
@@ -97,6 +98,18 @@ export default class DiaryEntryAPIService {
     await fetch(api, request)
       .then(response => response.json())
       .then(data => output = data as DiaryEntry)
+    return output
+  }
+
+  async textSearchDiaryEntries (diaryId: string, search: string, page: number = 1, pageSize: number = 20) : Promise<PagedResult<DiaryEntry>> {
+    const api = new URL(`v1/DiaryEntry/TextSearch/${diaryId}`, getAppConfigField('VITE_API'))
+    api.searchParams.set('search', search)
+    api.searchParams.set('page', String(page))
+    api.searchParams.set('pageSize', String(pageSize))
+    let output : PagedResult<DiaryEntry> = { items: [], totalCount: 0, page, pageSize }
+    await fetch(api)
+      .then(response => response.json())
+      .then(data => output = data as PagedResult<DiaryEntry>)
     return output
   }
 

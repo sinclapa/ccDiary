@@ -29,12 +29,19 @@ namespace ccDiaryApi.Services
             _context.SaveChanges();
         }
 
-        public PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize)
+        public PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize, string? search = null)
         {
-            var query = _context.Diaries
-                .OrderBy(x => x.Author).ThenBy(x => x.Title);
+            var query = _context.Diaries.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(x => x.Title.Contains(search) ||
+                                         (x.Description != null && x.Description.Contains(search)));
+            }
+
             var totalCount = query.Count();
-            var items = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var items = query
+                .OrderBy(x => x.Author).ThenBy(x => x.Title)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToList();
             return new PagedResultDTO<DiaryDTO>
             {
                 Items = items,
