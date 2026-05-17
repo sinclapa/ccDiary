@@ -4,7 +4,7 @@
       <v-card
         prepend-icon="$mdi-pen"
         rounded="xl"
-        style="display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;"
+        style="display: flex; flex-direction: column; max-height: 90dvh; overflow: hidden;"
         :title="isEdit ? 'Edit Diary Entry' : 'Add Diary Entry'"
       >
         <template #append>
