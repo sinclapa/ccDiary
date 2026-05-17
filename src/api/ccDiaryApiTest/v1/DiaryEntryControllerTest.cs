@@ -451,7 +451,7 @@ namespace ccDiaryApiTest.v1
             };
             var paged = new PagedResultDTO<DiaryEntryDTO>
             {
-                Items = [matchingEntry],
+                Items =[matchingEntry],
                 TotalCount = 1,
                 Page = 1,
                 PageSize = 20,
@@ -482,7 +482,7 @@ namespace ccDiaryApiTest.v1
             var diaryId = Guid.NewGuid();
             var paged = new PagedResultDTO<DiaryEntryDTO>
             {
-                Items = [new DiaryEntryDTO { DiaryId = diaryId, Location = "Passchendaele", Entry = "Quiet day.", Date = DateTime.UtcNow }],
+                Items =[new DiaryEntryDTO { DiaryId = diaryId, Location = "Passchendaele", Entry = "Quiet day.", Date = DateTime.UtcNow }],
                 TotalCount = 1,
                 Page = 1,
                 PageSize = 20,
@@ -527,7 +527,7 @@ namespace ccDiaryApiTest.v1
             var diaryId = Guid.NewGuid();
             var emptyPaged = new PagedResultDTO<DiaryEntryDTO>
             {
-                Items = [],
+                Items =[],
                 TotalCount = 0,
                 Page = 1,
                 PageSize = 20,

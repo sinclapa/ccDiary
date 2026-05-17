@@ -1,14 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import { flushPromises, mount, VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import vuetify from '@/../tests/plugins/vuetify-test-plugin'
 import Component from '@/pages/admin/index.vue'
-import { approveRequest, declineRequest, getPendingRequests } from '@/services/modules/adminService'
+import { approveRequest, declineRequest, deleteRequest, getAllRequests, resendInvitation } from '@/services/modules/adminService'
 import type { AccessRequest } from '@/services/models/accessRequest'
 
 vi.mock('@/services/modules/adminService')
 
 globalThis.ResizeObserver = require('resize-observer-polyfill')
+
+const mockApprovedRequest: AccessRequest = {
+  accessRequestId: 'req-2',
+  displayName: 'Jane Smith',
+  email: 'jane@example.com',
+  status: 'approved',
+  requestedAt: '2024-01-10T00:00:00Z',
+  inviteRedeemUrl: 'https://ms.example/invite/abc',
+}
 
 const mockRequest: AccessRequest = {
   accessRequestId: 'req-1',
@@ -20,13 +29,21 @@ const mockRequest: AccessRequest = {
 
 describe('admin/index.vue', () => {
   let wrapper: VueWrapper
+  let clipboardSpy: MockInstance
 
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    vi.mocked(getPendingRequests).mockResolvedValue([mockRequest])
+    clipboardSpy = vi.fn()
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: clipboardSpy },
+      configurable: true,
+    })
+    vi.mocked(getAllRequests).mockResolvedValue([mockRequest])
     vi.mocked(approveRequest).mockResolvedValue({ ok: true, redeemUrl: null })
     vi.mocked(declineRequest).mockResolvedValue(true)
+    vi.mocked(deleteRequest).mockResolvedValue(true)
+    vi.mocked(resendInvitation).mockResolvedValue({ ok: true, redeemUrl: null })
     wrapper = mount(Component, { global: { plugins: [vuetify] } })
   })
 
@@ -39,9 +56,9 @@ describe('admin/index.vue', () => {
     expect(wrapper.text()).toContain('Access Requests')
   })
 
-  it('calls getPendingRequests on mount', async () => {
+  it('calls getAllRequests on mount', async () => {
     await flushPromises()
-    expect(getPendingRequests).toHaveBeenCalled()
+    expect(getAllRequests).toHaveBeenCalled()
   })
 
   it('displays request display name in the table', async () => {
@@ -55,7 +72,7 @@ describe('admin/index.vue', () => {
   })
 
   it('shows no data text when no requests are returned', async () => {
-    vi.mocked(getPendingRequests).mockResolvedValue([])
+    vi.mocked(getAllRequests).mockResolvedValue([])
     wrapper.unmount()
     wrapper = mount(Component, { global: { plugins: [vuetify] } })
     await flushPromises()
@@ -128,5 +145,124 @@ describe('admin/index.vue', () => {
     await flushPromises()
     expect((wrapper.vm as any).feedbackMessage).toBe('')
     expect((wrapper.vm as any).redeemUrl).toBeNull()
+  })
+
+  it('clears feedback when the tab changes', async () => {
+    await flushPromises()
+    await wrapper.find('#req-1_approve').trigger('click')
+    await flushPromises()
+    expect((wrapper.vm as any).feedbackMessage).toBeTruthy()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    expect((wrapper.vm as any).feedbackMessage).toBe('')
+    expect((wrapper.vm as any).redeemUrl).toBeNull()
+  })
+
+  it('shows copy button for approved requests', async () => {
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    expect(wrapper.find('#req-2_copy').exists()).toBe(true)
+  })
+
+  it('calls deleteRequest when delete button is clicked on an approved entry', async () => {
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_delete').trigger('click')
+    await flushPromises()
+    expect(deleteRequest).toHaveBeenCalledWith('req-2')
+  })
+
+  it('shows success feedback after deleting an approved entry', async () => {
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_delete').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('deleted')
+  })
+
+  it('shows error feedback when delete fails', async () => {
+    vi.mocked(deleteRequest).mockResolvedValue(false)
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_delete').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Failed to delete')
+  })
+
+  it('copies the invite link to the clipboard when the copy button is clicked', async () => {
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_copy').trigger('click')
+    expect(clipboardSpy).toHaveBeenCalledWith('https://ms.example/invite/abc')
+  })
+
+  it('calls resendInvitation when resend button is clicked on an approved entry', async () => {
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_resend').trigger('click')
+    await flushPromises()
+    expect(resendInvitation).toHaveBeenCalledWith('req-2')
+  })
+
+  it('shows success feedback after resend', async () => {
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_resend').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('resent')
+  })
+
+  it('shows redeem URL in feedback when resend returns one', async () => {
+    vi.mocked(resendInvitation).mockResolvedValue({ ok: true, redeemUrl: 'https://ms.example/invite/xyz' })
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_resend').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('https://ms.example/invite/xyz')
+  })
+
+  it('shows error feedback when resend fails', async () => {
+    vi.mocked(resendInvitation).mockResolvedValue({ ok: false, redeemUrl: null })
+    vi.mocked(getAllRequests).mockResolvedValue([mockApprovedRequest])
+    wrapper.unmount()
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+    ;(wrapper.vm as any).tab = 'approved'
+    await flushPromises()
+    await wrapper.find('#req-2_resend').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Failed to resend')
   })
 })

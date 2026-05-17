@@ -26,6 +26,22 @@ test.describe('Admin API — requires authentication', () => {
     })
     expect(response.status()).toBe(401)
   })
+
+  test('POST Admin/ResendInvitation/:id returns 401 without a token', async ({ request }) => {
+    const fakeId = '00000000-0000-0000-0000-000000000003'
+    const response = await request.post(`${API_BASE}/api/v1/Admin/ResendInvitation/${fakeId}`, {
+      ignoreHTTPSErrors: true,
+    })
+    expect(response.status()).toBe(401)
+  })
+
+  test('DELETE Admin/Delete/:id returns 401 without a token', async ({ request }) => {
+    const fakeId = '00000000-0000-0000-0000-000000000004'
+    const response = await request.delete(`${API_BASE}/api/v1/Admin/Delete/${fakeId}`, {
+      ignoreHTTPSErrors: true,
+    })
+    expect(response.status()).toBe(401)
+  })
 })
 
 // ─── Admin page — non-admin access ───────────────────────────────────────────

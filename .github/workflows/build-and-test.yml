@@ -263,6 +263,12 @@ jobs:
             "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}"
             "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
             "BootstrapAdmin__DisplayName=${{ vars.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
+            "Smtp__Host=${{ vars.SMTP_HOST }}"
+            "Smtp__Port=${{ vars.SMTP_PORT }}"
+            "Smtp__Username=${{ vars.SMTP_USERNAME }}"
+            "Smtp__Password=${{ secrets.SMTP_PASSWORD }}"
+            "Smtp__From=${{ vars.SMTP_FROM }}"
+            "Smtp__FromName=${{ vars.SMTP_FROM_NAME }}"
           )
           # Construct the connection string from the individual server/DB name
           # variables (the same ones used by the wake-SQL step, so known-correct).

@@ -126,6 +126,48 @@ if (-not $otlpAuthHeader -and $otlpEndpoint) {
     $otlpAuthHeader = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($otlpAuthHeaderSecure))
 }
 
+$smtpHost = $apiEnv["Smtp__Host"]
+if (-not $smtpHost) {
+    $smtpHost = Read-Host -Prompt "Enter SMTP server hostname (leave empty to use Entra invitation email, e.g. smtp.office365.com)"
+}
+
+if ($smtpHost) {
+    $smtpPort = $apiEnv["Smtp__Port"]
+    if (-not $smtpPort) {
+        $smtpPort = Read-Host -Prompt "Enter SMTP port (leave empty for 587)"
+        if (-not $smtpPort) { $smtpPort = "587" }
+    }
+
+    $smtpUsername = $apiEnv["Smtp__Username"]
+    if (-not $smtpUsername) {
+        $smtpUsername = Read-Host -Prompt "Enter SMTP username / email address"
+    }
+
+    $smtpPassword = $apiEnv["Smtp__Password"]
+    if (-not $smtpPassword) {
+        $smtpPasswordSecure = Read-Host -Prompt "Enter SMTP password" -AsSecureString
+        $smtpPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($smtpPasswordSecure))
+    }
+
+    $smtpFrom = $apiEnv["Smtp__From"]
+    if (-not $smtpFrom) {
+        $smtpFrom = Read-Host -Prompt "Enter From email address (e.g. noreply@yourdomain.com)"
+    }
+
+    $smtpFromName = $apiEnv["Smtp__FromName"]
+    if (-not $smtpFromName) {
+        $smtpFromName = Read-Host -Prompt "Enter From display name (leave empty for 'ccDiary')"
+        if (-not $smtpFromName) { $smtpFromName = "ccDiary" }
+    }
+}
+else {
+    $smtpPort     = ""
+    $smtpUsername = ""
+    $smtpPassword = ""
+    $smtpFrom     = ""
+    $smtpFromName = ""
+}
+
 $httpsCertFile = $apiEnv["HTTPS_CERT_FILE"]
 if (-not $httpsCertFile) {
     $httpsCertFile = "ccdiaryapi.pfx"
@@ -283,6 +325,14 @@ $apiEnv["Graph__InviteRedirectUrl"] = $baseUrlUI
 if ($entraClientSecret) {
     $apiEnv["Graph__ClientSecret"] = $entraClientSecret
 }
+if ($smtpHost) {
+    $apiEnv["Smtp__Host"]     = $smtpHost
+    $apiEnv["Smtp__Port"]     = $smtpPort
+    $apiEnv["Smtp__Username"] = $smtpUsername
+    $apiEnv["Smtp__Password"] = $smtpPassword
+    $apiEnv["Smtp__From"]     = $smtpFrom
+    $apiEnv["Smtp__FromName"] = $smtpFromName
+}
 $apiEnv | ConvertTo-StringData | Set-Content -Path $envPath
 Write-Host "  USER_SECRETS_PATH set to: $userSecretsPath" -ForegroundColor Gray
 Write-Host "  HTTPS_CERTS_PATH set to: $httpsCertsPath" -ForegroundColor Gray
@@ -335,6 +385,19 @@ if ($entraClientId) {
 dotnet user-secrets -p $apiProject set "Graph:InviteRedirectUrl" "$inviteRedirectUrl"
 if ($entraClientSecret) {
     dotnet user-secrets -p $apiProject set "Graph:ClientSecret" "$entraClientSecret"
+}
+
+# SMTP - used by the API to send branded invitation emails when approving access requests
+if ($smtpHost) {
+    dotnet user-secrets -p $apiProject set "Smtp:Host"     "$smtpHost"
+    dotnet user-secrets -p $apiProject set "Smtp:Port"     "$smtpPort"
+    dotnet user-secrets -p $apiProject set "Smtp:Username" "$smtpUsername"
+    dotnet user-secrets -p $apiProject set "Smtp:Password" "$smtpPassword"
+    dotnet user-secrets -p $apiProject set "Smtp:From"     "$smtpFrom"
+    dotnet user-secrets -p $apiProject set "Smtp:FromName" "$smtpFromName"
+    Write-Host "  SMTP configured ($smtpFrom via $smtpHost)" -ForegroundColor Gray
+} else {
+    Write-Host "  SMTP not configured — Entra invitation email will be used instead" -ForegroundColor Yellow
 }
 
 $vuePath = "$PSScriptRoot/../src/ui/.env.dev.local"

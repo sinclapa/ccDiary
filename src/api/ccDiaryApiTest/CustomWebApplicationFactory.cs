@@ -116,6 +116,12 @@ namespace ccDiaryApiTest
                     .Setup(g => g.SendInvitationAsync(It.IsAny<string>(), It.IsAny<string>()))
                     .ReturnsAsync(() => GraphRedeemUrl);
                 services.AddScoped<IGraphService>(_ => graphMock.Object);
+
+                var emailMock = new Mock<IEmailService>();
+                emailMock
+                    .Setup(e => e.SendInvitationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(Task.CompletedTask);
+                services.AddScoped<IEmailService>(_ => emailMock.Object);
             });
         }
     }

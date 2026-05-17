@@ -116,6 +116,8 @@ builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();
 
 builder.Services.AddScoped<IGraphService, GraphService>();
 
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 builder.Services.AddHttpClient();
 
 builder.Services.AddHttpClient("MapTileProxy", client =>
