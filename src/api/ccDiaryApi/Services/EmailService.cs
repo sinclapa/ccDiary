@@ -53,7 +53,26 @@ namespace ccDiaryApi.Services
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
 
-            _logger.LogInformation("Invitation email sent to {Email}", toEmail);
+            _logger.LogInformation("Invitation email sent to {MaskedEmail}", MaskEmail(toEmail));
+        }
+
+        private static string MaskEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return "***";
+            }
+
+            var atIndex = email.IndexOf('@');
+            if (atIndex <= 0 || atIndex == email.Length - 1)
+            {
+                return "***";
+            }
+
+            var localPart = email.Substring(0, atIndex);
+            var domain = email.Substring(atIndex);
+            var visiblePrefix = localPart.Length > 0 ? localPart[0].ToString() : "*";
+            return $"{visiblePrefix}***{domain}";
         }
 
         private static string BuildHtml(string displayName, string inviteRedeemUrl, int year)
