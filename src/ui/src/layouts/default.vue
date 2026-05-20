@@ -23,7 +23,7 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 100dvh;
-  padding-top: 64px;
+  padding-top: var(--cc-header-height);
   background: rgb(var(--v-theme-background));
   color: rgb(var(--v-theme-on-background));
 }

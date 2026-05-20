@@ -1,13 +1,13 @@
 <template>
   <div class="map-wrapper">
-    <div v-if="status === 'loading'" class="map-placeholder">
+    <div v-if="status === 'loading'" class="map-component-placeholder">
       <v-progress-circular color="red" indeterminate />
     </div>
-    <div v-else-if="status === 'not-found'" class="map-placeholder map-not-found">
+    <div v-else-if="status === 'not-found'" class="map-component-placeholder map-not-found">
       <v-icon color="grey">$mdi-map-marker-off</v-icon>
       <span class="text-caption text-grey">Location not found</span>
     </div>
-    <div v-else-if="status === 'error'" class="map-placeholder map-error">
+    <div v-else-if="status === 'error'" class="map-component-placeholder map-error">
       <v-icon color="grey">$mdi-map-off</v-icon>
       <span class="text-caption text-grey">Map unavailable</span>
     </div>
@@ -110,21 +110,10 @@
 
   .map-container {
     width: 100%;
-    height: 250px;
+    height: var(--cc-map-height);
   }
 
   .map-hidden {
     display: none;
-  }
-
-  .map-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    height: 250px;
-    background: rgb(var(--v-theme-surface-variant));
-    border-radius: 4px;
   }
 </style>

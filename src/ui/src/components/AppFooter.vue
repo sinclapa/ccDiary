@@ -42,9 +42,9 @@
       </div>
 
       <div class="d-flex align-center justify-center w-100 footer-row--secondary">
-        <button class="text-caption text-disabled cookie-pref-btn" @click="openPreferences">
+        <v-btn class="text-caption text-disabled" size="x-small" variant="text" @click="openPreferences">
           Cookie preferences
-        </button>
+        </v-btn>
       </div>
     </div>
   </footer>
@@ -126,12 +126,4 @@
     &:hover
       text-decoration: underline
 
-  .cookie-pref-btn
-    background: none
-    border: none
-    padding: 0
-    cursor: pointer
-    color: inherit
-    font: inherit
-    text-decoration: underline
 </style>

@@ -2,9 +2,9 @@
   <v-sheet rounded="xl">
     <v-form @submit.prevent="submit">
       <v-card
+        class="editor-scroll-container"
         prepend-icon="$mdi-pen"
         rounded="xl"
-        style="display: flex; flex-direction: column; max-height: 90dvh; overflow: hidden;"
         :title="isEdit ? 'Edit Diary Entry' : 'Add Diary Entry'"
       >
         <template #append>
@@ -410,6 +410,13 @@
 </script>
 
 <style scoped>
+  .editor-scroll-container {
+    display: flex;
+    flex-direction: column;
+    max-height: 90dvh;
+    overflow: hidden;
+  }
+
   .image-drop-zone {
     background: none;
     border: 2px dashed rgba(var(--v-border-color), var(--v-border-opacity));
