@@ -5,5 +5,5 @@ export function useSearchDebounce (query: Ref<string>, onSearch: () => void, del
   watch(query, () => {
     if (timer) clearTimeout(timer)
     timer = setTimeout(onSearch, delay)
-  })
+  }, { flush: 'sync' })
 }
