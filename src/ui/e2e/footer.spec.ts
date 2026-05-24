@@ -31,7 +31,7 @@ test.describe('App Footer', () => {
   })
 
   test('shows cookie preferences button', async ({ page }) => {
-    const cookieBtn = page.locator('footer button.cookie-pref-btn')
+    const cookieBtn = page.locator('footer button', { hasText: 'Cookie preferences' })
     await expect(cookieBtn).toBeVisible({ timeout: 10000 })
     await expect(cookieBtn).toContainText('Cookie preferences')
   })
