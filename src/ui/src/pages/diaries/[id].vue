@@ -209,7 +209,7 @@
       <v-col class="timeline-col pr-0">
         <DiaryTimeline
           :can-edit="canEditDiary"
-          :entries="diaryEntries"
+          :entries="diaryEntries ?? []"
           @delete="onDeleteEntry"
           @edit="onEditEntry"
         />
