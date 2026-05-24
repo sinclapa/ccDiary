@@ -54,44 +54,16 @@
       />
     </v-expand-transition>
 
-    <v-row v-if="entrySearch">
-      <v-col cols="12">
-        <v-progress-linear
-          :active="searchLoading"
-          color="primary"
-          height="2"
-          indeterminate
-        />
-        <div v-if="!searchLoading && searchResults && searchResults.totalCount === 0" class="text-body-2 text-disabled pa-4">
-          No entries found for "{{ entrySearch }}"
-        </div>
-        <v-list v-else-if="searchResults && searchResults.items.length > 0" bg-color="transparent" lines="two">
-          <v-list-item
-            v-for="entry in searchResults.items"
-            :key="entry.diaryEntryId"
-            class="search-result-item"
-            rounded="lg"
-            @click="goToSearchResult(entry)"
-          >
-            <template #prepend>
-              <div class="search-result-date text-caption text-primary">
-                {{ dayjs(entry.date).format('ddd D MMM YYYY') }}<br>{{ dayjs(entry.date).format('HH:mm') }}
-              </div>
-            </template>
-            <v-list-item-title class="text-primary">{{ entry.location }}</v-list-item-title>
-            <v-list-item-subtitle class="search-result-preview">{{ entry.entry }}</v-list-item-subtitle>
-          </v-list-item>
-        </v-list>
-        <div v-if="searchResults && searchResults.totalCount > searchPageSize" class="d-flex justify-center pb-4">
-          <v-pagination
-            v-model="searchPage"
-            :length="Math.ceil(searchResults.totalCount / searchPageSize)"
-            rounded="circle"
-            :total-visible="display.mobile.value ? 3 : 7"
-          />
-        </div>
-      </v-col>
-    </v-row>
+    <DiaryEntrySearchResults
+      v-if="entrySearch"
+      :loading="searchLoading"
+      :page="searchPage"
+      :page-size="searchPageSize"
+      :results="searchResults"
+      :search="entrySearch"
+      @select="goToSearchResult"
+      @update:page="searchPage = $event"
+    />
 
     <v-row v-else>
       <v-col class="calendar-col" cols="auto">
@@ -220,95 +192,27 @@
             @submit="onSubmitDiaryEntry"
           />
         </v-dialog>
-        <v-dialog v-model="dialogDelete" max-width="560px">
-          <v-card class="delete-entry-dialog" rounded="xl">
-            <v-card-title class="d-flex align-center gap-2 text-h6 text-primary">
-              <v-icon icon="$mdi-alert-circle-outline" />
-              Delete Diary Entry
-            </v-card-title>
-            <v-card-text>
-              <p class="mb-3">Are you sure you want to permanently delete this diary entry?</p>
-              <div class="delete-entry-meta pa-3">
-                <div><strong>Date:</strong> {{ editedItem?.date ? dayjs(editedItem.date).format('ddd D MMM YYYY') : 'Unknown date' }}</div>
-                <div><strong>Time:</strong> {{ editedItem?.date ? dayjs(editedItem.date).format('HH:mm') : 'Unknown time' }}</div>
-                <div><strong>Location:</strong> {{ editedItem?.location || 'Unknown location' }}</div>
-              </div>
-            </v-card-text>
-            <v-card-actions class="px-4 pb-4">
-              <v-spacer />
-              <v-btn variant="text" @click="closeDelete">Cancel</v-btn>
-              <v-btn color="primary" variant="flat" @click="deleteItemConfirm">Delete Entry</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+        <ConfirmDeleteDialog
+          v-model="dialogDelete"
+          confirm-label="Delete Entry"
+          item-type="diary entry"
+          :items="[
+            { label: 'Date', value: editedItem?.date ? dayjs(editedItem.date).format('ddd D MMM YYYY') : 'Unknown date' },
+            { label: 'Time', value: editedItem?.date ? dayjs(editedItem.date).format('HH:mm') : 'Unknown time' },
+            { label: 'Location', value: editedItem?.location || 'Unknown location' },
+          ]"
+          title="Delete Diary Entry"
+          @cancel="closeDelete"
+          @confirm="deleteItemConfirm"
+        />
       </v-col>
       <v-col class="timeline-col pr-0">
-        <v-timeline :align="'start'" side="end" style="justify-content: start; height: fit-content;">
-          <v-timeline-item
-            v-for="(diaryEntry, i) in diaryEntries"
-            :key="i"
-            dot-color="primary"
-            size="small"
-          >
-            <template #opposite>
-              <div class="pt-1 headline font-weight-light text-primary" style="width: 80px;">
-                {{ dayjs(diaryEntry.date).format('ddd HH:mm') }}
-              </div>
-            </template>
-            <div
-              class="entry-content"
-              :class="{ 'entry-content--with-map': (diaryEntry.showMap && diaryEntry.mapLocation) || (diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation) }"
-            >
-              <div class="entry-text-col">
-                <h2 class="mt-n1 headline font-weight-light mb-4 text-primary">
-                  {{ diaryEntry.location }}
-                  <div v-if="canEditDiary">
-                    <v-btn
-                      aria-label="Edit entry"
-                      class="action-btn"
-                      color="primary"
-                      icon="$mdi-pencil"
-                      size="x-small"
-                      variant="outlined"
-                      @click="onEditEntry(diaryEntry)"
-                    />
-                    &nbsp;
-                    <v-btn
-                      aria-label="Delete entry"
-                      class="action-btn"
-                      color="primary"
-                      icon="$mdi-delete"
-                      size="x-small"
-                      variant="outlined"
-                      @click="onDeleteEntry(diaryEntry)"
-                    />
-                  </div>
-                </h2>
-                <div>
-                  {{ diaryEntry.entry }}
-                </div>
-                <v-img
-                  v-if="diaryEntry.imageData && diaryEntry.imageContentType"
-                  class="mt-2 diary-entry-media"
-                  :max-height="400"
-                  :src="`data:${diaryEntry.imageContentType};base64,${diaryEntry.imageData}`"
-                />
-              </div>
-              <div
-                v-if="(diaryEntry.showMap && diaryEntry.mapLocation) || (diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation)"
-                class="entry-map-col"
-              >
-                <map-view v-if="diaryEntry.showMap && diaryEntry.mapLocation" :location="diaryEntry.mapLocation" />
-                <journey-view
-                  v-if="diaryEntry.showJourney && diaryEntry.fromLocation && diaryEntry.toLocation"
-                  :from-location="diaryEntry.fromLocation"
-                  :journey-mode="diaryEntry.journeyMode"
-                  :to-location="diaryEntry.toLocation"
-                />
-              </div>
-            </div>
-          </v-timeline-item>
-        </v-timeline>
+        <DiaryTimeline
+          :can-edit="canEditDiary"
+          :entries="diaryEntries ?? []"
+          @delete="onDeleteEntry"
+          @edit="onEditEntry"
+        />
       </v-col>
     </v-row><!-- end v-else calendar/timeline row -->
 
@@ -362,8 +266,8 @@
   import { useAuthStore } from '@/stores/auth'
   import dayjs from 'dayjs'
   import { useApiStatusStore } from '@/stores/apiStatus'
-  import JourneyView from '@/components/JourneyView.vue'
   import { endFaroUserAction, startFaroUserAction } from '@/plugins/faro'
+  import { useSearchDebounce } from '@/composables/useSearchDebounce'
 
   const authStore = useAuthStore()
 
@@ -789,14 +693,7 @@
     setDateInUrl(date, false)
   }
 
-  let entrySearchDebounce: ReturnType<typeof setTimeout> | null = null
-  watch(entrySearch, () => {
-    if (entrySearchDebounce) clearTimeout(entrySearchDebounce)
-    entrySearchDebounce = setTimeout(() => {
-      searchPage.value = 1
-      runEntrySearch()
-    }, 300)
-  })
+  useSearchDebounce(entrySearch, () => { searchPage.value = 1; runEntrySearch() })
 
   watch(searchPage, () => runEntrySearch())
   watch(searchPageSize, () => {
@@ -923,19 +820,6 @@
     }
   }
 
-  :deep(.action-btn) {
-    transition: background-color 0.15s ease, color 0.15s ease;
-  }
-
-  :deep(.action-btn:hover) {
-    background-color: rgb(var(--v-theme-primary)) !important;
-    color: white !important;
-  }
-
-  :deep(.action-btn:hover .v-btn__overlay) {
-    opacity: 0 !important;
-  }
-
   :deep(.diary-day-marker) {
     position: absolute;
     top: 1px;
@@ -990,53 +874,6 @@
     margin-left: -8px;
   }
 
-  .entry-content {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .entry-text-col {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .entry-map-col {
-    flex: 0 0 300px;
-    min-width: 0;
-  }
-
-  .entry-content--with-map {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .entry-content--with-map .entry-text-col {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  @media (max-width: 599px) {
-    .entry-content--with-map {
-      flex-direction: column;
-    }
-    .entry-content--with-map .entry-text-col {
-      width: 100%;
-    }
-    .entry-map-col {
-      flex: 0 0 auto;
-      width: 100%;
-    }
-  }
-
-  :deep(.diary-entry-media) {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-  }
-
   :deep(.timeline-col .v-timeline-item__body) {
     min-width: 0;
     width: 100%;
@@ -1054,42 +891,6 @@
     :deep(.timeline-col .v-timeline-item__body) {
       padding-right: 0;
     }
-  }
-
-  .delete-entry-dialog {
-    border-color: rgba(var(--v-theme-primary), 0.25);
-    background: rgb(var(--v-theme-surface));
-  }
-
-  .delete-entry-meta {
-    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-    border-radius: 12px;
-    background: rgb(var(--v-theme-surface));
-  }
-
-  .search-result-item {
-    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-    margin-bottom: 4px;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-  }
-
-  .search-result-item:hover {
-    border-color: rgba(var(--v-theme-primary), 0.4);
-  }
-
-  .search-result-date {
-    width: 110px;
-    min-width: 110px;
-    padding-right: 16px;
-    line-height: 1.4;
-    white-space: nowrap;
-  }
-
-  .search-result-preview {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .search-inline {

@@ -60,26 +60,18 @@
           @submit="onAddDiary"
         />
       </v-dialog>
-      <v-dialog v-model="dialogDelete" max-width="560px">
-        <v-card class="delete-diary-dialog" rounded="xl">
-          <v-card-title class="d-flex align-center gap-2 text-h6 text-primary">
-            <v-icon icon="$mdi-alert-circle-outline" />
-            Delete Diary
-          </v-card-title>
-          <v-card-text>
-            <p class="mb-3">Are you sure you want to permanently delete this diary?</p>
-            <div class="delete-diary-meta pa-3">
-              <div><strong>Title:</strong> {{ editedItem?.title || 'Untitled diary' }}</div>
-              <div><strong>Author:</strong> {{ editedItem?.author || 'Unknown author' }}</div>
-            </div>
-          </v-card-text>
-          <v-card-actions class="px-4 pb-4">
-            <v-spacer />
-            <v-btn variant="text" @click="closeDelete">Cancel</v-btn>
-            <v-btn color="primary" variant="flat" @click="deleteItemConfirm">Delete Diary</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <ConfirmDeleteDialog
+        v-model="dialogDelete"
+        confirm-label="Delete Diary"
+        item-type="diary"
+        :items="[
+          { label: 'Title', value: editedItem?.title || 'Untitled diary' },
+          { label: 'Author', value: editedItem?.author || 'Unknown author' },
+        ]"
+        title="Delete Diary"
+        @cancel="closeDelete"
+        @confirm="deleteItemConfirm"
+      />
     </div>
 
     <v-expand-transition>
@@ -157,6 +149,7 @@
   import { state } from '@/services/authentication/msalConfig'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import { useAuthStore } from '@/stores/auth'
+  import { useSearchDebounce } from '@/composables/useSearchDebounce'
 
   const display = useDisplay()
 
@@ -253,14 +246,7 @@
     }
   }
 
-  let searchDebounce: ReturnType<typeof setTimeout> | null = null
-  watch(searchTerm, () => {
-    if (searchDebounce) clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => {
-      currentPage.value = 1
-      data()
-    }, 300)
-  })
+  useSearchDebounce(searchTerm, () => { currentPage.value = 1; data() })
 
   watch(currentPage, () => data())
 
@@ -303,17 +289,6 @@
 
 .action-btn:hover :deep(.v-btn__overlay) {
   opacity: 0 !important;
-}
-
-.delete-diary-dialog {
-  border-color: rgba(var(--v-theme-primary), 0.25);
-  background: rgb(var(--v-theme-surface));
-}
-
-.delete-diary-meta {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 12px;
-  background: rgb(var(--v-theme-surface));
 }
 
 .search-inline {
