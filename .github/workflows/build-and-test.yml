@@ -63,6 +63,18 @@ jobs:
 
     needs: build-prep
 
+    # Azurite backs the storage-layer tests. They run against the real emulator rather
+    # than a hand-written fake, because the behaviours worth testing — row key ordering,
+    # filter evaluation, the 100-entity transaction limit, 404/409 semantics — are
+    # exactly the ones a fake would get wrong.
+    services:
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite:latest
+        ports:
+          - 10000:10000
+          - 10001:10001
+          - 10002:10002
+
     defaults:
       run:
         working-directory: ./src/api
@@ -112,6 +124,20 @@ jobs:
 
       - name: Build API
         run: dotnet build ccDiary.sln --no-incremental --configuration Release --no-restore /p:Version=${{ needs.build-prep.outputs.app_version }}
+
+      # The Azurite image is Node-based and ships no curl or nc, so a container-level
+      # healthcheck is awkward; wait on the table endpoint from the runner instead.
+      - name: Wait for Azurite
+        run: |
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/10002) 2>/dev/null; then
+              echo "Azurite is up after ${i}s."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Azurite did not become reachable on 127.0.0.1:10002 within 30s"
+          exit 1
 
       - name: Test API
         run: dotnet-coverage collect "dotnet test ccDiary.sln --configuration Release --no-build --verbosity normal --logger trx" -f xml -o coverage.xml
