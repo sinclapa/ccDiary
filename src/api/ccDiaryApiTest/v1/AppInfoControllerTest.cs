@@ -5,33 +5,30 @@
 namespace ccDiaryApiTest.v1
 {
     using ccDiaryApi.Controllers.v1;
-    using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.EntityFrameworkCore;
+    using Moq;
 
     [TestClass]
     public class AppInfoControllerTest
     {
         [TestMethod]
-        public void Get_ReturnsOk_WhenAppInfoExists()
+        public async Task Get_ReturnsOk_WhenAppInfoExists()
         {
             // Arrange
-            var db = GetMemoryContext("AppInfoTest_Ok_" + Guid.NewGuid());
-            db.AppInfo.Add(new AppInfoDTO
+            var appInfo = new AppInfoDTO
             {
                 Id = 1,
                 InformationalVersion = "1.2.3",
                 DatabaseLastUpdated = DateTime.UtcNow,
-            });
-            db.SaveChanges();
-
-            var service = new AppInfoService(db);
-            var controller = new AppInfoController(service);
+            };
+            var service = new Mock<IAppInfoService>();
+            service.Setup(x => x.GetAppInfoAsync()).ReturnsAsync(appInfo);
+            var controller = new AppInfoController(service.Object);
 
             // Act
-            var response = controller.Get();
+            var response = await controller.Get();
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -41,26 +38,18 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void Get_ReturnsNotFound_WhenAppInfoIsNull()
+        public async Task Get_ReturnsNotFound_WhenAppInfoIsNull()
         {
             // Arrange
-            var db = GetMemoryContext("AppInfoTest_NotFound_" + Guid.NewGuid());
-            var service = new AppInfoService(db);
-            var controller = new AppInfoController(service);
+            var service = new Mock<IAppInfoService>();
+            service.Setup(x => x.GetAppInfoAsync()).ReturnsAsync((AppInfoDTO?)null);
+            var controller = new AppInfoController(service.Object);
 
             // Act
-            var response = controller.Get();
+            var response = await controller.Get();
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(NotFoundResult));
-        }
-
-        private static DiaryDatabaseContext GetMemoryContext(string dbName)
-        {
-            var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
-                .UseInMemoryDatabase(databaseName: dbName)
-                .Options;
-            return new DiaryDatabaseContext(options);
         }
     }
 }

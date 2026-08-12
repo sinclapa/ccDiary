@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryService.cs" company="CookingCode">
+// <copyright file="DiaryService.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -6,6 +6,7 @@ namespace ccDiaryApi.Services
 {
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
+    using Microsoft.EntityFrameworkCore;
 
     public class DiaryService : IDiaryService
     {
@@ -16,20 +17,20 @@ namespace ccDiaryApi.Services
             _context = context;
         }
 
-        public DiaryDTO Create(DiaryDTO diary)
+        public async Task<DiaryDTO> CreateAsync(DiaryDTO diary)
         {
             _context.Add(diary);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return diary;
         }
 
-        public void Delete(DiaryDTO diary)
+        public async Task DeleteAsync(DiaryDTO diary)
         {
             _context.Remove(diary);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
 
-        public PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize, string? search = null)
+        public async Task<PagedResultDTO<DiaryDTO>> GetDiariesAsync(int page, int pageSize, string? search = null)
         {
             var query = _context.Diaries.AsQueryable();
             if (!string.IsNullOrWhiteSpace(search))
@@ -38,10 +39,10 @@ namespace ccDiaryApi.Services
                                          (x.Description != null && x.Description.Contains(search)));
             }
 
-            var totalCount = query.Count();
-            var items = query
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderBy(x => x.Author).ThenBy(x => x.Title)
-                .Skip((page - 1) * pageSize).Take(pageSize).ToList();
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return new PagedResultDTO<DiaryDTO>
             {
                 Items = items,
@@ -51,17 +52,17 @@ namespace ccDiaryApi.Services
             };
         }
 
-        public DiaryDTO? GetDiary(Guid diaryId)
+        public async Task<DiaryDTO?> GetDiaryAsync(Guid diaryId)
         {
-            var diary = _context.Diaries
-                .SingleOrDefault(x => x.DiaryId == diaryId);
+            var diary = await _context.Diaries
+                .SingleOrDefaultAsync(x => x.DiaryId == diaryId);
             return diary;
         }
 
-        public DiaryDTO Update(DiaryDTO diary)
+        public async Task<DiaryDTO> UpdateAsync(DiaryDTO diary)
         {
             _context.Update(diary);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return diary;
         }
     }

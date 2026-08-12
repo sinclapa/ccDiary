@@ -8,6 +8,6 @@ namespace ccDiaryApi.Services
 
     public interface IAppInfoService
     {
-        AppInfoDTO? GetAppInfo();
+        Task<AppInfoDTO?> GetAppInfoAsync();
     }
 }

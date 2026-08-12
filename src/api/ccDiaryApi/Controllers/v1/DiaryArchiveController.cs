@@ -30,11 +30,11 @@ namespace ccDiaryApi.Controllers.v1
 
         [Route("{diaryId:guid}")]
         [HttpGet]
-        public ActionResult<DiaryArchiveDTO> Export(Guid diaryId)
+        public async Task<ActionResult<DiaryArchiveDTO>> Export(Guid diaryId)
         {
             _logger.LogInformation("Export requested. DiaryId={DiaryId}", SanitizeForLog(diaryId));
 
-            var export = _diaryArchiveService.Export(diaryId);
+            var export = await _diaryArchiveService.ExportAsync(diaryId);
             if (export == null)
             {
                 _logger.LogWarning("Export not found. DiaryId={DiaryId}", SanitizeForLog(diaryId));
@@ -50,7 +50,8 @@ namespace ccDiaryApi.Controllers.v1
 
         [HttpPost]
         [AllowAnonymous]
-        public ActionResult<DiaryDTO> Import([FromServices] IWebHostEnvironment env, DiaryArchiveDTO diaryArchive)
+        [RequestSizeLimit(RequestLimits.ArchiveImportBytes)]
+        public async Task<ActionResult<DiaryDTO>> Import([FromServices] IWebHostEnvironment env, DiaryArchiveDTO diaryArchive)
         {
             bool isLocalEnvironment = env.IsEnvironment("local")
                 || env.IsEnvironment("LocalContainer")
@@ -61,7 +62,7 @@ namespace ccDiaryApi.Controllers.v1
                 return Unauthorized();
             }
 
-            var diary = _diaryArchiveService.Import(diaryArchive);
+            var diary = await _diaryArchiveService.ImportAsync(diaryArchive);
             _logger.LogInformation(
                 "Import succeeded. DiaryId={DiaryId} EntryCount={EntryCount}",
                 SanitizeForLog(diary.DiaryId),

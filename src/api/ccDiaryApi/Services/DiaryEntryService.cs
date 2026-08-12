@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryEntryService.cs" company="CookingCode">
+// <copyright file="DiaryEntryService.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -6,6 +6,7 @@ namespace ccDiaryApi.Services
 {
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
+    using Microsoft.EntityFrameworkCore;
 
     public class DiaryEntryService : IDiaryEntryService
     {
@@ -16,7 +17,7 @@ namespace ccDiaryApi.Services
             _context = context;
         }
 
-        public DiaryEntryDTO CreateDiaryEntry(DiaryEntryDTO diaryEntry)
+        public async Task<DiaryEntryDTO> CreateDiaryEntryAsync(DiaryEntryDTO diaryEntry)
         {
             if (diaryEntry.Date == null || diaryEntry.Date == DateTime.MinValue)
             {
@@ -24,34 +25,34 @@ namespace ccDiaryApi.Services
             }
 
             _context.Add(diaryEntry);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return diaryEntry;
         }
 
-        public void DeleteDiaryEntry(DiaryEntryDTO diaryEntry)
+        public async Task DeleteDiaryEntryAsync(DiaryEntryDTO diaryEntry)
         {
             _context.Remove(diaryEntry);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
 
-        public DiaryDateRange GetDiaryDateRange(Guid diaryId)
+        public async Task<DiaryDateRange> GetDiaryDateRangeAsync(Guid diaryId)
         {
-            var maxDate = _context.DiaryEntries
+            var maxDate = await _context.DiaryEntries
                 .Where(d => d.DiaryId == diaryId)
                 .OrderByDescending(d => d.Date)
-                .Select(d => d.Date).AsEnumerable()
-                .FirstOrDefault() ?? DateTime.MaxValue;
+                .Select(d => d.Date)
+                .FirstOrDefaultAsync() ?? DateTime.MaxValue;
 
-            var minDate = _context.DiaryEntries
+            var minDate = await _context.DiaryEntries
                 .Where(d => d.DiaryId == diaryId)
                 .OrderBy(d => d.Date)
-                .Select(d => d.Date).AsEnumerable()
-                .FirstOrDefault() ?? DateTime.MinValue;
+                .Select(d => d.Date)
+                .FirstOrDefaultAsync() ?? DateTime.MinValue;
 
             return new DiaryDateRange { MaxDateTime = maxDate, MinDateTime = minDate };
         }
 
-        public List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0)
+        public async Task<List<int>> SearchDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0)
         {
             Func<DiaryEntryDTO, int> func;
             switch (searchType)
@@ -69,43 +70,48 @@ namespace ccDiaryApi.Services
                     throw new ArgumentException($"Unhandled SearchType [{searchType}]");
             }
 
-            return _context.DiaryEntries.Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= until)
+            // The projection runs client-side: only the Where is translated to SQL.
+            var matches = await _context.DiaryEntries
+                .Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= until)
+                .ToListAsync();
+
+            return matches
                 .OrderBy(func)
                 .Select(func)
                 .Distinct()
                 .ToList();
         }
 
-        public List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId)
+        public async Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId)
         {
-            return _context.DiaryEntries
+            return await _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
                 .OrderBy(x => x.Date)
-                .ToList();
+                .ToListAsync();
         }
 
-        public List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId, DateTime from, DateTime until)
+        public async Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until)
         {
-            return _context.DiaryEntries
+            return await _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId && x.Date >= from && x.Date <= until)
                 .OrderBy(x => x.Date)
-                .ToList();
+                .ToListAsync();
         }
 
-        public DiaryEntryDTO? GetDiaryEntry(Guid id)
+        public async Task<DiaryEntryDTO?> GetDiaryEntryAsync(Guid id)
         {
-            return _context.DiaryEntries.Where(x => x.DiaryEntryId == id)
-                .FirstOrDefault();
+            return await _context.DiaryEntries.Where(x => x.DiaryEntryId == id)
+                .FirstOrDefaultAsync();
         }
 
-        public DiaryEntryDTO UpdateDiaryEntry(DiaryEntryDTO diaryEntry)
+        public async Task<DiaryEntryDTO> UpdateDiaryEntryAsync(DiaryEntryDTO diaryEntry)
         {
             _context.Update(diaryEntry);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return diaryEntry;
         }
 
-        public PagedResultDTO<DiaryEntryDTO> TextSearchDiaryEntries(Guid diaryId, string search, int page = 1, int pageSize = 20)
+        public async Task<PagedResultDTO<DiaryEntryDTO>> TextSearchDiaryEntriesAsync(Guid diaryId, string search, int page = 1, int pageSize = 20)
         {
             var query = _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
@@ -114,10 +120,10 @@ namespace ccDiaryApi.Services
                             (x.FromLocation != null && x.FromLocation.Contains(search)) ||
                             (x.ToLocation != null && x.ToLocation.Contains(search)));
 
-            var totalCount = query.Count();
-            var items = query
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderBy(x => x.Date)
-                .Skip((page - 1) * pageSize).Take(pageSize).ToList();
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
             return new PagedResultDTO<DiaryEntryDTO>
             {
@@ -128,28 +134,28 @@ namespace ccDiaryApi.Services
             };
         }
 
-        public DateTime MinDiaryEntryDate(Guid diaryId)
+        public async Task<DateTime> MinDiaryEntryDateAsync(Guid diaryId)
         {
-            if (!_context.DiaryEntries.Any(x => x.DiaryId == diaryId))
+            if (!await _context.DiaryEntries.AnyAsync(x => x.DiaryId == diaryId))
             {
                 return DateTime.UtcNow;
             }
 
-            return _context.DiaryEntries
+            return await _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
-                .Min(x => x.Date) ?? DateTime.MinValue;
+                .MinAsync(x => x.Date) ?? DateTime.MinValue;
         }
 
-        public DateTime MaxDiaryEntryDate(Guid diaryId)
+        public async Task<DateTime> MaxDiaryEntryDateAsync(Guid diaryId)
         {
-            if (!_context.DiaryEntries.Any(x => x.DiaryId == diaryId))
+            if (!await _context.DiaryEntries.AnyAsync(x => x.DiaryId == diaryId))
             {
                 return DateTime.UtcNow;
             }
 
-            return _context.DiaryEntries
+            return await _context.DiaryEntries
                 .Where(x => x.DiaryId == diaryId)
-                .Max(x => x.Date) ?? DateTime.MaxValue;
+                .MaxAsync(x => x.Date) ?? DateTime.MaxValue;
         }
     }
 }

@@ -30,48 +30,51 @@ namespace ccDiaryApi.Controllers.v1
 
         [HttpGet]
         [AllowAnonymous]
-        public ActionResult<PagedResultDTO<DiaryDTO>> Get(
+        public async Task<ActionResult<PagedResultDTO<DiaryDTO>>> Get(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12,
             [FromQuery] string? search = null)
         {
-            var diaries = _diaryService.GetDiaries(page, pageSize, search);
+            var diaries = await _diaryService.GetDiariesAsync(
+                PagingLimits.ClampPage(page),
+                PagingLimits.ClampPageSize(pageSize),
+                search);
             return Ok(diaries);
         }
 
         [Route("{diaryId:guid}")]
         [HttpGet]
         [AllowAnonymous]
-        public ActionResult<DiaryDTO> Get(Guid diaryId)
+        public async Task<ActionResult<DiaryDTO>> Get(Guid diaryId)
         {
-            var diary = _diaryService.GetDiary(diaryId);
+            var diary = await _diaryService.GetDiaryAsync(diaryId);
             return Ok(diary);
         }
 
         [HttpPost]
         [Authorize(Policy = "DiaryContributor")]
-        public ActionResult<DiaryDTO> Create([FromBody] DiaryDTO diary)
+        public async Task<ActionResult<DiaryDTO>> Create([FromBody] DiaryDTO diary)
         {
             diary.OwnerId = User.GetOid();
-            var retDiary = _diaryService.Create(diary);
+            var retDiary = await _diaryService.CreateAsync(diary);
             _logger.LogInformation("Diary created. DiaryId={DiaryId}", SanitizeForLog(retDiary.DiaryId));
             return Created("Uri", retDiary);
         }
 
         [HttpPut]
         [Authorize(Policy = "DiaryContributor")]
-        public ActionResult<DiaryDTO> Update([FromBody] DiaryDTO diary)
+        public async Task<ActionResult<DiaryDTO>> Update([FromBody] DiaryDTO diary)
         {
             if (!User.IsInRole("DiaryAdmin"))
             {
-                var existing = _diaryService.GetDiary(diary.DiaryId ?? Guid.Empty);
+                var existing = await _diaryService.GetDiaryAsync(diary.DiaryId ?? Guid.Empty);
                 if (existing == null || existing.OwnerId != User.GetOid())
                 {
                     return Forbid();
                 }
             }
 
-            var retDiary = _diaryService.Update(diary);
+            var retDiary = await _diaryService.UpdateAsync(diary);
             _logger.LogInformation("Diary updated. DiaryId={DiaryId}", SanitizeForLog(retDiary.DiaryId));
             return Ok(retDiary);
         }
@@ -79,9 +82,9 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}")]
         [HttpDelete]
         [Authorize(Policy = "DiaryContributor")]
-        public ActionResult Delete(Guid diaryId)
+        public async Task<ActionResult> Delete(Guid diaryId)
         {
-            var diary = _diaryService.GetDiary(diaryId);
+            var diary = await _diaryService.GetDiaryAsync(diaryId);
             if (diary == null)
             {
                 return NotFound();
@@ -92,7 +95,7 @@ namespace ccDiaryApi.Controllers.v1
                 return Forbid();
             }
 
-            _diaryService.Delete(diary);
+            await _diaryService.DeleteAsync(diary);
             _logger.LogInformation("Diary deleted. DiaryId={DiaryId}", SanitizeForLog(diaryId));
             return Ok();
         }

@@ -6,6 +6,7 @@ namespace ccDiaryApi.Services
 {
     using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
+    using Microsoft.EntityFrameworkCore;
 
     public class AppInfoService : IAppInfoService
     {
@@ -16,9 +17,9 @@ namespace ccDiaryApi.Services
             _context = context;
         }
 
-        public AppInfoDTO? GetAppInfo()
+        public async Task<AppInfoDTO?> GetAppInfoAsync()
         {
-            return _context.AppInfo.SingleOrDefault(a => a.Id == 1);
+            return await _context.AppInfo.SingleOrDefaultAsync(a => a.Id == 1);
         }
     }
 }

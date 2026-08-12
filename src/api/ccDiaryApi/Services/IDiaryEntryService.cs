@@ -1,4 +1,4 @@
-﻿// <copyright file="IDiaryEntryService.cs" company="CookingCode">
+// <copyright file="IDiaryEntryService.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,26 +8,26 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryEntryService
     {
-        List<int> SearchDiaryEntries(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0);
+        Task<List<int>> SearchDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0);
 
-        List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId, DateTime from, DateTime until);
+        Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until);
 
-        List<DiaryEntryDTO> GetDiaryEntries(Guid diaryId);
+        Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId);
 
-        DiaryEntryDTO? GetDiaryEntry(Guid id);
+        Task<DiaryEntryDTO?> GetDiaryEntryAsync(Guid id);
 
-        DiaryDateRange GetDiaryDateRange(Guid diaryId);
+        Task<DiaryDateRange> GetDiaryDateRangeAsync(Guid diaryId);
 
-        void DeleteDiaryEntry(DiaryEntryDTO diaryEntry);
+        Task DeleteDiaryEntryAsync(DiaryEntryDTO diaryEntry);
 
-        DiaryEntryDTO CreateDiaryEntry(DiaryEntryDTO diaryEntry);
+        Task<DiaryEntryDTO> CreateDiaryEntryAsync(DiaryEntryDTO diaryEntry);
 
-        DiaryEntryDTO UpdateDiaryEntry(DiaryEntryDTO diaryEntry);
+        Task<DiaryEntryDTO> UpdateDiaryEntryAsync(DiaryEntryDTO diaryEntry);
 
-        DateTime MinDiaryEntryDate(Guid diaryId);
+        Task<DateTime> MinDiaryEntryDateAsync(Guid diaryId);
 
-        DateTime MaxDiaryEntryDate(Guid diaryId);
+        Task<DateTime> MaxDiaryEntryDateAsync(Guid diaryId);
 
-        PagedResultDTO<DiaryEntryDTO> TextSearchDiaryEntries(Guid diaryId, string search, int page = 1, int pageSize = 20);
+        Task<PagedResultDTO<DiaryEntryDTO>> TextSearchDiaryEntriesAsync(Guid diaryId, string search, int page = 1, int pageSize = 20);
     }
 }

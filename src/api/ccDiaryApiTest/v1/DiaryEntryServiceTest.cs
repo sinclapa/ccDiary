@@ -13,63 +13,63 @@ namespace ccDiaryApiTest.v1
     public class DiaryEntryServiceTest
     {
         [TestMethod]
-        public void SearchDiaryEntries_ThrowsArgumentException_ForInvalidSearchType()
+        public async Task SearchDiaryEntries_ThrowsArgumentException_ForInvalidSearchType()
         {
             // Arrange
             var db = GetMemoryContext();
             var service = new DiaryEntryService(db);
 
             // Act & Assert
-            Assert.ThrowsException<ArgumentException>(() =>
+            await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
-                service.SearchDiaryEntries(Guid.NewGuid(), DateTime.MinValue, DateTime.MaxValue, (SearchType)99);
+                await service.SearchDiaryEntriesAsync(Guid.NewGuid(), DateTime.MinValue, DateTime.MaxValue, (SearchType)99);
             });
         }
 
         [TestMethod]
-        public void CreateDiaryEntry_ThrowsArgumentException_WhenDateIsNull()
+        public async Task CreateDiaryEntry_ThrowsArgumentException_WhenDateIsNull()
         {
             var db = GetMemoryContext();
             var service = new DiaryEntryService(db);
 
-            Assert.ThrowsException<ArgumentException>(() =>
+            await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
-                service.CreateDiaryEntry(new DiaryEntryDTO { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = null });
+                await service.CreateDiaryEntryAsync(new DiaryEntryDTO { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = null });
             });
         }
 
         [TestMethod]
-        public void CreateDiaryEntry_ThrowsArgumentException_WhenDateIsMinValue()
+        public async Task CreateDiaryEntry_ThrowsArgumentException_WhenDateIsMinValue()
         {
             var db = GetMemoryContext();
             var service = new DiaryEntryService(db);
 
-            Assert.ThrowsException<ArgumentException>(() =>
+            await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
-                service.CreateDiaryEntry(new DiaryEntryDTO { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = DateTime.MinValue });
+                await service.CreateDiaryEntryAsync(new DiaryEntryDTO { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = DateTime.MinValue });
             });
         }
 
         [TestMethod]
-        public void MinDiaryEntryDate_ReturnsApproximatelyUtcNow_WhenNoDiaryEntries()
+        public async Task MinDiaryEntryDate_ReturnsApproximatelyUtcNow_WhenNoDiaryEntries()
         {
             var db = GetMemoryContext();
             var service = new DiaryEntryService(db);
             var before = DateTime.UtcNow;
 
-            var result = service.MinDiaryEntryDate(Guid.NewGuid());
+            var result = await service.MinDiaryEntryDateAsync(Guid.NewGuid());
 
             Assert.IsTrue(result >= before.AddSeconds(-1) && result <= DateTime.UtcNow.AddSeconds(1));
         }
 
         [TestMethod]
-        public void MaxDiaryEntryDate_ReturnsApproximatelyUtcNow_WhenNoDiaryEntries()
+        public async Task MaxDiaryEntryDate_ReturnsApproximatelyUtcNow_WhenNoDiaryEntries()
         {
             var db = GetMemoryContext();
             var service = new DiaryEntryService(db);
             var before = DateTime.UtcNow;
 
-            var result = service.MaxDiaryEntryDate(Guid.NewGuid());
+            var result = await service.MaxDiaryEntryDateAsync(Guid.NewGuid());
 
             Assert.IsTrue(result >= before.AddSeconds(-1) && result <= DateTime.UtcNow.AddSeconds(1));
         }
