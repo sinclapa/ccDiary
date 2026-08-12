@@ -18,19 +18,19 @@ namespace ccDiaryApiTest.v1
     public class DiaryEntryControllerTest
     {
         [TestMethod]
-        public void GetValid()
+        public async Task GetValid()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
 
             Guid id = Guid.NewGuid();
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = id, DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "London", Entry = "Some text." };
-            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(id)).Returns(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(id)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.Get(id);
+            var response = await controller.Get(id);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -40,7 +40,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void GetInvalid()
+        public async Task GetInvalid()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -48,7 +48,7 @@ namespace ccDiaryApiTest.v1
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.Get(Guid.NewGuid());
+            var response = await controller.Get(Guid.NewGuid());
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(NotFoundResult));
@@ -56,7 +56,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void SearchByDiaryId()
+        public async Task SearchByDiaryId()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -65,9 +65,9 @@ namespace ccDiaryApiTest.v1
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
-            diaryEntryServiceMock.Setup(h => h.GetDiaryDateRange(It.IsAny<Guid>()))
-                .Returns(new DiaryDateRange { MaxDateTime = DateTime.MaxValue, MinDateTime = DateTime.MinValue });
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+            diaryEntryServiceMock.Setup(h => h.GetDiaryDateRangeAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDateRange { MaxDateTime = DateTime.MaxValue, MinDateTime = DateTime.MinValue });
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntriesAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
                 .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     diaryId = d;
@@ -75,14 +75,14 @@ namespace ccDiaryApiTest.v1
                     to = t;
                     searchType = s;
                 })
-                .Returns([2022, 2023]);
+                .ReturnsAsync(new List<int> { 2022, 2023 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
-            var response = controller.Search(id);
+            var response = await controller.Search(id);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -95,7 +95,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void SearchByYear()
+        public async Task SearchByYear()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -104,7 +104,7 @@ namespace ccDiaryApiTest.v1
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntriesAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
                 .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     diaryId = d;
@@ -112,14 +112,14 @@ namespace ccDiaryApiTest.v1
                     to = t;
                     searchType = s;
                 })
-                .Returns([04, 05, 08]);
+                .ReturnsAsync(new List<int> { 04, 05, 08 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
-            var response = controller.Search(id, 2022);
+            var response = await controller.Search(id, 2022);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -132,7 +132,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void SearchByYearAndMonth()
+        public async Task SearchByYearAndMonth()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -141,7 +141,7 @@ namespace ccDiaryApiTest.v1
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
             var searchType = SearchType.Day;
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntriesAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
                 .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     diaryId = d;
@@ -149,14 +149,14 @@ namespace ccDiaryApiTest.v1
                     to = t;
                     searchType = s;
                 })
-                .Returns([7, 13, 23, 30]);
+                .ReturnsAsync(new List<int> { 7, 13, 23, 30 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
-            var response = controller.Search(id, 2022, 5, 0);
+            var response = await controller.Search(id, 2022, 5, 0);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -169,7 +169,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void SearchByYearAndMonthWithUTCOffset()
+        public async Task SearchByYearAndMonthWithUTCOffset()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -177,21 +177,21 @@ namespace ccDiaryApiTest.v1
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
             var capturedOffset = -1;
-            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
+            diaryEntryServiceMock.Setup(h => h.SearchDiaryEntriesAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<SearchType>(), It.IsAny<int>()))
                 .Callback<Guid, DateTime, DateTime, SearchType, int>((d, f, t, s, o) =>
                 {
                     from = f;
                     to = t;
                     capturedOffset = o;
                 })
-                .Returns([7, 13, 23, 24]);
+                .ReturnsAsync(new List<int> { 7, 13, 23, 24 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act — BST offset (+60 min): local May starts at UTC April 30 23:00
             var id = Guid.NewGuid();
-            var response = controller.Search(id, 2022, 5, 60);
+            var response = await controller.Search(id, 2022, 5, 60);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -201,7 +201,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void SearchByYearAndMonthAndDate()
+        public async Task SearchByYearAndMonthAndDate()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -217,21 +217,21 @@ namespace ccDiaryApiTest.v1
                 Entry = "Test entry",
                 Location = "Test location",
             };
-            diaryEntryServiceMock.Setup(h => h.GetDiaryEntries(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            diaryEntryServiceMock.Setup(h => h.GetDiaryEntriesAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                 .Callback<Guid, DateTime, DateTime>((d, f, t) =>
                 {
                     diaryId = d;
                     from = f;
                     to = t;
                 })
-                .Returns([diaryEntry]);
+                .ReturnsAsync(new List<DiaryEntryDTO> { diaryEntry });
 
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
             var id = Guid.NewGuid();
-            var response = controller.Search(id, 2022, 5, 23, 0);
+            var response = await controller.Search(id, 2022, 5, 23, 0);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -243,7 +243,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void CreatePassesThroughShowJourneyFields()
+        public async Task CreatePassesThroughShowJourneyFields()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -261,17 +261,17 @@ namespace ccDiaryApiTest.v1
                 ToLocation = "Southampton, UK",
             };
             diaryEntryServiceMock
-                .Setup(x => x.CreateDiaryEntry(It.IsAny<DiaryEntryDTO>()))
+                .Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>()))
                 .Callback<DiaryEntryDTO>(d => captured = d)
-                .Returns(diaryEntry);
+                .ReturnsAsync(diaryEntry);
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
-                .Returns(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.Create(diaryEntry);
+            var response = await controller.Create(diaryEntry);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
@@ -282,7 +282,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void UpdatePassesThroughShowJourneyFields()
+        public async Task UpdatePassesThroughShowJourneyFields()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -300,17 +300,17 @@ namespace ccDiaryApiTest.v1
                 ToLocation = "Paris, France",
             };
             diaryEntryServiceMock
-                .Setup(x => x.UpdateDiaryEntry(It.IsAny<DiaryEntryDTO>()))
+                .Setup(x => x.UpdateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>()))
                 .Callback<DiaryEntryDTO>(d => captured = d)
-                .Returns(diaryEntry);
+                .ReturnsAsync(diaryEntry);
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
-                .Returns(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.Update(diaryEntry);
+            var response = await controller.Update(diaryEntry);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -321,123 +321,123 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void Create_AsNonOwner_ReturnsForbid()
+        public async Task Create_AsNonOwner_ReturnsForbid()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
-                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
-            var response = controller.Create(diaryEntry);
+            var response = await controller.Create(diaryEntry);
 
             Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
         }
 
         [TestMethod]
-        public void Create_AsAdmin_ReturnsCreated()
+        public async Task Create_AsAdmin_ReturnsCreated()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.CreateDiaryEntry(It.IsAny<DiaryEntryDTO>())).Returns(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>())).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
-            var response = controller.Create(diaryEntry);
+            var response = await controller.Create(diaryEntry);
 
             Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
         }
 
         [TestMethod]
-        public void Update_AsNonOwner_ReturnsForbid()
+        public async Task Update_AsNonOwner_ReturnsForbid()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
-                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
-            var response = controller.Update(diaryEntry);
+            var response = await controller.Update(diaryEntry);
 
             Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
         }
 
         [TestMethod]
-        public void Update_AsAdmin_ReturnsOk()
+        public async Task Update_AsAdmin_ReturnsOk()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.UpdateDiaryEntry(It.IsAny<DiaryEntryDTO>())).Returns(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.UpdateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>())).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
-            var response = controller.Update(diaryEntry);
+            var response = await controller.Update(diaryEntry);
 
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
         }
 
         [TestMethod]
-        public void Delete_EntryNotFound_ReturnsNotFound()
+        public async Task Delete_EntryNotFound_ReturnsNotFound()
         {
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
-            var response = controller.Delete(Guid.NewGuid());
+            var response = await controller.Delete(Guid.NewGuid());
 
             Assert.IsInstanceOfType(response, typeof(NotFoundResult));
         }
 
         [TestMethod]
-        public void Delete_AsOwner_ReturnsOk()
+        public async Task Delete_AsOwner_ReturnsOk()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(diaryEntry.DiaryEntryId!.Value)).Returns(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(diaryEntry.DiaryEntryId!.Value)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
-                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "owner-oid");
-            var response = controller.Delete(diaryEntry.DiaryEntryId!.Value);
+            var response = await controller.Delete(diaryEntry.DiaryEntryId!.Value);
 
             Assert.IsInstanceOfType(response, typeof(OkResult));
         }
 
         [TestMethod]
-        public void Delete_AsNonOwner_ReturnsForbid()
+        public async Task Delete_AsNonOwner_ReturnsForbid()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(diaryEntry.DiaryEntryId!.Value)).Returns(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(diaryEntry.DiaryEntryId!.Value)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiary(It.IsAny<Guid>()))
-                .Returns(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
-            var response = controller.Delete(diaryEntry.DiaryEntryId!.Value);
+            var response = await controller.Delete(diaryEntry.DiaryEntryId!.Value);
 
             Assert.IsInstanceOfType(response, typeof(ForbidResult));
         }
 
         [TestMethod]
-        public void Delete_AsAdmin_ReturnsOk()
+        public async Task Delete_AsAdmin_ReturnsOk()
         {
             var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.GetDiaryEntry(diaryEntry.DiaryEntryId!.Value)).Returns(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(diaryEntry.DiaryEntryId!.Value)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
-            var response = controller.Delete(diaryEntry.DiaryEntryId!.Value);
+            var response = await controller.Delete(diaryEntry.DiaryEntryId!.Value);
 
             Assert.IsInstanceOfType(response, typeof(OkResult));
         }
 
         [TestMethod]
-        public void TextSearch_ReturnsMatchingEntries()
+        public async Task TextSearch_ReturnsMatchingEntries()
         {
             // Arrange
             var diaryId = Guid.NewGuid();
@@ -459,13 +459,13 @@ namespace ccDiaryApiTest.v1
 
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             diaryEntryServiceMock
-                .Setup(x => x.TextSearchDiaryEntries(diaryId, "Menin", 1, 20))
-                .Returns(paged);
+                .Setup(x => x.TextSearchDiaryEntriesAsync(diaryId, "Menin", 1, 20))
+                .ReturnsAsync(paged);
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.TextSearch(diaryId, "Menin");
+            var response = await controller.TextSearch(diaryId, "Menin");
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -476,7 +476,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void TextSearch_MatchesLocation()
+        public async Task TextSearch_MatchesLocation()
         {
             // Arrange
             var diaryId = Guid.NewGuid();
@@ -490,13 +490,13 @@ namespace ccDiaryApiTest.v1
 
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             diaryEntryServiceMock
-                .Setup(x => x.TextSearchDiaryEntries(diaryId, "Passchendaele", 1, 20))
-                .Returns(paged);
+                .Setup(x => x.TextSearchDiaryEntriesAsync(diaryId, "Passchendaele", 1, 20))
+                .ReturnsAsync(paged);
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.TextSearch(diaryId, "Passchendaele");
+            var response = await controller.TextSearch(diaryId, "Passchendaele");
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -506,7 +506,7 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void TextSearch_EmptySearch_ReturnsBadRequest()
+        public async Task TextSearch_EmptySearch_ReturnsBadRequest()
         {
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
@@ -514,14 +514,14 @@ namespace ccDiaryApiTest.v1
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.TextSearch(Guid.NewGuid(), "   ");
+            var response = await controller.TextSearch(Guid.NewGuid(), "   ");
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(BadRequestObjectResult));
         }
 
         [TestMethod]
-        public void TextSearch_NoMatch_ReturnsEmptyPage()
+        public async Task TextSearch_NoMatch_ReturnsEmptyPage()
         {
             // Arrange
             var diaryId = Guid.NewGuid();
@@ -535,13 +535,13 @@ namespace ccDiaryApiTest.v1
 
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             diaryEntryServiceMock
-                .Setup(x => x.TextSearchDiaryEntries(diaryId, "zzznomatch", 1, 20))
-                .Returns(emptyPaged);
+                .Setup(x => x.TextSearchDiaryEntriesAsync(diaryId, "zzznomatch", 1, 20))
+                .ReturnsAsync(emptyPaged);
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
-            var response = controller.TextSearch(diaryId, "zzznomatch");
+            var response = await controller.TextSearch(diaryId, "zzznomatch");
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));

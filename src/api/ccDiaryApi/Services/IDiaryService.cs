@@ -1,4 +1,4 @@
-﻿// <copyright file="IDiaryService.cs" company="CookingCode">
+// <copyright file="IDiaryService.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,14 +8,14 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryService
     {
-        PagedResultDTO<DiaryDTO> GetDiaries(int page, int pageSize, string? search = null);
+        Task<PagedResultDTO<DiaryDTO>> GetDiariesAsync(int page, int pageSize, string? search = null);
 
-        DiaryDTO? GetDiary(Guid diaryId);
+        Task<DiaryDTO?> GetDiaryAsync(Guid diaryId);
 
-        DiaryDTO Create(DiaryDTO diary);
+        Task<DiaryDTO> CreateAsync(DiaryDTO diary);
 
-        DiaryDTO Update(DiaryDTO diary);
+        Task<DiaryDTO> UpdateAsync(DiaryDTO diary);
 
-        void Delete(DiaryDTO diary);
+        Task DeleteAsync(DiaryDTO diary);
     }
 }

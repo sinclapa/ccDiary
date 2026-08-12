@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryControllerTest.cs" company="CookingCode">
+// <copyright file="DiaryControllerTest.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,49 +8,45 @@ namespace ccDiaryApiTest.v1
     using System.Collections.Generic;
     using System.Linq;
     using System.Security.Claims;
-    using System.Text;
     using System.Threading.Tasks;
+    using ccDiaryApi.Controllers;
     using ccDiaryApi.Controllers.v1;
-    using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
     using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Http.HttpResults;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.EntityFrameworkCore;
+    using Moq;
 
+    /// <summary>
+    /// Controller-level tests: routing of results, authorisation branches and query
+    /// parameter clamping. The query semantics of <see cref="DiaryService"/> itself
+    /// are covered by the integration tests, which run it end to end over HTTP.
+    /// </summary>
     [TestClass]
     public class DiaryControllerTest
     {
-        public static DiaryDatabaseContext GetMemoryContext()
-        {
-            var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
-                .UseInMemoryDatabase(databaseName: "InMemoryDatabase")
-                .EnableSensitiveDataLogging()
-                .Options;
-            return new DiaryDatabaseContext(options);
-        }
+        private Mock<IDiaryService> _diaryService = null!;
 
         [TestInitialize]
-        public void InitDb()
+        public void Init()
         {
-            var db = GetMemoryContext();
-            if (db.Database.IsInMemory())
-            {
-                db.Database.EnsureDeleted();
-            }
+            _diaryService = new Mock<IDiaryService>();
         }
 
         [TestMethod]
-        public void Insert()
+        public async Task Insert()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
+            _diaryService.Setup(x => x.CreateAsync(It.IsAny<DiaryDTO>()))
+                .ReturnsAsync((DiaryDTO d) =>
+                {
+                    d.DiaryId = Guid.NewGuid();
+                    return d;
+                });
+            var controller = CreateController();
 
             // Act
-            var response = controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
+            var response = await controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
@@ -62,18 +58,36 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void GetMany()
+        public async Task Create_StampsOwnerIdFromCallersOid()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
+            DiaryDTO? captured = null;
+            _diaryService.Setup(x => x.CreateAsync(It.IsAny<DiaryDTO>()))
+                .Callback<DiaryDTO>(d => captured = d)
+                .ReturnsAsync((DiaryDTO d) => d);
+            var controller = CreateController(oid: "owner-oid");
 
             // Act
-            controller.Create(new DiaryDTO { Author = "Paul1", Title = "Paul's 1st Diary" });
-            controller.Create(new DiaryDTO { Author = "Paul2", Title = "Paul's 2nd Diary" });
-            controller.Create(new DiaryDTO { Author = "Paul3", Title = "Paul's 3rd Diary" });
-            var response = controller.Get();
+            await controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
+
+            // Assert
+            Assert.IsNotNull(captured);
+            Assert.AreEqual("owner-oid", captured.OwnerId);
+        }
+
+        [TestMethod]
+        public async Task GetMany()
+        {
+            // Arrange
+            var page = NewPage(
+                new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Paul1", Title = "Paul's 1st Diary" },
+                new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Paul2", Title = "Paul's 2nd Diary" },
+                new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Paul3", Title = "Paul's 3rd Diary" });
+            _diaryService.Setup(x => x.GetDiariesAsync(1, 12, null)).ReturnsAsync(page);
+            var controller = CreateController();
+
+            // Act
+            var response = await controller.Get();
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
@@ -84,336 +98,271 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
-        public void GetSingle()
+        public async Task GetNone()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>()))
+                .ReturnsAsync(NewPage());
+            var controller = CreateController();
 
             // Act
-            controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
-            var response = controller.Get();
+            var response = await controller.Get();
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
-            Assert.AreEqual(1, result.TotalCount);
-            Assert.AreEqual(1, result.Items.Count());
-            Assert.AreEqual("Paul's Diary", result.Items.First().Title);
-            Assert.AreNotEqual(Guid.Empty, result.Items.First().DiaryId);
+            Assert.AreEqual(0, result.TotalCount);
+            Assert.AreEqual(0, result.Items.Count());
         }
 
         [TestMethod]
-        public void GetSingleById()
+        public async Task GetSingleById()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
+            var diaryId = Guid.NewGuid();
+            var diary = new DiaryDTO
+            {
+                DiaryId = diaryId,
+                Author = "Paul2",
+                Title = "Paul's 2nd Diary",
+                Description = "Description of Paul's 2nd Diary",
+            };
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
+            var controller = CreateController();
 
             // Act
-            controller.Create(new DiaryDTO { Author = "Paul1", Title = "Paul's 1st Diary", Description = "Description of Paul's 1st Diary" });
-            var createResponse = controller.Create(new DiaryDTO { Author = "Paul2", Title = "Paul's 2nd Diary", Description = "Description of Paul's 2nd Diary" });
-            controller.Create(new DiaryDTO { Author = "Paul3", Title = "Paul's 3rd Diary", Description = "Description of Paul's 3rd Diary" });
-            var createResult = createResponse.GetObjectResult();
-            Assert.IsNotNull(createResult);
-            var response = controller.Get(createResult.DiaryId!.Value);
+            var response = await controller.Get(diaryId);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
-            Assert.AreEqual(createResult.DiaryId, result.DiaryId);
+            Assert.AreEqual(diaryId, result.DiaryId);
             Assert.AreEqual("Paul2", result.Author);
             Assert.AreEqual("Paul's 2nd Diary", result.Title);
             Assert.AreEqual("Description of Paul's 2nd Diary", result.Description);
         }
 
         [TestMethod]
-        public void Delete()
+        public async Task Get_PassesSearchTermThrough()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            controller.Create(new DiaryDTO { Author = "Paul1", Title = "Paul's 1st Diary", Description = "Description of Paul's 1st Diary" });
-            var createResponse = controller.Create(new DiaryDTO { Author = "Paul2", Title = "Paul's 2nd Diary", Description = "Description of Paul's 2nd Diary" });
-            controller.Create(new DiaryDTO { Author = "Paul3", Title = "Paul's 3rd Diary", Description = "Description of Paul's 3rd Diary" });
-            var createResult = createResponse.GetObjectResult();
-            Assert.IsNotNull(createResult);
-            var preGetResponse = controller.Get();
-            var preGetResult = preGetResponse.GetObjectResult();
-            Assert.IsNotNull(preGetResult);
-            Assert.AreEqual(3, preGetResult.TotalCount);
+            _diaryService.Setup(x => x.GetDiariesAsync(1, 12, "World War")).ReturnsAsync(NewPage());
+            var controller = CreateController();
 
             // Act
-            var response = controller.Delete(createResult.DiaryId!.Value);
+            await controller.Get(search: "World War");
 
             // Assert
-            Assert.IsInstanceOfType(response, typeof(OkResult));
-            var postGetResponse = controller.Get();
-            var postGetResult = postGetResponse.GetObjectResult();
-            Assert.IsNotNull(postGetResult);
-            Assert.AreEqual(2, postGetResult.TotalCount);
+            _diaryService.Verify(x => x.GetDiariesAsync(1, 12, "World War"), Times.Once);
         }
 
         [TestMethod]
-        public void DeleteNone()
+        public async Task Get_ClampsPageSizeToMaximum()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>()))
+                .ReturnsAsync(NewPage());
+            var controller = CreateController();
 
             // Act
-            var response = controller.Delete(Guid.NewGuid());
+            await controller.Get(page: 1, pageSize: 5000);
 
             // Assert
-            Assert.IsInstanceOfType(response, typeof(NotFoundResult));
+            _diaryService.Verify(x => x.GetDiariesAsync(1, PagingLimits.MaxPageSize, null), Times.Once);
         }
 
         [TestMethod]
-        public void Update()
+        public async Task Get_ClampsNonPositivePageAndPageSize()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            var createResponse = controller.Create(new DiaryDTO { Author = "Paul2", Title = "Paul's 2nd Diary", Description = "Description of Paul's 2nd Diary" });
-            var createResult = createResponse.GetObjectResult();
-            Assert.IsNotNull(createResult);
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>()))
+                .ReturnsAsync(NewPage());
+            var controller = CreateController();
 
             // Act
-            createResult.Author = "John";
-            createResult.Title = "John's Diary";
-            createResult.Description = "Description of John's Diary";
-            var response = controller.Update(createResult);
+            await controller.Get(page: 0, pageSize: 0);
 
             // Assert
-            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-            var result = response.GetObjectResult();
-            Assert.IsNotNull(result);
-            Assert.AreEqual(createResult.DiaryId, result.DiaryId);
-            Assert.AreEqual("John", result.Author);
-            Assert.AreEqual("John's Diary", result.Title);
-            Assert.AreEqual("Description of John's Diary", result.Description);
+            _diaryService.Verify(x => x.GetDiariesAsync(1, 1, null), Times.Once);
         }
 
         [TestMethod]
-        public void GetNone()
+        public async Task GetPaged_PassesPagingThrough()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
+            var page = NewPage(new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Author01", Title = "Diary01" });
+            page.TotalCount = 15;
+            page.Page = 2;
+            page.PageSize = 5;
+            _diaryService.Setup(x => x.GetDiariesAsync(2, 5, null)).ReturnsAsync(page);
+            var controller = CreateController();
 
             // Act
-            var response = controller.Get();
-
-            // Assert
-            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-            var result = response.GetObjectResult();
-            Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.TotalCount);
-            Assert.AreEqual(0, result.Items.Count());
-        }
-
-        [TestMethod]
-        public void GetPaged_ReturnsCorrectPage()
-        {
-            // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            for (int i = 1; i <= 15; i++)
-            {
-                controller.Create(new DiaryDTO { Author = $"Author{i:D2}", Title = $"Diary{i:D2}" });
-            }
-
-            // Act — page 2 with page size 5
-            var response = controller.Get(page: 2, pageSize: 5);
+            var response = await controller.Get(page: 2, pageSize: 5);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
             Assert.AreEqual(15, result.TotalCount);
-            Assert.AreEqual(5, result.Items.Count());
             Assert.AreEqual(2, result.Page);
             Assert.AreEqual(5, result.PageSize);
         }
 
         [TestMethod]
-        public void Update_AsNonOwner_ReturnsForbid()
+        public async Task Delete()
         {
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Paul", Title = "Paul's Diary", OwnerId = "owner-oid" };
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
+            var controller = CreateController(oid: "owner-oid");
 
-            var ownerController = CreateController(diaryService, oid: "owner-oid");
-            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
-            Assert.IsNotNull(diary);
+            // Act
+            var response = await controller.Delete(diaryId);
 
-            var otherController = CreateController(diaryService, oid: "other-oid");
-            diary.Title = "Hijacked";
-            var response = otherController.Update(diary);
-
-            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
-        }
-
-        [TestMethod]
-        public void Update_WithMissingDiary_ReturnsForbid()
-        {
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService, oid: "user-oid");
-
-            var response = controller.Update(new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Ghost", Title = "Ghost Diary" });
-
-            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
-        }
-
-        [TestMethod]
-        public void Update_AsAdmin_ReturnsOk()
-        {
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-
-            var ownerController = CreateController(diaryService, oid: "owner-oid");
-            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
-            Assert.IsNotNull(diary);
-
-            var adminController = CreateController(diaryService, oid: "admin-oid", isAdmin: true);
-            diary.Title = "Admin Updated";
-            var response = adminController.Update(diary);
-
-            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-        }
-
-        [TestMethod]
-        public void Delete_AsNonOwner_ReturnsForbid()
-        {
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-
-            var ownerController = CreateController(diaryService, oid: "owner-oid");
-            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
-            Assert.IsNotNull(diary);
-
-            var otherController = CreateController(diaryService, oid: "other-oid");
-            var response = otherController.Delete(diary.DiaryId!.Value);
-
-            Assert.IsInstanceOfType(response, typeof(ForbidResult));
-        }
-
-        [TestMethod]
-        public void Delete_AsAdmin_ReturnsOk()
-        {
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-
-            var ownerController = CreateController(diaryService, oid: "owner-oid");
-            var diary = ownerController.Create(new DiaryDTO { Author = "Owner", Title = "Owner's Diary" }).GetObjectResult();
-            Assert.IsNotNull(diary);
-
-            var adminController = CreateController(diaryService, oid: "admin-oid", isAdmin: true);
-            var response = adminController.Delete(diary.DiaryId!.Value);
-
+            // Assert
             Assert.IsInstanceOfType(response, typeof(OkResult));
+            _diaryService.Verify(x => x.DeleteAsync(diary), Times.Once);
         }
 
         [TestMethod]
-        public void GetSearch_ByTitle_ReturnsFilteredResults()
+        public async Task DeleteNone()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "World War One" });
-            controller.Create(new DiaryDTO { Author = "AuthorB", Title = "World War Two" });
-            controller.Create(new DiaryDTO { Author = "AuthorC", Title = "Cold War Stories" });
+            _diaryService.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDTO?)null);
+            var controller = CreateController();
 
             // Act
-            var response = controller.Get(search: "World War");
+            var response = await controller.Delete(Guid.NewGuid());
+
+            // Assert
+            Assert.IsInstanceOfType(response, typeof(NotFoundResult));
+            _diaryService.Verify(x => x.DeleteAsync(It.IsAny<DiaryDTO>()), Times.Never);
+        }
+
+        [TestMethod]
+        public async Task Update()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var updated = new DiaryDTO
+            {
+                DiaryId = diaryId,
+                Author = "John",
+                Title = "John's Diary",
+                Description = "Description of John's Diary",
+                OwnerId = "owner-oid",
+            };
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(updated);
+            _diaryService.Setup(x => x.UpdateAsync(It.IsAny<DiaryDTO>())).ReturnsAsync((DiaryDTO d) => d);
+            var controller = CreateController(oid: "owner-oid");
+
+            // Act
+            var response = await controller.Update(updated);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
             var result = response.GetObjectResult();
             Assert.IsNotNull(result);
-            Assert.AreEqual(2, result.TotalCount);
-            Assert.AreEqual(2, result.Items.Count());
+            Assert.AreEqual(diaryId, result.DiaryId);
+            Assert.AreEqual("John", result.Author);
+            Assert.AreEqual("John's Diary", result.Title);
+            Assert.AreEqual("Description of John's Diary", result.Description);
         }
 
         [TestMethod]
-        public void GetSearch_ByDescription_ReturnsFilteredResults()
+        public async Task Update_AsNonOwner_ReturnsForbid()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "Diary One", Description = "Trench warfare in France" });
-            controller.Create(new DiaryDTO { Author = "AuthorB", Title = "Diary Two", Description = "Naval battles in the Pacific" });
+            var diaryId = Guid.NewGuid();
+            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
+            var controller = CreateController(oid: "other-oid");
 
             // Act
-            var response = controller.Get(search: "France");
+            var response = await controller.Update(new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Hijacked" });
 
             // Assert
-            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-            var result = response.GetObjectResult();
-            Assert.IsNotNull(result);
-            Assert.AreEqual(1, result.TotalCount);
-            Assert.AreEqual("Diary One", result.Items.First().Title);
+            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
+            _diaryService.Verify(x => x.UpdateAsync(It.IsAny<DiaryDTO>()), Times.Never);
         }
 
         [TestMethod]
-        public void GetSearch_NoMatch_ReturnsEmpty()
+        public async Task Update_WithMissingDiary_ReturnsForbid()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "War Diary", Description = "Some description" });
+            _diaryService.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDTO?)null);
+            var controller = CreateController(oid: "user-oid");
 
             // Act
-            var response = controller.Get(search: "zzznomatch");
+            var response = await controller.Update(new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Ghost", Title = "Ghost Diary" });
 
             // Assert
-            Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-            var result = response.GetObjectResult();
-            Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.TotalCount);
-            Assert.AreEqual(0, result.Items.Count());
+            Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
         }
 
         [TestMethod]
-        public void GetSearch_EmptySearch_ReturnsAll()
+        public async Task Update_AsAdmin_ReturnsOk()
         {
-            // Arrange
-            var db = GetMemoryContext();
-            var diaryService = new DiaryService(db);
-            var controller = CreateController(diaryService);
-
-            controller.Create(new DiaryDTO { Author = "AuthorA", Title = "Diary One" });
-            controller.Create(new DiaryDTO { Author = "AuthorB", Title = "Diary Two" });
+            // Arrange — an admin never triggers the ownership lookup
+            var diary = new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Owner", Title = "Admin Updated", OwnerId = "owner-oid" };
+            _diaryService.Setup(x => x.UpdateAsync(It.IsAny<DiaryDTO>())).ReturnsAsync((DiaryDTO d) => d);
+            var controller = CreateController(oid: "admin-oid", isAdmin: true);
 
             // Act
-            var response = controller.Get(search: string.Empty);
+            var response = await controller.Update(diary);
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-            var result = response.GetObjectResult();
-            Assert.IsNotNull(result);
-            Assert.AreEqual(2, result.TotalCount);
+            _diaryService.Verify(x => x.GetDiaryAsync(It.IsAny<Guid>()), Times.Never);
         }
 
-        private static DiaryController CreateController(IDiaryService service, string? oid = null, bool isAdmin = false)
+        [TestMethod]
+        public async Task Delete_AsNonOwner_ReturnsForbid()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
+            var controller = CreateController(oid: "other-oid");
+
+            // Act
+            var response = await controller.Delete(diaryId);
+
+            // Assert
+            Assert.IsInstanceOfType(response, typeof(ForbidResult));
+            _diaryService.Verify(x => x.DeleteAsync(It.IsAny<DiaryDTO>()), Times.Never);
+        }
+
+        [TestMethod]
+        public async Task Delete_AsAdmin_ReturnsOk()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
+            var controller = CreateController(oid: "admin-oid", isAdmin: true);
+
+            // Act
+            var response = await controller.Delete(diaryId);
+
+            // Assert
+            Assert.IsInstanceOfType(response, typeof(OkResult));
+            _diaryService.Verify(x => x.DeleteAsync(diary), Times.Once);
+        }
+
+        private static PagedResultDTO<DiaryDTO> NewPage(params DiaryDTO[] items) => new ()
+        {
+            Items = items.ToList(),
+            TotalCount = items.Length,
+            Page = 1,
+            PageSize = 12,
+        };
+
+        private DiaryController CreateController(string? oid = null, bool isAdmin = false)
         {
             var claims = new List<Claim>();
             if (oid != null)
@@ -426,15 +375,16 @@ namespace ccDiaryApiTest.v1
                 claims.Add(new Claim(ClaimTypes.Role, "DiaryAdmin"));
             }
 
-            var controller = new DiaryController(service);
-            controller.ControllerContext = new ControllerContext
+            return new DiaryController(_diaryService.Object)
             {
-                HttpContext = new DefaultHttpContext
+                ControllerContext = new ControllerContext
                 {
-                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, claims.Count > 0 ? "Test" : string.Empty)),
+                    HttpContext = new DefaultHttpContext
+                    {
+                        User = new ClaimsPrincipal(new ClaimsIdentity(claims, claims.Count > 0 ? "Test" : string.Empty)),
+                    },
                 },
             };
-            return controller;
         }
     }
 }

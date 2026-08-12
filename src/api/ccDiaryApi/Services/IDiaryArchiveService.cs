@@ -1,4 +1,4 @@
-﻿// <copyright file="IDiaryArchiveService.cs" company="CookingCode">
+// <copyright file="IDiaryArchiveService.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,8 +8,8 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryArchiveService
     {
-        DiaryArchiveDTO? Export(Guid diaryId);
+        Task<DiaryArchiveDTO?> ExportAsync(Guid diaryId);
 
-        DiaryDTO Import(DiaryArchiveDTO diaryArchive);
+        Task<DiaryDTO> ImportAsync(DiaryArchiveDTO diaryArchive);
     }
 }
