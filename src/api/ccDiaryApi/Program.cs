@@ -10,18 +10,16 @@ using System.Text.Json.Serialization;
 using Asp.Versioning;
 using ccDiaryApi;
 using ccDiaryApi.Authorization;
-using ccDiaryApi.Data.Context;
-using ccDiaryApi.Data.Migration;
 using ccDiaryApi.Data.Model;
+using ccDiaryApi.Data.Storage;
 using ccDiaryApi.Endpoints;
 using ccDiaryApi.Extensions;
 using ccDiaryApi.Health;
+using ccDiaryApi.Infrastructure;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -65,17 +63,17 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 Log.Logger.Information("ASPNETCORE_ENVIRONMENT = {Environment}", builder.Configuration["ASPNETCORE_ENVIRONMENT"]);
-string connectionString = Program.GetRequiredConnectionString(builder.Configuration);
+Program.ValidateStorageConfiguration(builder.Configuration);
 
-var connStrBuilder = new SqlConnectionStringBuilder(connectionString);
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+builder.Services.AddSingleton<ITableStore, TableStore>();
+builder.Services.AddSingleton<IBlobStore, BlobStore>();
 
-if (!string.IsNullOrEmpty(builder.Configuration["SA_PASSWORD"]))
-{
-    connStrBuilder.Password = builder.Configuration["SA_PASSWORD"];
-}
-
-builder.Services.AddDbContext<DiaryDatabaseContext>(opts =>
-    opts.UseSqlServer(connStrBuilder.ConnectionString));
+// Creates the tables and containers, records the running version and seeds the first
+// administrator. Throwing here stops the host from starting, which the deployment
+// workflow already treats as a failed revision — that is what replaces the old
+// pending-migrations health gate.
+builder.Services.AddHostedService<StorageBootstrapper>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddMicrosoftIdentityWebApi(
@@ -137,7 +135,7 @@ builder.Services.AddControllers()
             new JsonStringEnumConverter(JsonNamingPolicy.KebabCaseLower)));
 
 // Add Steeltoe actuators
-builder.Services.AddSingleton<IHealthContributor, DatabaseHealthContributor>();
+builder.Services.AddSingleton<IHealthContributor, StorageHealthContributor>();
 
 builder.Services.AddHealthActuator();
 
@@ -174,21 +172,6 @@ hostLifetime.ApplicationStopping.Register(() =>
     app.Services.GetRequiredService<TracerProvider>().ForceFlush(5000);
     app.Services.GetRequiredService<MeterProvider>().ForceFlush(5000);
 });
-
-if (app.Configuration.GetValue<bool>("RUN_MIGRATIONS", true))
-{
-    Program.RunDatabaseMigration(app, startupActivitySource);
-}
-else
-{
-    Log.Logger.Information("Skipping database migration (RUN_MIGRATIONS is not set)");
-}
-
-using (var scope = app.Services.CreateScope())
-{
-    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-    await userService.SeedBootstrapAdminAsync();
-}
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
@@ -253,18 +236,27 @@ public partial class Program
     {
     }
 
-    // Missing connection string causes startup failure; not testable in integration tests
-    // because the test factory always provides a connection string via appsettings.
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Startup guard; requires removing all connection string config sources to trigger — not testable in standard integration tests.")]
-    internal static string GetRequiredConnectionString(IConfiguration configuration)
+    /// <summary>
+    /// Fails startup when storage is not configured, rather than letting the first
+    /// request fail with an unrelated error.
+    /// </summary>
+    /// <param name="configuration">The application configuration.</param>
+    /// <remarks>
+    /// A connection string is used locally against Azurite; in Azure only the account
+    /// name is set and the Container App's managed identity supplies the credential, so
+    /// no secret is stored anywhere.
+    /// </remarks>
+    internal static void ValidateStorageConfiguration(IConfiguration configuration)
     {
-        var cs = configuration["AZURE_SQL_CONNECTIONSTRING"] ?? configuration["ConnectionStrings:SqlConnection"];
-        if (string.IsNullOrEmpty(cs))
-        {
-            throw new InvalidOperationException("A valid SQL connection string must be provided in configuration.");
-        }
+        var section = configuration.GetSection(StorageOptions.SectionName);
+        var connectionString = section["ConnectionString"];
+        var accountName = section["AccountName"];
 
-        return cs;
+        if (string.IsNullOrWhiteSpace(connectionString) && string.IsNullOrWhiteSpace(accountName))
+        {
+            throw new InvalidOperationException(
+                "Storage is not configured. Set Storage:ConnectionString (Azurite) or Storage:AccountName (managed identity).");
+        }
     }
 
     internal static void ConfigureJwtBearer(JwtBearerOptions jwtBearerOptions)
@@ -282,22 +274,5 @@ public partial class Program
     {
         options.GroupNameFormat = "'v'VVV";
         options.SubstituteApiVersionInUrl = true;
-    }
-
-    internal static void RunDatabaseMigration(
-        WebApplication app,
-        ActivitySource activitySource,
-        Action<WebApplication>? migrateAction = null)
-    {
-        var migrationStopwatch = Stopwatch.StartNew();
-        using var migrationActivity = activitySource.StartActivity("database.migrate", ActivityKind.Internal);
-        migrationActivity?.SetTag("db.operation", "migrate");
-        migrationActivity?.SetTag("service.name", "ccDiaryApi");
-
-        (migrateAction ?? (webApp => webApp.MigrateDatabase()))(app);
-        migrationStopwatch.Stop();
-        migrationActivity?.SetStatus(ActivityStatusCode.Ok);
-        migrationActivity?.SetTag("migration.duration.ms", migrationStopwatch.ElapsedMilliseconds);
-        Log.Logger.Information("Database migration completed in {MigrationDurationMs}ms", migrationStopwatch.ElapsedMilliseconds);
     }
 }

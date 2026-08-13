@@ -105,7 +105,18 @@ namespace ccDiaryApi.Controllers.v1
         [RequestSizeLimit(RequestLimits.DiaryEntryBytes)]
         public async Task<ActionResult<DiaryEntryDTO>> Create([FromBody] DiaryEntryDTO diaryEntry)
         {
-            if (!User.IsInRole("DiaryAdmin"))
+            if (User.IsInRole("DiaryAdmin"))
+            {
+                // A foreign key used to reject an entry pointing at a diary that does not
+                // exist, surfacing as a 500. There is no referential integrity behind a
+                // key-value store, so the check is explicit — and reported as the client
+                // error it always was.
+                if (await _diaryService.GetDiaryAsync(diaryEntry.DiaryId) == null)
+                {
+                    return BadRequest($"Diary {diaryEntry.DiaryId} does not exist.");
+                }
+            }
+            else
             {
                 var diary = await _diaryService.GetDiaryAsync(diaryEntry.DiaryId);
                 if (diary == null || diary.OwnerId != User.GetOid())

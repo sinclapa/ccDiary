@@ -4,20 +4,36 @@
 
 namespace ccDiaryApiTest.v1
 {
-    using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Data.Storage;
     using ccDiaryApi.Services;
-    using Microsoft.EntityFrameworkCore;
+    using ccDiaryApiTest.Storage;
+    using global::Azure.Data.Tables;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Moq;
 
     [TestClass]
     public class AccessRequestServiceTest
     {
+        private StorageTestFixture _fixture = null!;
+
+        [TestInitialize]
+        public async Task Init()
+        {
+            _fixture = await StorageTestFixture.CreateAsync();
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _fixture?.Dispose();
+        }
+
         [TestMethod]
         public async Task ApproveAsync_AdminNotFound_ThrowsInvalidOperation()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -26,10 +42,9 @@ namespace ccDiaryApiTest.v1
                 Status = RequestStatus.Pending,
                 RequestedAt = DateTime.UtcNow,
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(
                 () => service.ApproveAsync(request.AccessRequestId, "non-existent-oid"));
@@ -38,7 +53,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task DeclineAsync_AdminNotFound_ThrowsInvalidOperation()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -47,10 +62,9 @@ namespace ccDiaryApiTest.v1
                 Status = RequestStatus.Pending,
                 RequestedAt = DateTime.UtcNow,
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(
                 () => service.DeclineAsync(request.AccessRequestId, "non-existent-oid"));
@@ -59,13 +73,12 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ApproveAsync_NoEmailService_LogsWarningAndReturnsRedeemUrl()
         {
-            using var db = CreateDb();
-            db.AppUsers.Add(CreateAdminUser("admin-oid"));
+            // storage comes from the fixture
+            await _fixture.SeedUserAsync("admin-oid", AppRole.DiaryAdmin);
             var request = CreatePendingRequest();
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             var result = await service.ApproveAsync(request.AccessRequestId, "admin-oid");
 
             Assert.AreEqual("https://test-redeem.example.com", result);
@@ -74,18 +87,17 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ApproveAsync_EmailServiceThrows_LogsErrorAndReturnsRedeemUrl()
         {
-            using var db = CreateDb();
-            db.AppUsers.Add(CreateAdminUser("admin-oid"));
+            // storage comes from the fixture
+            await _fixture.SeedUserAsync("admin-oid", AppRole.DiaryAdmin);
             var request = CreatePendingRequest();
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
             var emailMock = new Mock<IEmailService>();
             emailMock
                 .Setup(e => e.SendInvitationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ThrowsAsync(new InvalidOperationException("SMTP failed"));
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger(), emailMock.Object);
+            var service = CreateService(emailMock.Object);
             var result = await service.ApproveAsync(request.AccessRequestId, "admin-oid");
 
             Assert.AreEqual("https://test-redeem.example.com", result);
@@ -94,9 +106,9 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task GetAllAsync_ReturnsAllRequests()
         {
-            using var db = CreateDb();
-            db.AccessRequests.Add(CreatePendingRequest("req1@example.com"));
-            db.AccessRequests.Add(new AccessRequestDto
+            // storage comes from the fixture
+            await SeedRequestAsync(CreatePendingRequest("req1@example.com"));
+            await SeedRequestAsync(new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = "Approved User",
@@ -104,9 +116,8 @@ namespace ccDiaryApiTest.v1
                 Status = RequestStatus.Approved,
                 RequestedAt = DateTime.UtcNow,
             });
-            await db.SaveChangesAsync();
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             var result = (await service.GetAllAsync()).ToList();
 
             Assert.AreEqual(2, result.Count);
@@ -115,7 +126,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ResendInvitationAsync_WithEmailService_SendsEmailAndReturnsUrl()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -125,15 +136,14 @@ namespace ccDiaryApiTest.v1
                 RequestedAt = DateTime.UtcNow,
                 InviteRedeemUrl = "https://test-redeem.example.com",
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
             var emailMock = new Mock<IEmailService>();
             emailMock
                 .Setup(e => e.SendInvitationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .Returns(Task.CompletedTask);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger(), emailMock.Object);
+            var service = CreateService(emailMock.Object);
             var result = await service.ResendInvitationAsync(request.AccessRequestId);
 
             Assert.AreEqual("https://test-redeem.example.com", result);
@@ -143,7 +153,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ResendInvitationAsync_NoEmailService_LogsWarningAndReturnsUrl()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -153,10 +163,9 @@ namespace ccDiaryApiTest.v1
                 RequestedAt = DateTime.UtcNow,
                 InviteRedeemUrl = "https://test-redeem.example.com",
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             var result = await service.ResendInvitationAsync(request.AccessRequestId);
 
             Assert.AreEqual("https://test-redeem.example.com", result);
@@ -165,8 +174,8 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task DeleteAsync_NotFound_ThrowsKeyNotFoundException()
         {
-            using var db = CreateDb();
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            // storage comes from the fixture
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<KeyNotFoundException>(
                 () => service.DeleteAsync(Guid.NewGuid()));
@@ -175,12 +184,11 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task DeleteAsync_PendingRequest_ThrowsInvalidOperation()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = CreatePendingRequest();
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(
                 () => service.DeleteAsync(request.AccessRequestId));
@@ -189,7 +197,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task DeleteAsync_ApprovedRequest_DeletesRecord()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -198,19 +206,18 @@ namespace ccDiaryApiTest.v1
                 Status = RequestStatus.Approved,
                 RequestedAt = DateTime.UtcNow,
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             await service.DeleteAsync(request.AccessRequestId);
 
-            Assert.AreEqual(0, db.AccessRequests.Count());
+            Assert.AreEqual(0, await CountRequestsAsync());
         }
 
         [TestMethod]
         public async Task DeleteAsync_DeclinedRequest_DeletesRecord()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -219,25 +226,24 @@ namespace ccDiaryApiTest.v1
                 Status = RequestStatus.Declined,
                 RequestedAt = DateTime.UtcNow,
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             await service.DeleteAsync(request.AccessRequestId);
 
-            Assert.AreEqual(0, db.AccessRequests.Count());
+            Assert.AreEqual(0, await CountRequestsAsync());
         }
 
         [TestMethod]
         public async Task SubmitAsync_NewEmail_AddsRequest()
         {
-            using var db = CreateDb();
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            // storage comes from the fixture
+            var service = CreateService();
 
             await service.SubmitAsync("New User", "new@example.com");
 
-            Assert.AreEqual(1, db.AccessRequests.Count());
-            var saved = db.AccessRequests.First();
+            Assert.AreEqual(1, await CountRequestsAsync());
+            var saved = (await CreateService().GetAllAsync()).Single();
             Assert.AreEqual("new@example.com", saved.Email);
             Assert.AreEqual(RequestStatus.Pending, saved.Status);
         }
@@ -245,11 +251,10 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task SubmitAsync_DuplicatePendingEmail_ThrowsInvalidOperation()
         {
-            using var db = CreateDb();
-            db.AccessRequests.Add(CreatePendingRequest("dup@example.com"));
-            await db.SaveChangesAsync();
+            // storage comes from the fixture
+            await SeedRequestAsync(CreatePendingRequest("dup@example.com"));
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<InvalidOperationException>(
                 () => service.SubmitAsync("Dup User", "dup@example.com"));
@@ -258,9 +263,9 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task GetPendingAsync_ReturnsOnlyPendingRequests()
         {
-            using var db = CreateDb();
-            db.AccessRequests.Add(CreatePendingRequest("pending@example.com"));
-            db.AccessRequests.Add(new AccessRequestDto
+            // storage comes from the fixture
+            await SeedRequestAsync(CreatePendingRequest("pending@example.com"));
+            await SeedRequestAsync(new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
                 DisplayName = "Approved User",
@@ -268,9 +273,8 @@ namespace ccDiaryApiTest.v1
                 Status = RequestStatus.Approved,
                 RequestedAt = DateTime.UtcNow,
             });
-            await db.SaveChangesAsync();
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             var result = (await service.GetPendingAsync()).ToList();
 
             Assert.AreEqual(1, result.Count);
@@ -280,8 +284,8 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ApproveAsync_RequestNotFound_ThrowsKeyNotFoundException()
         {
-            using var db = CreateDb();
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            // storage comes from the fixture
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<KeyNotFoundException>(
                 () => service.ApproveAsync(Guid.NewGuid(), "admin-oid"));
@@ -290,18 +294,17 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ApproveAsync_WithEmailService_SendsEmailAndReturnsRedeemUrl()
         {
-            using var db = CreateDb();
-            db.AppUsers.Add(CreateAdminUser("admin-oid"));
+            // storage comes from the fixture
+            await _fixture.SeedUserAsync("admin-oid", AppRole.DiaryAdmin);
             var request = CreatePendingRequest();
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
             var emailMock = new Mock<IEmailService>();
             emailMock
                 .Setup(e => e.SendInvitationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .Returns(Task.CompletedTask);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger(), emailMock.Object);
+            var service = CreateService(emailMock.Object);
             var result = await service.ApproveAsync(request.AccessRequestId, "admin-oid");
 
             Assert.AreEqual("https://test-redeem.example.com", result);
@@ -313,8 +316,8 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task DeclineAsync_RequestNotFound_ThrowsKeyNotFoundException()
         {
-            using var db = CreateDb();
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            // storage comes from the fixture
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<KeyNotFoundException>(
                 () => service.DeclineAsync(Guid.NewGuid(), "admin-oid"));
@@ -323,16 +326,15 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task DeclineAsync_HappyPath_SetsDeclinedStatus()
         {
-            using var db = CreateDb();
-            db.AppUsers.Add(CreateAdminUser("admin-oid"));
+            // storage comes from the fixture
+            await _fixture.SeedUserAsync("admin-oid", AppRole.DiaryAdmin);
             var request = CreatePendingRequest();
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             await service.DeclineAsync(request.AccessRequestId, "admin-oid");
 
-            var updated = await db.AccessRequests.FindAsync(request.AccessRequestId);
+            var updated = (await CreateService().GetAllAsync()).SingleOrDefault(r => r.AccessRequestId == request.AccessRequestId);
             Assert.IsNotNull(updated);
             Assert.AreEqual(RequestStatus.Declined, updated.Status);
         }
@@ -340,8 +342,8 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ResendInvitationAsync_RequestNotFound_ThrowsKeyNotFoundException()
         {
-            using var db = CreateDb();
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            // storage comes from the fixture
+            var service = CreateService();
 
             await Assert.ThrowsExceptionAsync<KeyNotFoundException>(
                 () => service.ResendInvitationAsync(Guid.NewGuid()));
@@ -350,7 +352,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ResendInvitationAsync_NoInviteUrl_ReturnsNull()
         {
-            using var db = CreateDb();
+            // storage comes from the fixture
             var request = new AccessRequestDto
             {
                 AccessRequestId = Guid.NewGuid(),
@@ -360,24 +362,13 @@ namespace ccDiaryApiTest.v1
                 RequestedAt = DateTime.UtcNow,
                 InviteRedeemUrl = null,
             };
-            db.AccessRequests.Add(request);
-            await db.SaveChangesAsync();
+            await SeedRequestAsync(request);
 
-            var service = new AccessRequestService(db, CreateMockGraph(), CreateLogger());
+            var service = CreateService();
             var result = await service.ResendInvitationAsync(request.AccessRequestId);
 
             Assert.IsNull(result);
         }
-
-        private static AppUserDto CreateAdminUser(string oid) => new AppUserDto
-        {
-            UserId = Guid.NewGuid(),
-            EntraObjectId = oid,
-            DisplayName = "Test Admin",
-            Email = $"{oid}@test.com",
-            Role = AppRole.DiaryAdmin,
-            CreatedAt = DateTime.UtcNow,
-        };
 
         private static AccessRequestDto CreatePendingRequest(string email = "test@example.com") => new AccessRequestDto
         {
@@ -387,16 +378,6 @@ namespace ccDiaryApiTest.v1
             Status = RequestStatus.Pending,
             RequestedAt = DateTime.UtcNow,
         };
-
-        private static DiaryDatabaseContext CreateDb()
-        {
-            var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
-                .UseInMemoryDatabase("AccessRequestServiceTest_" + Guid.NewGuid())
-                .Options;
-            var db = new DiaryDatabaseContext(options);
-            db.Database.EnsureCreated();
-            return db;
-        }
 
         private static ILogger<AccessRequestService> CreateLogger()
             => new Mock<ILogger<AccessRequestService>>().Object;
@@ -408,5 +389,32 @@ namespace ccDiaryApiTest.v1
                 .ReturnsAsync(redeemUrl);
             return mock.Object;
         }
+
+        private AccessRequestService CreateService(IEmailService? emailService = null) =>
+            new AccessRequestService(
+                _fixture.Tables,
+                new UserService(_fixture.Tables, new ConfigurationBuilder().Build()),
+                CreateMockGraph(),
+                CreateLogger(),
+                emailService);
+
+        private async Task SeedRequestAsync(AccessRequestDto request)
+        {
+            var entity = TableJson.ToEntity(
+                StorageKeys.RequestPartition,
+                request.AccessRequestId.ToString("N"),
+                request,
+                e =>
+                {
+                    e["Status"] = request.Status.ToStoredValue();
+                    e["Email"] = request.Email;
+                    e["RequestedAt"] = request.RequestedAt;
+                });
+
+            await _fixture.Tables.AccessRequests.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
+
+        private async Task<int> CountRequestsAsync() =>
+            (await TableJson.QueryAsync(_fixture.Tables.AccessRequests)).Count;
     }
 }

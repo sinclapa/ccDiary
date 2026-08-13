@@ -57,3 +57,7 @@ resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
 output containerAppId string = containerApps.id
 output containerAppName string = containerApps.name
 output containerAppUrl string = containerApps.properties.configuration.ingress.fqdn
+
+// The system-assigned identity is what lets the app reach storage without holding a
+// secret; the resource group template grants it the data-plane roles.
+output containerAppPrincipalId string = containerApps.identity.principalId

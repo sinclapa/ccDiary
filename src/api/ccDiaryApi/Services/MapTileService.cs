@@ -8,14 +8,24 @@ namespace ccDiaryApi.Services
     using System.Net.Http.Json;
     using System.Text.Json;
     using System.Text.RegularExpressions;
-    using ccDiaryApi.Data.Context;
-    using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Data.Storage;
+    using global::Azure.Data.Tables;
+    using Microsoft.Extensions.Options;
 
+    /// <summary>
+    /// Proxies and caches the upstream map services.
+    /// </summary>
+    /// <remarks>
+    /// Tiles and routes are cached as blobs rather than table rows. That gives three
+    /// things the relational version lacked: payloads above the 64 KB property cap fit,
+    /// the blob's own last-modified timestamp serves as the expiry clock, and a
+    /// lifecycle policy evicts stale entries automatically — the previous
+    /// implementation had no eviction at all and grew without bound. Route lookups are
+    /// now an exact-match key built from quantised coordinates, replacing a tolerance
+    /// comparison that could not use an index and scanned the whole table.
+    /// </remarks>
     public class MapTileService : IMapTileService
     {
-        private static readonly TimeSpan TileTtl = TimeSpan.FromDays(90);
-        private static readonly TimeSpan GeocodingTtl = TimeSpan.FromDays(180);
-        private static readonly TimeSpan RoutingTtl = TimeSpan.FromDays(90);
         private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
 
         private static readonly Dictionary<string, string> SourceUrls =
@@ -25,16 +35,28 @@ namespace ccDiaryApi.Services
                 ["openseamap"] = "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
             };
 
-        private readonly DiaryDatabaseContext _context;
+        private readonly ITableStore _tables;
+        private readonly IBlobStore _blobs;
+        private readonly StorageOptions _options;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<MapTileService> _logger;
 
+        /// <summary>Initializes a new instance of the <see cref="MapTileService"/> class.</summary>
+        /// <param name="tables">The table store.</param>
+        /// <param name="blobs">The blob store.</param>
+        /// <param name="options">The storage options, carrying the cache lifetimes.</param>
+        /// <param name="httpClientFactory">Supplies the compliant-user-agent client.</param>
+        /// <param name="logger">The logger.</param>
         public MapTileService(
-            DiaryDatabaseContext context,
+            ITableStore tables,
+            IBlobStore blobs,
+            IOptions<StorageOptions> options,
             IHttpClientFactory httpClientFactory,
             ILogger<MapTileService> logger)
         {
-            _context = context;
+            _tables = tables;
+            _blobs = blobs;
+            _options = options.Value;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
         }
@@ -46,15 +68,15 @@ namespace ccDiaryApi.Services
                 return null;
             }
 
-            var cutoff = DateTime.UtcNow - TileTtl;
-            var cached = _context.MapTileCache
-                .Where(t => t.Source == source && t.Z == z && t.X == x && t.Y == y && t.CachedAt >= cutoff)
-                .Select(t => new { t.TileData, t.ContentType })
-                .FirstOrDefault();
+            var cached = await _blobs.TryGetAsync(
+                _options.MapCacheContainer,
+                StorageKeys.TileBlobKey(source, z, x, y));
 
-            if (cached != null)
+            // The lifecycle policy sweeps expired blobs once a day, so the age is still
+            // checked here to keep the TTL exact between sweeps.
+            if (cached != null && IsFresh(cached.LastModified, _options.TileTtl))
             {
-                return (cached.TileData, cached.ContentType);
+                return (cached.Content.ToArray(), cached.ContentType ?? "image/png");
             }
 
             var url = urlTemplate
@@ -101,16 +123,21 @@ namespace ccDiaryApi.Services
             }
 
             var normalised = query.Trim().ToLowerInvariant();
-            var cutoff = DateTime.UtcNow - GeocodingTtl;
+            var cutoff = DateTime.UtcNow - _options.GeocodingTtl;
 
-            var cached = _context.GeocodingCache
-                .Where(g => g.Query == normalised && g.CachedAt >= cutoff)
-                .Select(g => new { g.Lat, g.Lon })
-                .FirstOrDefault();
+            var row = await TableJson.GetIfExistsAsync(
+                _tables.GeocodingCache,
+                StorageKeys.GeocodePartition,
+                StorageKeys.GeocodeKey(normalised));
 
-            if (cached != null)
+            if (row != null && row.GetDateTime("CachedAt") is DateTime cachedAt && cachedAt >= cutoff)
             {
-                return (cached.Lat, cached.Lon);
+                var lat = row.GetDouble("Lat");
+                var lon = row.GetDouble("Lon");
+                if (lat.HasValue && lon.HasValue)
+                {
+                    return (lat.Value, lon.Value);
+                }
             }
 
             var url = $"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(normalised)}&format=json&limit=1";
@@ -157,18 +184,13 @@ namespace ccDiaryApi.Services
             var rFromLon = Round6(fromLon);
             var rToLat = Round6(toLat);
             var rToLon = Round6(toLon);
-            var cutoff = DateTime.UtcNow - RoutingTtl;
+            var cached = await _blobs.TryGetAsync(
+                _options.MapCacheContainer,
+                StorageKeys.RouteBlobKey(profile, rFromLat, rFromLon, rToLat, rToLon));
 
-            var cached = _context.RoutingCache
-                .Where(r => Math.Abs(r.FromLat - rFromLat) < 1e-9 && Math.Abs(r.FromLon - rFromLon) < 1e-9
-                         && Math.Abs(r.ToLat - rToLat) < 1e-9 && Math.Abs(r.ToLon - rToLon) < 1e-9
-                         && r.Profile == profile && r.CachedAt >= cutoff)
-                .Select(r => r.RouteCoords)
-                .FirstOrDefault();
-
-            if (cached != null)
+            if (cached != null && IsFresh(cached.LastModified, _options.RoutingTtl))
             {
-                return JsonSerializer.Deserialize<List<double[]>>(cached);
+                return JsonSerializer.Deserialize<List<double[]>>(cached.Content.ToString());
             }
 
             var url = BuildOsrmUrl(profile, rFromLon, rFromLat, rToLon, rToLat);
@@ -260,36 +282,21 @@ namespace ccDiaryApi.Services
                 : value;
         }
 
+        /// <summary>Reports whether a cached blob is still within its lifetime.</summary>
+        private static bool IsFresh(DateTimeOffset lastModified, TimeSpan ttl) =>
+            lastModified > DateTimeOffset.UtcNow - ttl;
+
         private async Task PersistTileAsync(string source, int z, int x, int y, byte[] data, string contentType)
         {
-            var existing = _context.MapTileCache
-                .Where(t => t.Source == source && t.Z == z && t.X == x && t.Y == y)
-                .FirstOrDefault();
-
-            if (existing != null)
-            {
-                existing.TileData = data;
-                existing.ContentType = contentType;
-                existing.CachedAt = DateTime.UtcNow;
-                _context.Update(existing);
-            }
-            else
-            {
-                _context.MapTileCache.Add(new MapTileCacheDto
-                {
-                    Source = source,
-                    Z = z,
-                    X = x,
-                    Y = y,
-                    TileData = data,
-                    ContentType = contentType,
-                    CachedAt = DateTime.UtcNow,
-                });
-            }
-
+            // Caching is best effort throughout: a storage failure must degrade to a
+            // slower proxy, never to a failed map.
             try
             {
-                await _context.SaveChangesAsync();
+                await _blobs.PutAsync(
+                    _options.MapCacheContainer,
+                    StorageKeys.TileBlobKey(source, z, x, y),
+                    BinaryData.FromBytes(data),
+                    contentType);
             }
             catch (Exception ex)
             {
@@ -299,31 +306,18 @@ namespace ccDiaryApi.Services
 
         private async Task PersistGeocodingAsync(string query, double lat, double lon)
         {
-            var existing = _context.GeocodingCache
-                .Where(g => g.Query == query)
-                .FirstOrDefault();
-
-            if (existing != null)
-            {
-                existing.Lat = lat;
-                existing.Lon = lon;
-                existing.CachedAt = DateTime.UtcNow;
-                _context.Update(existing);
-            }
-            else
-            {
-                _context.GeocodingCache.Add(new GeocodingCacheDto
-                {
-                    Query = query,
-                    Lat = lat,
-                    Lon = lon,
-                    CachedAt = DateTime.UtcNow,
-                });
-            }
-
             try
             {
-                await _context.SaveChangesAsync();
+                var entity = new TableEntity(StorageKeys.GeocodePartition, StorageKeys.GeocodeKey(query))
+                {
+                    { "Query", query },
+                    { "Lat", lat },
+                    { "Lon", lon },
+                    { "CachedAt", DateTime.UtcNow },
+                    { TableJson.SchemaVersionColumn, TableJson.CurrentSchemaVersion },
+                };
+
+                await _tables.GeocodingCache.UpsertEntityAsync(entity, TableUpdateMode.Replace);
             }
             catch (Exception ex)
             {
@@ -334,35 +328,13 @@ namespace ccDiaryApi.Services
         private async Task PersistRoutingAsync(
             double fromLat, double fromLon, double toLat, double toLon, string profile, string json)
         {
-            var existing = _context.RoutingCache
-                .Where(r => Math.Abs(r.FromLat - fromLat) < 1e-9 && Math.Abs(r.FromLon - fromLon) < 1e-9
-                         && Math.Abs(r.ToLat - toLat) < 1e-9 && Math.Abs(r.ToLon - toLon) < 1e-9
-                         && r.Profile == profile)
-                .FirstOrDefault();
-
-            if (existing != null)
-            {
-                existing.RouteCoords = json;
-                existing.CachedAt = DateTime.UtcNow;
-                _context.Update(existing);
-            }
-            else
-            {
-                _context.RoutingCache.Add(new RoutingCacheDto
-                {
-                    FromLat = fromLat,
-                    FromLon = fromLon,
-                    ToLat = toLat,
-                    ToLon = toLon,
-                    Profile = profile,
-                    RouteCoords = json,
-                    CachedAt = DateTime.UtcNow,
-                });
-            }
-
             try
             {
-                await _context.SaveChangesAsync();
+                await _blobs.PutAsync(
+                    _options.MapCacheContainer,
+                    StorageKeys.RouteBlobKey(profile, fromLat, fromLon, toLat, toLon),
+                    BinaryData.FromString(json),
+                    "application/json");
             }
             catch (Exception ex)
             {

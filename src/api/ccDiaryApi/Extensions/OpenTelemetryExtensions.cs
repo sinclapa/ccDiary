@@ -4,13 +4,10 @@
 
 namespace ccDiaryApi.Extensions
 {
-    using System.Data;
     using System.Reflection;
     using ccDiaryApi.Utilities;
     using OpenTelemetry.Exporter;
     using OpenTelemetry.Instrumentation.AspNetCore;
-    using OpenTelemetry.Instrumentation.EntityFrameworkCore;
-    using OpenTelemetry.Instrumentation.SqlClient;
     using OpenTelemetry.Metrics;
     using OpenTelemetry.Resources;
     using OpenTelemetry.Trace;
@@ -52,8 +49,10 @@ namespace ccDiaryApi.Extensions
                 .WithTracing(tracing => tracing
                     .AddAspNetCoreInstrumentation(ConfigureAspNetCoreTracing)
                     .AddHttpClientInstrumentation()
-                    .AddEntityFrameworkCoreInstrumentation(ConfigureEntityFrameworkCoreTracing)
-                    .AddSqlClientInstrumentation(ConfigureSqlClientTracing)
+
+                    // The Azure SDKs emit their own activities; without this the storage
+                    // calls that replaced the database queries would be invisible.
+                    .AddSource("Azure.*")
                     .AddOtlpExporter(opts =>
                     {
                         ConfigureTracingOtlpExporter(opts);
@@ -115,70 +114,6 @@ namespace ccDiaryApi.Extensions
         {
             options.RecordException = true;
             options.Filter = ShouldTraceRequest;
-        }
-
-        /// <summary>
-        /// Configures SQL Client tracing instrumentation to capture the full query text in spans.
-        /// </summary>
-        /// <param name="options">The instrumentation options to configure.</param>
-        public static void ConfigureSqlClientTracing(SqlClientTraceInstrumentationOptions options)
-        {
-            options.SetDbStatementForText = true;
-        }
-
-        /// <summary>
-        /// Configures EF Core tracing instrumentation to capture generated SQL text and record exceptions.
-        /// </summary>
-        /// <param name="options">The instrumentation options to configure.</param>
-        public static void ConfigureEntityFrameworkCoreTracing(EntityFrameworkInstrumentationOptions options)
-        {
-            options.SetDbStatementForText = true;
-            options.SetDbStatementForStoredProcedure = true;
-            options.Filter = ShouldTraceDbCommand;
-        }
-
-        /// <summary>
-        /// Filters out low-value probe queries from EF Core database spans.
-        /// </summary>
-        /// <param name="providerName">The EF provider name.</param>
-        /// <param name="dbCommand">The current database command.</param>
-        /// <returns><c>true</c> when the command should be traced; otherwise <c>false</c>.</returns>
-        public static bool ShouldTraceDbCommand(string? providerName, IDbCommand dbCommand)
-        {
-            _ = providerName;
-
-            var commandText = dbCommand.CommandText?.Trim();
-            if (string.IsNullOrEmpty(commandText))
-            {
-                return true;
-            }
-
-            return !IsLowValueProbeQuery(commandText);
-        }
-
-        /// <summary>
-        /// Returns <c>true</c> for DB probe statements that are usually emitted by health checks.
-        /// </summary>
-        /// <param name="commandText">The SQL command text.</param>
-        /// <returns><c>true</c> if this statement is likely a low-value probe; otherwise <c>false</c>.</returns>
-        public static bool IsLowValueProbeQuery(string commandText)
-        {
-            var normalized = commandText.Trim();
-            while (normalized.EndsWith(';'))
-            {
-                normalized = normalized[..^1].TrimEnd();
-            }
-
-            if (string.Equals(normalized, "SELECT 1", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalized, "SELECT 1 FROM DUAL", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalized, "SELECT DB_NAME()", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            return normalized.StartsWith("SELECT TOP(1) 1", StringComparison.OrdinalIgnoreCase)
-                || normalized.StartsWith("SELECT TOP (1) 1", StringComparison.OrdinalIgnoreCase)
-                || normalized.StartsWith("SELECT SERVERPROPERTY(", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

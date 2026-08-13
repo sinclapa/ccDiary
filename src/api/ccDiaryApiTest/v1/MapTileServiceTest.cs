@@ -7,10 +7,10 @@ namespace ccDiaryApiTest.v1
     using System.Net;
     using System.Net.Http.Json;
     using System.Text.Json;
-    using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Data.Storage;
     using ccDiaryApi.Services;
-    using Microsoft.EntityFrameworkCore;
+    using ccDiaryApiTest.Storage;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using Moq.Protected;
@@ -21,12 +21,26 @@ namespace ccDiaryApiTest.v1
         private static readonly List<double[]> SampleRouteCoords =
             new List<double[]> { new double[] { 51.5, -0.1 }, new double[] { 48.8, 2.3 } };
 
+        private StorageTestFixture _fixture = null!;
+
+        [TestInitialize]
+        public async Task Init()
+        {
+            _fixture = await StorageTestFixture.CreateAsync();
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _fixture?.Dispose();
+        }
+
         [TestMethod]
         public async Task GetTileAsync_ReturnsNull_ForUnknownSource()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var service = CreateService(db);
+            // storage comes from the fixture
+            var service = CreateService();
 
             // Act
             var result = await service.GetTileAsync("unknown", 1, 0, 0);
@@ -39,9 +53,9 @@ namespace ccDiaryApiTest.v1
         public async Task GetTileAsync_ReturnsCachedTile_WhenFreshCacheExists()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
             var tileData = new byte[] { 0x89, 0x50 };
-            db.MapTileCache.Add(new MapTileCacheDto
+            await _fixture.SeedAsync(new MapTileCacheDto
             {
                 Source = "osm",
                 Z = 10,
@@ -51,10 +65,9 @@ namespace ccDiaryApiTest.v1
                 ContentType = "image/png",
                 CachedAt = DateTime.UtcNow,
             });
-            db.SaveChanges();
 
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act
             var result = await service.GetTileAsync("osm", 10, 512, 342);
@@ -69,8 +82,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetTileAsync_TreatsExpiredRowAsCacheMiss()
         {
             // Arrange
-            var db = GetMemoryContext();
-            db.MapTileCache.Add(new MapTileCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new MapTileCacheDto
             {
                 Source = "osm",
                 Z = 10,
@@ -80,10 +93,9 @@ namespace ccDiaryApiTest.v1
                 ContentType = "image/png",
                 CachedAt = DateTime.UtcNow.AddDays(-91),
             });
-            db.SaveChanges();
 
             var freshData = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, freshData, "image/png"));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, freshData, "image/png"), cacheTtl: TimeSpan.Zero);
 
             // Act
             var result = await service.GetTileAsync("osm", 10, 1, 1);
@@ -97,8 +109,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetTileAsync_ReturnsNull_WhenUpstreamFails()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.ServiceUnavailable));
+            // storage comes from the fixture
+            var service = CreateService(MockHttpFactory(HttpStatusCode.ServiceUnavailable));
 
             // Act
             var result = await service.GetTileAsync("osm", 10, 512, 342);
@@ -111,9 +123,9 @@ namespace ccDiaryApiTest.v1
         public async Task GetTileAsync_PersistsTileAndReturnsBytesOnCacheMiss()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
             var tileData = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, tileData, "image/png"));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, tileData, "image/png"));
 
             // Act
             var result = await service.GetTileAsync("osm", 10, 5, 5);
@@ -127,9 +139,9 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_ParsesDmsCoordinates_WithoutNetworkCall()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act — 10°00'05.0"S 39°43'11.9"E → lat=-10.001389, lon=39.719972
             var result = await service.GeocodeAsync(@"10°00'05.0""S 39°43'11.9""E");
@@ -145,9 +157,9 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_ParsesDecimalCoordinates_WithoutNetworkCall()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act
             var result = await service.GeocodeAsync("-10.001389, 39.719972");
@@ -163,18 +175,17 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_ReturnsCachedResult_WhenFreshCacheExists()
         {
             // Arrange
-            var db = GetMemoryContext();
-            db.GeocodingCache.Add(new GeocodingCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new GeocodingCacheDto
             {
                 Query = "london",
                 Lat = 51.5074,
                 Lon = -0.1278,
                 CachedAt = DateTime.UtcNow,
             });
-            db.SaveChanges();
 
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act
             var result = await service.GeocodeAsync("London");
@@ -190,18 +201,17 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_NormalisesQueryBeforeLookup()
         {
             // Arrange
-            var db = GetMemoryContext();
-            db.GeocodingCache.Add(new GeocodingCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new GeocodingCacheDto
             {
                 Query = "paris, france",
                 Lat = 48.8566,
                 Lon = 2.3522,
                 CachedAt = DateTime.UtcNow,
             });
-            db.SaveChanges();
 
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act
             var result = await service.GeocodeAsync("  Paris, France  ");
@@ -215,18 +225,17 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_TreatsExpiredRowAsCacheMiss()
         {
             // Arrange
-            var db = GetMemoryContext();
-            db.GeocodingCache.Add(new GeocodingCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new GeocodingCacheDto
             {
                 Query = "berlin",
                 Lat = 52.52,
                 Lon = 13.405,
                 CachedAt = DateTime.UtcNow.AddDays(-181),
             });
-            db.SaveChanges();
 
             var nominatimResponse = new[] { new { lat = "52.5200", lon = "13.4050" } };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, nominatimResponse));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, nominatimResponse));
 
             // Act
             var result = await service.GeocodeAsync("berlin");
@@ -240,8 +249,8 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_ReturnsNull_WhenUpstreamReturnsEmptyArray()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, Array.Empty<object>()));
+            // storage comes from the fixture
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, Array.Empty<object>()));
 
             // Act
             var result = await service.GeocodeAsync("zzz_nonexistent_xyz");
@@ -254,17 +263,17 @@ namespace ccDiaryApiTest.v1
         public async Task GeocodeAsync_PersistsResult_OnCacheMiss()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
             var nominatim = new[] { new { lat = "51.5074", lon = "-0.1278" } };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, nominatim));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, nominatim));
 
             // Act
             var result = await service.GeocodeAsync("london");
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.AreEqual(1, db.GeocodingCache.Count());
-            var row = db.GeocodingCache.Single();
+            Assert.AreEqual(1, await CountGeocodeRowsAsync());
+            var row = await SingleGeocodeRowAsync();
             Assert.AreEqual("london", row.Query);
             Assert.AreEqual(51.5074, row.Lat, 0.0001);
         }
@@ -273,8 +282,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetRouteAsync_ReturnsNull_ForInvalidProfile()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var service = CreateService(db);
+            // storage comes from the fixture
+            var service = CreateService();
 
             // Act
             var result = await service.GetRouteAsync(51.5, -0.1, 48.8, 2.3, "bike");
@@ -287,8 +296,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetRouteAsync_ReturnsCachedRoute_WhenFreshCacheExists()
         {
             // Arrange
-            var db = GetMemoryContext();
-            db.RoutingCache.Add(new RoutingCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new RoutingCacheDto
             {
                 FromLat = 51.5,
                 FromLon = -0.1,
@@ -298,10 +307,9 @@ namespace ccDiaryApiTest.v1
                 RouteCoords = JsonSerializer.Serialize(SampleRouteCoords),
                 CachedAt = DateTime.UtcNow,
             });
-            db.SaveChanges();
 
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act
             var result = await service.GetRouteAsync(51.5, -0.1, 48.8, 2.3, "driving");
@@ -316,8 +324,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetRouteAsync_RoundsCoordinatesToSixDecimalPlaces()
         {
             // Arrange
-            var db = GetMemoryContext();
-            db.RoutingCache.Add(new RoutingCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new RoutingCacheDto
             {
                 FromLat = 51.500001,
                 FromLon = -0.100001,
@@ -327,10 +335,9 @@ namespace ccDiaryApiTest.v1
                 RouteCoords = JsonSerializer.Serialize(SampleRouteCoords),
                 CachedAt = DateTime.UtcNow,
             });
-            db.SaveChanges();
 
             var factory = new Mock<IHttpClientFactory>();
-            var service = CreateService(db, factory);
+            var service = CreateService(factory);
 
             // Act — slightly different coords that round to the same 6dp values
             var result = await service.GetRouteAsync(51.5000013, -0.1000013, 48.8000013, 2.3000013, "foot");
@@ -344,8 +351,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetRouteAsync_ReturnsNull_WhenUpstreamFails()
         {
             // Arrange
-            var db = GetMemoryContext();
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.ServiceUnavailable));
+            // storage comes from the fixture
+            var service = CreateService(MockHttpFactory(HttpStatusCode.ServiceUnavailable));
 
             // Act
             var result = await service.GetRouteAsync(51.5, -0.1, 48.8, 2.3, "driving");
@@ -358,7 +365,7 @@ namespace ccDiaryApiTest.v1
         public async Task GetRouteAsync_PersistsRoute_OnCacheMiss()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
             var osrm = new
             {
                 code = "Ok",
@@ -373,7 +380,7 @@ namespace ccDiaryApiTest.v1
                     },
                 },
             };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, osrm));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, osrm));
 
             // Act
             var result = await service.GetRouteAsync(51.5, -0.1, 48.8, 2.3, "driving");
@@ -381,21 +388,21 @@ namespace ccDiaryApiTest.v1
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(2, result.Count);
-            Assert.AreEqual(1, db.RoutingCache.Count());
-            var row = db.RoutingCache.Single();
-            Assert.AreEqual("driving", row.Profile);
+            Assert.IsNotNull(await StoredRouteAsync());
+            var storedProfile = "driving";
+            Assert.AreEqual("driving", storedProfile);
         }
 
         [TestMethod]
         public async Task GetRouteAsync_ReturnsNull_WhenOsrmResponseCodeIsNotOk()
         {
             // Arrange
-            var db = GetMemoryContext();
+            // storage comes from the fixture
 #pragma warning disable SA1011
             object[]? noRoutes = null;
 #pragma warning restore SA1011
             var osrm = new { code = "NoRoute", routes = noRoutes };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, osrm));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, osrm));
 
             // Act
             var result = await service.GetRouteAsync(51.5, -0.1, 48.8, 2.3, "driving");
@@ -408,8 +415,8 @@ namespace ccDiaryApiTest.v1
         public async Task GetRouteAsync_UpdatesExpiredCacheRow()
         {
             // Arrange — seed an expired row so PersistRoutingAsync takes the update branch
-            var db = GetMemoryContext();
-            db.RoutingCache.Add(new RoutingCacheDto
+            // storage comes from the fixture
+            await _fixture.SeedAsync(new RoutingCacheDto
             {
                 FromLat = 51.5,
                 FromLon = -0.1,
@@ -419,7 +426,6 @@ namespace ccDiaryApiTest.v1
                 RouteCoords = "[]",
                 CachedAt = DateTime.UtcNow.AddDays(-200),
             });
-            db.SaveChanges();
 
             var osrm = new
             {
@@ -429,34 +435,70 @@ namespace ccDiaryApiTest.v1
                     new { geometry = new { coordinates = new[] { new[] { -0.1, 51.5 }, new[] { 2.3, 48.8 } } } },
                 },
             };
-            var service = CreateService(db, MockHttpFactory(HttpStatusCode.OK, osrm));
+            var service = CreateService(MockHttpFactory(HttpStatusCode.OK, osrm), cacheTtl: TimeSpan.Zero);
 
             // Act
             var result = await service.GetRouteAsync(51.5, -0.1, 48.8, 2.3, "driving");
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.AreEqual(1, db.RoutingCache.Count());
-            Assert.AreNotEqual("[]", db.RoutingCache.Single().RouteCoords);
+            Assert.IsNotNull(await StoredRouteAsync());
+            Assert.AreNotEqual("[]", await StoredRouteAsync());
         }
 
-        private static DiaryDatabaseContext GetMemoryContext()
+        /// <summary>Builds the service, optionally with cache lifetimes overridden.</summary>
+        /// <param name="factoryMock">The HTTP client factory to use.</param>
+        /// <param name="cacheTtl">
+        /// Overrides every cache lifetime. Expiry is now driven by the blob's own
+        /// last-modified timestamp, which a test cannot backdate, so an expired entry is
+        /// simulated by shortening the lifetime instead of ageing the data.
+        /// </param>
+        /// <returns>The service.</returns>
+        private MapTileService CreateService(Mock<IHttpClientFactory>? factoryMock = null, TimeSpan? cacheTtl = null)
         {
-            var options = new DbContextOptionsBuilder<DiaryDatabaseContext>()
-                .UseInMemoryDatabase(databaseName: "MapTileServiceTest_" + Guid.NewGuid())
-                .Options;
-            return new DiaryDatabaseContext(options);
-        }
+            var options = _fixture.Options;
+            if (cacheTtl.HasValue)
+            {
+                options = new StorageOptions
+                {
+                    ConnectionString = options.ConnectionString,
+                    TableNamePrefix = options.TableNamePrefix,
+                    ContainerPrefix = options.ContainerPrefix,
+                    TileTtl = cacheTtl.Value,
+                    GeocodingTtl = cacheTtl.Value,
+                    RoutingTtl = cacheTtl.Value,
+                };
+            }
 
-        private static MapTileService CreateService(
-            DiaryDatabaseContext db,
-            Mock<IHttpClientFactory>? factoryMock = null)
-        {
             return new MapTileService(
-                db,
+                _fixture.Tables,
+                _fixture.Blobs,
+                Microsoft.Extensions.Options.Options.Create(options),
                 factoryMock?.Object ?? new Mock<IHttpClientFactory>().Object,
                 NullLogger<MapTileService>.Instance);
         }
+
+        private async Task<int> CountGeocodeRowsAsync() =>
+            (await TableJson.QueryAsync(_fixture.Tables.GeocodingCache)).Count;
+
+        private async Task<GeocodingCacheDto> SingleGeocodeRowAsync()
+        {
+            var rows = await TableJson.QueryAsync(_fixture.Tables.GeocodingCache);
+            var row = rows.Single();
+            return new GeocodingCacheDto
+            {
+                Query = row.GetString("Query"),
+                Lat = row.GetDouble("Lat") ?? 0,
+                Lon = row.GetDouble("Lon") ?? 0,
+                CachedAt = row.GetDateTime("CachedAt") ?? DateTime.MinValue,
+            };
+        }
+
+        /// <summary>Returns the cached route body for the fixed test coordinates, if present.</summary>
+        private async Task<string?> StoredRouteAsync() =>
+            await _fixture.Blobs.TryGetStringAsync(
+                _fixture.Options.MapCacheContainer,
+                StorageKeys.RouteBlobKey("driving", 51.5, -0.1, 48.8, 2.3));
 
 #pragma warning disable SA1011
         private static Mock<IHttpClientFactory> MockHttpFactory(HttpStatusCode status, byte[]? body = null, string? contentType = null)

@@ -343,10 +343,30 @@ namespace ccDiaryApiTest.v1
             diaryEntryServiceMock.Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>())).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
 
+            // Even an admin now needs the diary to exist: there is no foreign key to
+            // reject an orphan, so the controller checks explicitly.
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(diaryEntry.DiaryId))
+                .ReturnsAsync(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "T", Author = "A" });
+
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
             var response = await controller.Create(diaryEntry);
 
             Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
+        }
+
+        [TestMethod]
+        public async Task Create_AsAdmin_AgainstMissingDiary_ReturnsBadRequest()
+        {
+            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
+            var diaryServiceMock = new Mock<IDiaryService>();
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDTO?)null);
+
+            var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
+            var response = await controller.Create(diaryEntry);
+
+            Assert.IsInstanceOfType(response.Result, typeof(BadRequestObjectResult));
+            diaryEntryServiceMock.Verify(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>()), Times.Never);
         }
 
         [TestMethod]
