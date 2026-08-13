@@ -61,6 +61,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
+  // The account is the resource being accessed, not a caller: the Container App's
+  // identity authenticates *to* it. A storage account only needs an identity of its own
+  // to reach a key vault for customer-managed keys, which this does not use.
+  identity: {
+    type: 'None' // NOSONAR (S6378) — see above
+  }
   properties: {
     accessTier: 'Hot'
     allowBlobPublicAccess: false
@@ -70,6 +76,9 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     supportsHttpsTrafficOnly: true
     encryption: {
       keySource: 'Microsoft.Storage'
+      // Encrypts a second time at the infrastructure layer, so a flaw in the service
+      // level encryption alone does not expose the data. It costs nothing here.
+      requireInfrastructureEncryption: true
       services: {
         blob: {
           enabled: true

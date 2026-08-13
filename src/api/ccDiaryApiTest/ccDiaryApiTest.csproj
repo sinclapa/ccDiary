@@ -47,6 +47,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ccDiaryApi\ccDiaryApi.csproj" />
+    <ProjectReference Include="..\ccDiary.Migrate\ccDiary.Migrate.csproj" />
   </ItemGroup>
 
   <ItemGroup>

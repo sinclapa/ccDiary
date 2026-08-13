@@ -15,6 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ccDiaryApiTest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Reads the old database directly rather than through EF, so this tool keeps
          working after the EF packages and migrations are deleted from the API. -->
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />

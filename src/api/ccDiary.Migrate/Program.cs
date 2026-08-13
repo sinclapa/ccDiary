@@ -19,6 +19,8 @@ using ccDiaryApi.Data.Storage;
 /// repaired by running it again rather than by cleaning up first.
 /// </para>
 /// </remarks>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(
+    Justification = "Console entry point and progress reporting; the logic it orchestrates is covered directly.")]
 internal static class Program
 {
     public static async Task<int> Main(string[] args)

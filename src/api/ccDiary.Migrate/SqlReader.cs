@@ -11,6 +11,8 @@ using Microsoft.Data.SqlClient;
 /// deleted by the same change this tool supports, so binding to them would make the tool
 /// stop compiling exactly when it is still needed — including for a rollback.
 /// </remarks>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(
+    Justification = "Reads a live SQL Server; there is no database left in the test environment to read from.")]
 internal sealed class SqlReader(string connectionString)
 {
     public async Task<List<DiaryDTO>> ReadDiariesAsync()
