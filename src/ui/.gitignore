@@ -23,3 +23,8 @@ pnpm-debug.log*
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Vite writes a temporary bundled copy of the config next to it whenever the config
+# needs transpiling, and does not always clean it up — so these accumulate untracked
+# and clutter git status.
+vite.config.*.timestamp-*
