@@ -11,6 +11,14 @@ const SEEDED_IMAGE_YEAR = 1918
 const SEEDED_IMAGE_MONTH = 6
 const SEEDED_IMAGE_DAY = 2
 
+// Entries embed their image as base64 in the response body, so a single day holding one
+// image returns ~1.2 MB. Measured against dev this takes 7.9-8.9s, almost all of it time
+// to first byte — the server generating the response, not the transfer. Against the
+// previous 10s budget that left no margin, so these two tests flaked depending on which
+// side of the line the run landed. The latency is the real defect; until entries serve
+// images by URL rather than inline, the budget has to reflect what the API actually does.
+const IMAGE_RESPONSE_TIMEOUT = 30000
+
 async function getIntegrationDiaryId (request: import('@playwright/test').APIRequestContext): Promise<string> {
   const response = await request.get(`${API_BASE}/api/v1/Diary/Get`, { ignoreHTTPSErrors: true })
   expect(response.ok()).toBeTruthy()
@@ -521,7 +529,7 @@ test.describe('DiaryEntry API — imageData and imageContentType fields', () => 
   test('seeded June 2nd entry returns non-null imageData and imageContentType', async ({ request }) => {
     const response = await request.get(
       `${API_BASE}/api/v1/DiaryEntry/Search/${ww1DiaryId}/${SEEDED_IMAGE_YEAR}/${SEEDED_IMAGE_MONTH}/${SEEDED_IMAGE_DAY}`,
-      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' } },
+      { ignoreHTTPSErrors: true, headers: { 'x-utc-offset': '0' }, timeout: IMAGE_RESPONSE_TIMEOUT },
     )
     expect(response.ok()).toBeTruthy()
     const entries: Array<{ imageData: string | null; imageContentType: string | null }> = await response.json()
@@ -559,8 +567,9 @@ test.describe('Image display on diary entries', () => {
 
   test('image renders in timeline for a seeded entry with imageData set', async ({ page }) => {
     const dateWithImage = `${SEEDED_IMAGE_YEAR}-${String(SEEDED_IMAGE_MONTH).padStart(2, '0')}-${String(SEEDED_IMAGE_DAY).padStart(2, '0')}`
-    await page.goto(`/diaries/${ww1DiaryId}?date=${dateWithImage}`, { waitUntil: 'load', timeout: 25000 })
-    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: 12000 })
+    await page.goto(`/diaries/${ww1DiaryId}?date=${dateWithImage}`, { waitUntil: 'load', timeout: 40000 })
+    // The timeline cannot render until the same slow image response arrives.
+    await expect(page.locator('.v-timeline-item').first()).toBeVisible({ timeout: IMAGE_RESPONSE_TIMEOUT })
     await expect(page.locator('.v-timeline-item .v-img').first()).toBeVisible({ timeout: 10000 })
   })
 

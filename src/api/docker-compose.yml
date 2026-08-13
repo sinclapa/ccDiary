@@ -24,6 +24,32 @@ services:
       start_period: 10s
     networks:
       - ccdiarynet
+  # Azure Table + Blob emulator, backing the storage layer and its tests.
+  # Runs alongside SQL Server for now: the application still reads and writes SQL,
+  # and only the storage primitives and their tests use Azurite.
+  azurite:
+    image: "mcr.microsoft.com/azure-storage/azurite:latest"
+    container_name: ccdiary-azurite
+    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data"
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - ccdiaryazuritevolume:/data
+    healthcheck:
+      # The image is Node-based with no curl or nc, so probe with node itself.
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('net').connect(10002,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\""
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks:
+      - ccdiarynet
   ccdiaryapi:
     image: ${DOCKER_REGISTRY-}ccdiaryapi
     container_name: ccdiaryapi
@@ -32,6 +58,8 @@ services:
     depends_on:
       ccdiary:
         condition: service_healthy
+      azurite:
+        condition: service_healthy
     build:
       context: .
       dockerfile: ccDiaryApi/Dockerfile
@@ -39,6 +67,7 @@ services:
       - ccdiarynet
 volumes:
   ccdiarydbvolume:
+  ccdiaryazuritevolume:
 networks:
   ccdiarynet:
     name: ccdiary_network  
