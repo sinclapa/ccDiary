@@ -70,31 +70,13 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Wake SQL database (auto-resume from serverless pause)
-        run: |
-          STATUS=$(az sql db show \
-            --name ${{ vars.SQL_DB_NAME }} \
-            --server ${{ vars.SQL_SERVER_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --query "status" -o tsv 2>/dev/null || echo "unknown")
-          echo "SQL database status: $STATUS"
-          if [ "$STATUS" = "Paused" ]; then
-            echo "Resuming paused SQL database (waiting until online)..."
-            az sql db update \
-              --name ${{ vars.SQL_DB_NAME }} \
-              --server ${{ vars.SQL_SERVER_NAME }} \
-              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-              --output none
-            echo "Database is online."
-          fi
+      # The "wake SQL database" step that used to sit here is gone: storage is always
+      # on, so there is no paused resource to resume before deploying.
 
-      - name: Deploy public GHCR image to Container App with migration
-        env:
-          SQL_SERVER_NAME: ${{ vars.SQL_SERVER_NAME }}
-          SQL_DB_NAME: ${{ vars.SQL_DB_NAME }}
+      - name: Deploy public GHCR image to Container App
         run: |
           ENV_VARS=(
-            "RUN_MIGRATIONS=true"
+            "Storage__AccountName=${{ vars.STORAGE_ACCOUNT_NAME }}"
             "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}"
             "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}"
             "OTEL_SERVICE_NAME=ccDiaryApi"
@@ -113,20 +95,17 @@ jobs:
             "Smtp__From=${{ vars.SMTP_FROM }}"
             "Smtp__FromName=${{ vars.SMTP_FROM_NAME }}"
           )
-          if [ -n "$SQL_SERVER_NAME" ] && [ -n "$SQL_DB_NAME" ]; then
-            ENV_VARS+=("AZURE_SQL_CONNECTIONSTRING=Server=tcp:${SQL_SERVER_NAME}.database.windows.net,1433;Initial Catalog=${SQL_DB_NAME};Authentication=Active Directory Default")
-          fi
-          UPDATE_CMD=(az containerapp update
-            --name "${{ vars.CONTAINER_APP_NAME }}"
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}"
-            --image "${{ steps.api_image.outputs.value }}"
-            --set-env-vars "${ENV_VARS[@]}"
-            --no-wait
-            --output none)
-          if [ -z "$SQL_SERVER_NAME" ] || [ -z "$SQL_DB_NAME" ]; then
-            UPDATE_CMD+=(--remove-env-vars AZURE_SQL_CONNECTIONSTRING)
-          fi
-          "${UPDATE_CMD[@]}"
+          # Managed identity supplies the credential, so only the account name is passed.
+          # Any stale SQL connection string is removed so a later image-only rollback
+          # cannot pick it up again.
+          az containerapp update \
+            --name "${{ vars.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --image "${{ steps.api_image.outputs.value }}" \
+            --set-env-vars "${ENV_VARS[@]}" \
+            --remove-env-vars AZURE_SQL_CONNECTIONSTRING RUN_MIGRATIONS \
+            --no-wait \
+            --output none
 
       - name: Wait for revision to be running
         run: |
@@ -178,11 +157,5 @@ jobs:
             sleep 10
           done
 
-      - name: Disable migration for subsequent restarts
-        run: |
-          az containerapp update \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --set-env-vars "RUN_MIGRATIONS=false" \
-            --no-wait \
-            --output none
+      # The "disable migration" step is gone: creating a table that already exists is
+      # idempotent, so every replica can safely bootstrap on every boot.

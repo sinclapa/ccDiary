@@ -71,6 +71,39 @@ namespace ccDiaryApi.Data.Storage
         public static int ByteSize(string json) => Encoding.UTF8.GetByteCount(json);
 
         /// <summary>
+        /// Builds a table row from an entity: the serialised entity in the <c>Json</c>
+        /// column, plus whatever columns the caller needs to be able to filter on.
+        /// </summary>
+        /// <typeparam name="T">The entity type.</typeparam>
+        /// <param name="partitionKey">The partition key.</param>
+        /// <param name="rowKey">The row key.</param>
+        /// <param name="value">The entity to serialise.</param>
+        /// <param name="columns">Adds the broken-out queryable columns, if any.</param>
+        /// <returns>The row, ready to upsert.</returns>
+        public static TableEntity ToEntity<T>(
+            string partitionKey,
+            string rowKey,
+            T value,
+            Action<TableEntity>? columns = null)
+        {
+            var entity = new TableEntity(partitionKey, rowKey)
+            {
+                { JsonColumn, Serialize(value) },
+                { SchemaVersionColumn, CurrentSchemaVersion },
+            };
+
+            columns?.Invoke(entity);
+            return entity;
+        }
+
+        /// <summary>Reads the entity back out of a row's <c>Json</c> column.</summary>
+        /// <typeparam name="T">The entity type.</typeparam>
+        /// <param name="entity">The row.</param>
+        /// <returns>The entity, or <c>null</c> when the row carries no payload.</returns>
+        public static T? FromEntity<T>(TableEntity entity) =>
+            Deserialize<T>(entity.GetString(JsonColumn));
+
+        /// <summary>
         /// Drains a table query into a list.
         /// </summary>
         /// <param name="client">The table to query.</param>

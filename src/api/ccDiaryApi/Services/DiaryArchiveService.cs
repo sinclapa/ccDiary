@@ -4,72 +4,65 @@
 
 namespace ccDiaryApi.Services
 {
-    using ccDiaryApi.Data.Context;
     using ccDiaryApi.Data.Model;
-    using Microsoft.EntityFrameworkCore;
 
+    /// <summary>
+    /// Whole-diary export and import.
+    /// </summary>
+    /// <remarks>
+    /// Built on the diary and entry services rather than on storage directly, so that
+    /// image blobs, JSON spill and row key derivation have exactly one implementation.
+    /// <para>
+    /// This is no longer atomic. The relational version committed an import in a single
+    /// transaction; here it is a sequence of blob writes and row upserts, so a failure
+    /// part way through leaves a partial diary. Every write is an upsert keyed by the
+    /// archive's own identifiers, so re-running the same import repairs it.
+    /// </para>
+    /// </remarks>
     public class DiaryArchiveService : IDiaryArchiveService
     {
-        private readonly DiaryDatabaseContext _context;
+        private readonly IDiaryService _diaryService;
+        private readonly IDiaryEntryService _diaryEntryService;
 
-        public DiaryArchiveService(DiaryDatabaseContext context)
+        /// <summary>Initializes a new instance of the <see cref="DiaryArchiveService"/> class.</summary>
+        /// <param name="diaryService">The diary service.</param>
+        /// <param name="diaryEntryService">The diary entry service.</param>
+        public DiaryArchiveService(IDiaryService diaryService, IDiaryEntryService diaryEntryService)
         {
-            _context = context;
+            _diaryService = diaryService;
+            _diaryEntryService = diaryEntryService;
         }
 
+        /// <inheritdoc/>
         public async Task<DiaryArchiveDTO?> ExportAsync(Guid diaryId)
         {
-            var diary = await _context.Diaries.Where(x => x.DiaryId == diaryId).FirstOrDefaultAsync();
+            var diary = await _diaryService.GetDiaryAsync(diaryId);
             if (diary == null)
             {
                 return null;
             }
 
-            var diaryEntries = await _context.DiaryEntries.Where(x => x.DiaryId == diaryId).OrderBy(x => x.Date).ToListAsync();
-            return new DiaryArchiveDTO { Diary = diary, DiaryEntries = diaryEntries };
+            var entries = await _diaryEntryService.GetDiaryEntriesAsync(diaryId);
+            return new DiaryArchiveDTO { Diary = diary, DiaryEntries = entries };
         }
 
+        /// <inheritdoc/>
         public async Task<DiaryDTO> ImportAsync(DiaryArchiveDTO diaryArchive)
         {
-            var diary = await _context.Diaries.Where(x => x.DiaryId == diaryArchive.Diary.DiaryId).FirstOrDefaultAsync();
+            diaryArchive.Diary.DiaryId ??= Guid.NewGuid();
+            await _diaryService.UpdateAsync(diaryArchive.Diary);
 
-            if (diary == null)
+            foreach (var entry in diaryArchive.DiaryEntries)
             {
-                _context.Add(diaryArchive.Diary);
-            }
-            else
-            {
-                diary.Title = diaryArchive.Diary.Title;
-                diary.Author = diaryArchive.Diary.Author;
-                diary.Description = diaryArchive.Diary.Description;
-                _context.Update(diary);
-            }
-
-            foreach (var diaryEntry in diaryArchive.DiaryEntries)
-            {
-                var updateDiaryEntry = await _context.DiaryEntries.Where(x => x.DiaryEntryId == diaryEntry.DiaryEntryId).FirstOrDefaultAsync();
-                if (updateDiaryEntry == null)
+                entry.DiaryEntryId ??= Guid.NewGuid();
+                if (entry.DiaryId == Guid.Empty)
                 {
-                    _context.Add(diaryEntry);
+                    entry.DiaryId = diaryArchive.Diary.DiaryId!.Value;
                 }
-                else
-                {
-                    updateDiaryEntry.Date = diaryEntry.Date;
-                    updateDiaryEntry.Location = diaryEntry.Location;
-                    updateDiaryEntry.Entry = diaryEntry.Entry;
-                    updateDiaryEntry.ShowMap = diaryEntry.ShowMap;
-                    updateDiaryEntry.MapLocation = diaryEntry.MapLocation;
-                    updateDiaryEntry.ShowJourney = diaryEntry.ShowJourney;
-                    updateDiaryEntry.FromLocation = diaryEntry.FromLocation;
-                    updateDiaryEntry.ToLocation = diaryEntry.ToLocation;
-                    updateDiaryEntry.JourneyMode = diaryEntry.JourneyMode;
-                    updateDiaryEntry.ImageData = diaryEntry.ImageData;
-                    updateDiaryEntry.ImageContentType = diaryEntry.ImageContentType;
-                    _context.Update(updateDiaryEntry);
-                }
+
+                await _diaryEntryService.UpdateDiaryEntryAsync(entry);
             }
 
-            await _context.SaveChangesAsync();
             return diaryArchive.Diary;
         }
     }

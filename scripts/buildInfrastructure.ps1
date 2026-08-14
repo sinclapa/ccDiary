@@ -369,6 +369,7 @@ $resourceGroupName = $deploymentResult.properties.outputs.environment.value.reso
 $containerAppId = $deploymentResult.properties.outputs.environment.value.containerAppId.value
 $containerAppName = $deploymentResult.properties.outputs.environment.value.containerAppName.value
 $containerAppUrl = $deploymentResult.properties.outputs.environment.value.containerAppUrl.value
+$storageAccountName = $deploymentResult.properties.outputs.environment.value.storageAccountName.value
 $databaseServer = $deploymentResult.properties.outputs.environment.value.databaseServer.value
 $databaseServerName = $deploymentResult.properties.outputs.environment.value.databaseServerName.value
 $databaseId = $deploymentResult.properties.outputs.environment.value.databaseId.value
@@ -409,6 +410,27 @@ $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 $entraObjectId = $entraOut.EntraObjectId
 
+Write-Host "Granting storage data-plane roles to the deploying user..." -ForegroundColor Cyan
+
+# The bicep template grants these to the Container App's managed identity. The person
+# running this script needs them too, otherwise the migration tool and any local run
+# against the real account get 403s. Note these are data-plane roles: control-plane roles
+# such as Storage Account Contributor grant no access to the tables or blobs themselves.
+$storageAccountId = az storage account show `
+  --name "$storageAccountName" `
+  --resource-group "$resourceGroupName" `
+  --query "id" -o tsv
+
+foreach ($role in @('Storage Table Data Contributor', 'Storage Blob Data Contributor')) {
+    Write-Host "  Granting '$role' to $userPrincipalName"
+    az role assignment create `
+      --assignee-object-id "$userId" `
+      --assignee-principal-type User `
+      --role "$role" `
+      --scope "$storageAccountId" `
+      --output none 2>$null
+}
+
 Write-Host "Configuring SQL Firewall Rules..." -ForegroundColor Cyan
 $myIP = Invoke-WebRequest -UseBasicParsing -Uri "https://api.ipify.org"
 
@@ -434,7 +456,7 @@ $envVars = @(
         "Entra__ClientId=$entraClientId",
         "Entra__ApplicationIdUri=$entraApplicationIdURI",
         "ASPNETCORE_ENVIRONMENT=$environment",
-        "RUN_MIGRATIONS=false",
+        "Storage__AccountName=$storageAccountName",
         "OTEL_EXPORTER_OTLP_ENDPOINT=$grafanaOtlpEndpoint",
         "OTEL_EXPORTER_OTLP_HEADERS=$grafanaOtlpAuthHeader",
         "OTEL_SERVICE_NAME=ccDiaryApi",
@@ -518,8 +540,10 @@ gh api --method PUT repos/${gitHubOwnerRepo}/environments/${environment}
 # Variables — non-sensitive configuration
 gh variable set "CONTAINER_APP_NAME" --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
 gh variable set "RESOURCE_GROUP_NAME" --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
-gh variable set "SQL_DB_NAME" --body "$databaseName" --repo $gitHubRepo --env "${environment}"
-gh variable set "SQL_SERVER_NAME" --body "$databaseServerName" --repo $gitHubRepo --env "${environment}"
+gh variable set "STORAGE_ACCOUNT_NAME" --body "$storageAccountName" --repo $gitHubRepo --env "${environment}"
+# The SQL variables are deleted so a stale value cannot be picked up by the deploy workflow.
+gh variable delete "SQL_DB_NAME" --repo $gitHubRepo --env "${environment}" 2>$null
+gh variable delete "SQL_SERVER_NAME" --repo $gitHubRepo --env "${environment}" 2>$null
 gh variable set "API_URL" --body "https://$containerAppUrl/api/" --repo $gitHubRepo --env "${environment}"
 gh variable set "ENTRA_CLIENT_ID" --body "$entraClientId" --repo $gitHubRepo --env "${environment}"
 gh variable set "ENTRA_APP_OBJECT_ID" --body "$entraObjectId" --repo $gitHubRepo --env "${environment}"

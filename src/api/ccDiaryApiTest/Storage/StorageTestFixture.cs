@@ -5,8 +5,13 @@
 namespace ccDiaryApiTest.Storage
 {
     using System.Net.Sockets;
+    using ccDiaryApi.Data.Model;
     using ccDiaryApi.Data.Storage;
     using ccDiaryApi.Infrastructure;
+    using ccDiaryApi.Services;
+    using global::Azure.Data.Tables;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging.Abstractions;
     using Microsoft.Extensions.Options;
 
@@ -75,15 +80,136 @@ namespace ccDiaryApiTest.Storage
             return fixture;
         }
 
+        /// <summary>Gets these options wrapped for constructor injection.</summary>
+        /// <returns>The wrapped options.</returns>
+        public IOptions<StorageOptions> AsOptions() => Microsoft.Extensions.Options.Options.Create(Options);
+
+        /// <summary>Writes an application user directly, bypassing the service.</summary>
+        /// <param name="oid">The Entra object id, which is also the row key.</param>
+        /// <param name="role">The role to grant.</param>
+        /// <param name="email">The email address, defaulted from the oid.</param>
+        /// <returns>The stored user.</returns>
+        public async Task<AppUserDto> SeedUserAsync(string oid, AppRole role, string? email = null)
+        {
+            var user = new AppUserDto
+            {
+                UserId = Guid.NewGuid(),
+                EntraObjectId = oid,
+                DisplayName = $"Test {role}",
+                Email = email ?? $"{oid}@test.com",
+                Role = role,
+                CreatedAt = DateTime.UtcNow,
+            };
+
+            var entity = TableJson.ToEntity(
+                StorageKeys.UserPartition,
+                StorageKeys.SanitiseKey(oid),
+                user,
+                e =>
+                {
+                    e["UserId"] = user.UserId.ToString();
+                    e["Email"] = user.Email;
+                    e["Role"] = user.Role.ToStoredValue();
+                });
+
+            await Tables.AppUsers.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+            return user;
+        }
+
+        /// <summary>Writes an access request directly, bypassing the service.</summary>
+        /// <param name="email">The requester's email.</param>
+        /// <param name="status">The request status.</param>
+        /// <param name="displayName">The requester's display name.</param>
+        /// <returns>The stored request.</returns>
+        public async Task<AccessRequestDto> SeedAccessRequestAsync(
+            string email,
+            RequestStatus status,
+            string displayName = "Test User")
+        {
+            var request = new AccessRequestDto
+            {
+                AccessRequestId = Guid.NewGuid(),
+                DisplayName = displayName,
+                Email = email,
+                Status = status,
+                RequestedAt = DateTime.UtcNow,
+            };
+
+            var entity = TableJson.ToEntity(
+                StorageKeys.RequestPartition,
+                request.AccessRequestId.ToString("N"),
+                request,
+                e =>
+                {
+                    e["Status"] = request.Status.ToStoredValue();
+                    e["Email"] = request.Email;
+                    e["RequestedAt"] = request.RequestedAt;
+                });
+
+            await Tables.AccessRequests.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+            return request;
+        }
+
+        /// <summary>Seeds a cached map tile at its blob location.</summary>
+        /// <param name="tile">The tile to store.</param>
+        /// <returns>A task representing the operation.</returns>
+        public async Task SeedAsync(MapTileCacheDto tile)
+        {
+            await Blobs.PutAsync(
+                Options.MapCacheContainer,
+                StorageKeys.TileBlobKey(tile.Source, tile.Z, tile.X, tile.Y),
+                BinaryData.FromBytes(tile.TileData),
+                tile.ContentType);
+        }
+
+        /// <summary>Seeds a cached geocoding result.</summary>
+        /// <param name="geocode">The result to store.</param>
+        /// <returns>A task representing the operation.</returns>
+        public async Task SeedAsync(GeocodingCacheDto geocode)
+        {
+            var entity = new TableEntity(StorageKeys.GeocodePartition, StorageKeys.GeocodeKey(geocode.Query))
+            {
+                { "Query", geocode.Query },
+                { "Lat", geocode.Lat },
+                { "Lon", geocode.Lon },
+                { "CachedAt", geocode.CachedAt },
+            };
+
+            await Tables.GeocodingCache.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
+
+        /// <summary>Seeds a cached route at its blob location.</summary>
+        /// <param name="route">The route to store.</param>
+        /// <returns>A task representing the operation.</returns>
+        public async Task SeedAsync(RoutingCacheDto route)
+        {
+            await Blobs.PutAsync(
+                Options.MapCacheContainer,
+                StorageKeys.RouteBlobKey(route.Profile, route.FromLat, route.FromLon, route.ToLat, route.ToLon),
+                BinaryData.FromString(route.RouteCoords),
+                "application/json");
+        }
+
         /// <summary>Runs the bootstrapper against this fixture's storage.</summary>
         /// <returns>A task representing the operation.</returns>
         public async Task BootstrapAsync()
         {
+            // The bootstrapper resolves IUserService to seed the first administrator.
+            // With no BootstrapAdmin configured that call returns immediately, so a
+            // minimal container is enough here.
+            var services = new ServiceCollection();
+            services.AddSingleton(Tables);
+            services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+            services.AddScoped<IUserService, UserService>();
+            using var provider = services.BuildServiceProvider();
+
             var bootstrapper = new StorageBootstrapper(
                 Tables,
                 Blobs,
-                Microsoft.Extensions.Options.Options.Create(Options),
+                AsOptions(),
+                provider.GetRequiredService<IServiceScopeFactory>(),
                 NullLogger<StorageBootstrapper>.Instance);
+
             await bootstrapper.StartAsync(CancellationToken.None);
         }
 
@@ -119,7 +245,7 @@ namespace ccDiaryApiTest.Storage
         /// Fails with an actionable message when the emulator is not running, rather
         /// than letting every storage test die on a raw socket exception.
         /// </summary>
-        private static void RequireAzurite()
+        public static void RequireAzurite()
         {
             try
             {

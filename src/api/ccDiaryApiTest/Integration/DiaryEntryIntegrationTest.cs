@@ -150,7 +150,7 @@ namespace ccDiaryApiTest.Integration
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
 
             // Assert
-            Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [TestMethod]

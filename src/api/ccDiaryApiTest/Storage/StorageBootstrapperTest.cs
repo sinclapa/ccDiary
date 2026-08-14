@@ -6,6 +6,7 @@ namespace ccDiaryApiTest.Storage
 {
     using ccDiaryApi.Data.Storage;
     using ccDiaryApi.Infrastructure;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging.Abstractions;
     using Microsoft.Extensions.Options;
 
@@ -78,6 +79,7 @@ namespace ccDiaryApiTest.Storage
                 new TableStore(options),
                 new BlobStore(options),
                 options,
+                new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
                 NullLogger<StorageBootstrapper>.Instance);
 
             await bootstrapper.StartAsync(CancellationToken.None);
@@ -91,6 +93,7 @@ namespace ccDiaryApiTest.Storage
                 new TableStore(options),
                 new BlobStore(options),
                 options,
+                new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
                 NullLogger<StorageBootstrapper>.Instance);
 
             await bootstrapper.StopAsync(CancellationToken.None);
