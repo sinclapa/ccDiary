@@ -338,22 +338,12 @@ Write-Host "  Subscription ID: $subscriptionId" -ForegroundColor Gray
 Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
-# FreeLimitExhaustionBehavior is immutable once set to BillOverUsage.
-# Read the current value so we never attempt an illegal AutoPause -> BillOverUsage -> AutoPause transition.
-$appName = "${name}-${environment}"
-$existingFreeLimitBehavior = az sql db show `
-  --name "sqldb-${appName}" `
-  --server "sql-${appName}" `
-  --resource-group "rg-${name}-${environment}" `
-  --query "freeLimitExhaustionBehavior" -o tsv 2>$null
-$freeLimitExhaustionBehavior = if ($existingFreeLimitBehavior -eq 'BillOverUsage') { 'BillOverUsage' } else { 'AutoPause' }
-Write-Host "  SQL freeLimitExhaustionBehavior: $freeLimitExhaustionBehavior" -ForegroundColor Gray
 
 # Deploy using Azure CLI
 $deploymentResult = az deployment sub create `
   --location $location `
   --template-file "$PSScriptRoot\..\deploy\main.bicep" `
-  --parameters name=$name environment="$environment" adminUser=$userPrincipalName adminUserSID=$userId devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" freeLimitExhaustionBehavior=$freeLimitExhaustionBehavior `
+  --parameters name=$name environment="$environment" devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
   --output json | ConvertFrom-Json
 
 # Check if deployment succeeded
@@ -370,10 +360,6 @@ $containerAppId = $deploymentResult.properties.outputs.environment.value.contain
 $containerAppName = $deploymentResult.properties.outputs.environment.value.containerAppName.value
 $containerAppUrl = $deploymentResult.properties.outputs.environment.value.containerAppUrl.value
 $storageAccountName = $deploymentResult.properties.outputs.environment.value.storageAccountName.value
-$databaseServer = $deploymentResult.properties.outputs.environment.value.databaseServer.value
-$databaseServerName = $deploymentResult.properties.outputs.environment.value.databaseServerName.value
-$databaseId = $deploymentResult.properties.outputs.environment.value.databaseId.value
-$databaseName = $deploymentResult.properties.outputs.environment.value.databaseName.value
 $staticSiteName = $deploymentResult.properties.outputs.environment.value.staticSiteName.value
 $staticSiteUrl = $deploymentResult.properties.outputs.environment.value.staticSiteUrl.value
 $resourceGroupId = $deploymentResult.properties.outputs.environment.value.resourceGroupId.value
@@ -384,10 +370,6 @@ Write-Output "  resourceGroupId = $resourceGroupId"
 Write-Output "  containerAppId = $containerAppId"
 Write-Output "  containerAppName = $containerAppName"
 Write-Output "  containerAppUrl = $containerAppUrl"
-Write-Output "  databaseServer = $databaseServer"
-Write-Output "  databaseServerName = $databaseServerName"
-Write-Output "  databaseId = $databaseId"
-Write-Output "  databaseName = $databaseName"
 Write-Output "  staticSiteName = $staticSiteName"
 Write-Output "  staticSiteUrl = $staticSiteUrl"
 Write-Output "  appName = $appName"
@@ -431,19 +413,6 @@ foreach ($role in @('Storage Table Data Contributor', 'Storage Blob Data Contrib
       --output none 2>$null
 }
 
-Write-Host "Configuring SQL Firewall Rules..." -ForegroundColor Cyan
-$myIP = Invoke-WebRequest -UseBasicParsing -Uri "https://api.ipify.org"
-
-Write-Host "  Adding firewall rule for IP: $myIP"
-
-az sql server firewall-rule create `
-  --resource-group "${resourceGroupName}" `
-  --server "${databaseServerName}" `
-  --name "Allow_${env:COMPUTERNAME}_${myIP}" `
-  --start-ip-address "${myIP}" `
-  --end-ip-address "${myIP}" `
-  --output none
-
 Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
 $entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
 $entraClientCredentialsPassword = $entraClientCredentials.password
@@ -485,37 +454,6 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to update Container App environment variables."
     exit 1
 }
-
-Write-Host "Creating Service Connector between Container App and SQL Database..." -ForegroundColor Cyan
-$connectionName = "sql_$((New-GuidFromString $appName).ToString().Replace('-', '_'))"
-$existingConnection = az containerapp connection list `
-    --source-id $containerAppId `
-    --query "[?name=='$connectionName'] | [0].name" -o tsv 2>$null
-if ($existingConnection -eq $connectionName) {
-    Write-Host "  Service Connector '$connectionName' already exists, deleting and recreating to refresh database user..." -ForegroundColor Gray
-    az containerapp connection delete `
-        --connection $connectionName `
-        --name $containerAppName `
-        --resource-group $resourceGroupName `
-        --yes `
-        --output none
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to delete existing Service Connector. Aborting."
-        exit 1
-    }
-}
-az containerapp connection create sql `
-    --connection $connectionName `
-    --source-id $containerAppId `
-    --target-id $databaseId `
-    --client-type dotnet `
-    --system-identity `
-    -c $containerAppName
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to create Service Connector. The Container App cannot connect to SQL without it. Aborting."
-    exit 1
-}
-Write-Host "  Service Connector '$connectionName' created successfully." -ForegroundColor Green
 
 Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
 

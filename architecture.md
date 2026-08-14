@@ -108,7 +108,7 @@ Resource names follow the pattern `{prefix}-ccdiary-{env}`. Container App FQDNs 
 | **Static Web App** | `stapp-ccdiary-dev.azurestaticapps.net` | `stapp-ccdiary-staging.azurestaticapps.net` | `stapp-ccdiary-prod.azurestaticapps.net` + custom domain |
 | **Container App** | `ca-ccdiary-dev.{suffix}.azurecontainerapps.io` | `ca-ccdiary-staging.{suffix}.azurecontainerapps.io` | `ca-ccdiary-prod.{suffix}.azurecontainerapps.io` |
 | **Container App Env** | `cae-ccdiary-dev` | `cae-ccdiary-staging` | `cae-ccdiary-prod` |
-| **SQL Server FQDN** | `sql-ccdiary-dev.database.windows.net` | `sql-ccdiary-staging.database.windows.net` | `sql-ccdiary-prod.database.windows.net` |
+| **Storage account** | `stccdiarydevcog5wcxyf3cz` | `stccdiarystagingn5tdd4wc` | `stccdiaryprod6vcphn6hsut` |
 | **SQL Database** | `sqldb-ccdiary-dev` | `sqldb-ccdiary-staging` | `sqldb-ccdiary-prod` |
 | **Log Analytics** | `logs-ccdiary-dev` | `logs-ccdiary-staging` | `logs-ccdiary-prod` |
 | **Container Image** | `ghcr.io/sinclapa/ccdiary-api:{semver}` | `ghcr.io/sinclapa/ccdiary-api:{semver}` | `ghcr.io/sinclapa/ccdiary-api:{semver}` |
@@ -134,13 +134,13 @@ flowchart LR
         ViteDev["⚡ Vite Dev Server\nlocalhost:8080\nnpm run dev"]
         API["🔧 ASP.NET Core API\nlocalhost:7183 HTTPS\ndotnet run"]
         subgraph Docker["🐳 Docker Compose"]
-            SQL[("🗄️ SQL Server 2022\nlocalhost:51433\nmssql/server:2022-latest")]
+            SQL[("🗄️ Azurite\nlocalhost:10000-10002\nazure-storage/azurite")]
         end
     end
 
     Browser -->|"http://localhost:8080"| ViteDev
     ViteDev -->|"REST /api/v1/"| API
-    API -->|"EF Core\nauto-migrate on startup"| SQL
+    API -->|"Table + Blob SDK\nbootstrap on startup"| SQL
 ```
 
 | Component | Value |

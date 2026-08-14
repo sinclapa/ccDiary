@@ -12,7 +12,7 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 
 - Framework: ASP.NET Core 8 (target framework: net8.0)
 - Architecture: RESTful API with API versioning
-- Database: SQL Server with Entity Framework Core 9.0 (SqlServer + InMemory/Sqlite for tests)
+- Storage: Azure Table + Blob Storage via Azure.Data.Tables / Azure.Storage.Blobs (Azurite locally and in CI). No ORM, no migrations
 - Authentication: Microsoft Identity Web 4.3.0 (JWT Bearer via Microsoft Entra ID, config section "Entra")
 
 ### Frontend (UI)
@@ -49,7 +49,7 @@ ccDiary/
     │   │   ├── Services/              # Service layer
     │   │   ├── Extensions/            # Extensions
     │   │   ├── Utilities/             # Utility code
-    │   │   ├── Migrations/            # EF Core migrations
+    │   │   ├── Infrastructure/       # StorageBootstrapper (creates tables/containers at boot)
     │   │   └── Properties/            # Assembly properties
     │   │
     │   └── ccDiaryApiTest/            # API tests (MSTest framework)
@@ -98,8 +98,8 @@ ccDiary/
 - Build: `dotnet build ccDiary.sln`
 - Test and Coverage: `dotnet test ccDiary.sln -c Release --settings ccDiary.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults\coverage-api`
 - Run: `dotnet run --project ccDiaryApi\ccDiaryApi.csproj`
-- Add Migration: `dotnet ef migrations add <Name> -p ccDiaryApi -s ccDiaryApi`
-- Update Database: `dotnet ef database update -p ccDiaryApi -s ccDiaryApi`
+- Migrate SQL data: `dotnet run --project ccDiary.Migrate -- --source "<sql>" --dest <account> --verify`
+- Rebuild from archive: `dotnet run --project ccDiary.Migrate -- --from-archive data/ww1-diary.json --dest <account>`
 - Format: `dotnet format .\ccDiary.sln`
 
 ### Frontend UI (src/ui)
@@ -168,7 +168,8 @@ Sensitive values are never committed. Override them via:
 
 | Key | Purpose |
 |---|---|
-| `ConnectionStrings:SqlConnection` | SQL Server connection string (see `appsettings.Local.json` for template) |
+| `Storage:AccountName` | Storage account; the Container App uses its managed identity, so no secret is stored |
+| `Storage:ConnectionString` | Used instead for Azurite locally |
 | `Entra:ClientId` | Entra ID app registration client ID |
 | `Entra:TenantId` | Entra ID tenant ID |
 | `Entra:ApplicationIdUri` | Entra ID application ID URI |
@@ -178,7 +179,7 @@ Sensitive values are never committed. Override them via:
 ### OpenTelemetry
 
 OTel is configured in `OpenTelemetryExtensions.cs`. When `OTEL_EXPORTER_OTLP_ENDPOINT` is set it exports:
-- **Traces** — ASP.NET Core, HttpClient, EF Core, SqlClient instrumentation → `{endpoint}/v1/traces`
+- **Traces** — ASP.NET Core, HttpClient, and the Azure SDKs via AddSource("Azure.*") → `{endpoint}/v1/traces`
 - **Metrics** — ASP.NET Core, HttpClient, runtime instrumentation → `{endpoint}/v1/metrics`
 - **Logs** — Serilog OTLP sink → `{endpoint}/v1/logs`
 
