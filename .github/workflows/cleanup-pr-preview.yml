@@ -1,0 +1,42 @@
+# Removes the Static Web App preview environment when a pull request closes.
+#
+# Every PR build creates one, and the Free tier allows only three at a time. Without
+# this they accumulate until an unrelated PR fails with:
+#
+#   Reason: This Static Web App already has the maximum number of staging environments.
+#
+# which surfaces as a UI deployment failing on a pull request that may not touch the UI
+# at all — an unhelpful place to begin debugging.
+#
+# This lives in its own workflow rather than as a job in build-and-test.yml: adding
+# "closed" to that workflow's pull_request trigger would run the entire build, test and
+# deploy pipeline every time a PR is closed.
+
+name: Clean up PR preview environment
+
+on:
+  pull_request:
+    types: [closed]
+
+# If a PR is closed and reopened quickly, only the latest state matters.
+concurrency:
+  group: cleanup-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  close-preview:
+    runs-on: ubuntu-latest
+
+    # The deploy token is scoped to the dev environment, and dev is where pull request
+    # previews are created.
+    environment: dev
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Close preview environment
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "close"
