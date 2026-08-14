@@ -46,6 +46,20 @@ internal sealed class Verifier(StorageWriter storage)
                 $"diary {diaryId}: expected {expectedEntries.Count} entries, storage returned {actualEntries.Count}");
         }
 
+        // Checking only that every source row arrived leaves the other direction blind:
+        // a row in storage with no counterpart in the source is either a leftover from a
+        // previous migration or something else writing to the same tables, and either way
+        // the operator needs to know before treating this as a faithful copy.
+        var expectedIds = expectedEntries
+            .Where(e => e.DiaryEntryId.HasValue)
+            .Select(e => e.DiaryEntryId!.Value)
+            .ToHashSet();
+
+        foreach (var extra in actualEntries.Where(e => e.DiaryEntryId.HasValue && !expectedIds.Contains(e.DiaryEntryId!.Value)))
+        {
+            _problems.Add($"entry {extra.DiaryEntryId} is in storage but not in the source");
+        }
+
         foreach (var expected in expectedEntries)
         {
             var id = expected.DiaryEntryId!.Value;
@@ -117,6 +131,15 @@ internal sealed class Verifier(StorageWriter storage)
             }
         }
 
+        // A user in storage that the source does not have is the more alarming direction:
+        // it means somebody holds an account, and a role, that the migration did not put
+        // there.
+        var expectedOids = expectedUsers.Select(u => u.EntraObjectId).ToHashSet(StringComparer.Ordinal);
+        foreach (var extra in actualUsers.Where(u => !expectedOids.Contains(u.EntraObjectId)))
+        {
+            _problems.Add($"user {extra.EntraObjectId} ({extra.Role}) is in storage but not in the source");
+        }
+
         var actualRequests = await storage.ReadAccessRequestsAsync();
         var byId = actualRequests.ToDictionary(r => r.AccessRequestId);
 
@@ -134,6 +157,12 @@ internal sealed class Verifier(StorageWriter storage)
             }
 
             CompareField(expected.AccessRequestId, "inviteRedeemUrl", expected.InviteRedeemUrl, actual.InviteRedeemUrl);
+        }
+
+        var expectedRequestIds = expectedRequests.Select(r => r.AccessRequestId).ToHashSet();
+        foreach (var extra in actualRequests.Where(r => !expectedRequestIds.Contains(r.AccessRequestId)))
+        {
+            _problems.Add($"access request {extra.AccessRequestId} ({extra.Email}) is in storage but not in the source");
         }
     }
 

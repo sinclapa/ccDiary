@@ -112,6 +112,105 @@ namespace ccDiaryApiTest.Storage
         }
 
         [TestMethod]
+        public async Task Verifier_DetectsAnEntryInStorageThatTheSourceDoesNotHave()
+        {
+            var (diary, entries) = await MigrateSampleAsync();
+
+            // Something wrote an entry the migration never put there.
+            await _storage.WriteEntryAsync(new DiaryEntryDTO
+            {
+                DiaryEntryId = Guid.NewGuid(),
+                DiaryId = diary.DiaryId!.Value,
+                Date = new DateTime(1919, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Location = "Unexpected",
+                Entry = "Not from the source",
+            });
+
+            var verifier = new Verifier(_storage);
+
+            Assert.IsFalse(await verifier.VerifyDiaryAsync(diary, entries));
+            Assert.IsTrue(verifier.Problems.Any(p => p.Contains("in storage but not in the source", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        public async Task Verifier_DetectsACompensatingPair_WhereCountsStillMatch()
+        {
+            // The case a count comparison cannot see: one row missing and one extra, so
+            // the totals agree while the contents do not. This is the whole reason the
+            // check is by identity rather than by number.
+            var (diary, entries) = await MigrateSampleAsync();
+
+            await _storage.WriteEntryAsync(new DiaryEntryDTO
+            {
+                DiaryEntryId = Guid.NewGuid(),
+                DiaryId = diary.DiaryId!.Value,
+                Date = new DateTime(1919, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Location = "Unexpected",
+                Entry = "Not from the source",
+            });
+
+            // Source expects one the migration never wrote, balancing the count exactly.
+            entries.Add(new DiaryEntryDTO
+            {
+                DiaryEntryId = Guid.NewGuid(),
+                DiaryId = diary.DiaryId!.Value,
+                Date = new DateTime(1920, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Location = "Never written",
+                Entry = "Never written",
+            });
+
+            var actual = await _storage.Entries.GetDiaryEntriesAsync(diary.DiaryId!.Value);
+            Assert.AreEqual(entries.Count, actual.Count, "the counts must match, or this is not testing what it claims");
+
+            var verifier = new Verifier(_storage);
+
+            Assert.IsFalse(await verifier.VerifyDiaryAsync(diary, entries));
+            Assert.IsTrue(verifier.Problems.Any(p => p.Contains("missing from storage", StringComparison.Ordinal)));
+            Assert.IsTrue(verifier.Problems.Any(p => p.Contains("in storage but not in the source", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        public async Task Verifier_DetectsAUserInStorageThatTheSourceDoesNotHave()
+        {
+            // The alarming direction: an account, with a role, that the migration did not
+            // create.
+            await _storage.WriteUserAsync(new AppUserDto
+            {
+                UserId = Guid.NewGuid(),
+                EntraObjectId = "unexpected-admin",
+                DisplayName = "Unexpected",
+                Email = "unexpected@test.com",
+                Role = AppRole.DiaryAdmin,
+                CreatedAt = DateTime.UtcNow,
+            });
+
+            var verifier = new Verifier(_storage);
+            await verifier.VerifyUsersAndRequestsAsync([],[]);
+
+            Assert.IsTrue(verifier.Problems.Any(p =>
+                p.Contains("unexpected-admin", StringComparison.Ordinal)
+                && p.Contains("in storage but not in the source", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
+        public async Task Verifier_DetectsAnAccessRequestInStorageThatTheSourceDoesNotHave()
+        {
+            await _storage.WriteAccessRequestAsync(new AccessRequestDto
+            {
+                AccessRequestId = Guid.NewGuid(),
+                DisplayName = "Unexpected",
+                Email = "unexpected@test.com",
+                Status = RequestStatus.Pending,
+                RequestedAt = DateTime.UtcNow,
+            });
+
+            var verifier = new Verifier(_storage);
+            await verifier.VerifyUsersAndRequestsAsync([],[]);
+
+            Assert.IsTrue(verifier.Problems.Any(p => p.Contains("in storage but not in the source", StringComparison.Ordinal)));
+        }
+
+        [TestMethod]
         public async Task Verifier_DetectsADowngradedAdministratorRole()
         {
             // Losing a role silently turns an administrator into a reader, which nobody
