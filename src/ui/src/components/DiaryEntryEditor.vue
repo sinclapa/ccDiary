@@ -184,9 +184,17 @@
             >
               Remove Image
             </v-btn>
+            <!--
+              Hidden and opened programmatically by the button above, so it never
+              receives focus in normal use. It still needs a name: assistive technology
+              can reach it directly, and an unlabelled file input announces as nothing
+              more useful than "button".
+            -->
             <input
+              id="diary-entry-image-input"
               ref="fileInputRef"
               accept="image/jpeg,image/png,image/gif,image/webp"
+              aria-label="Choose an image file for this diary entry"
               style="display: none"
               type="file"
               @change="handleFileSelect"
