@@ -110,10 +110,6 @@ if (Test-Path $envPath) {
     }
 }
 
-$localDBPassword = $apiEnv["DB_PASSWORD"]
-if (-not $localDBPassword) {
-    $localDBPassword = Read-Host -Prompt "Enter the password for the local database"
-}
 
 $otlpEndpoint = $apiEnv["OTEL_EXPORTER_OTLP_ENDPOINT"]
 if (-not $otlpEndpoint) {
@@ -303,7 +299,6 @@ if ($onWindows) {
     Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
 }
 
-$apiEnv["DB_PASSWORD"] = $localDBPassword
 $apiEnv["USER_SECRETS_PATH"] = $userSecretsPath
 $apiEnv["HTTPS_CERTS_PATH"] = $httpsCertsPath
 $apiEnv["HTTPS_CERT_FILE"] = $httpsCertFile
@@ -347,7 +342,6 @@ if ($otlpEndpoint) {
 
 $apiProject = "$PSScriptRoot/../src/api/ccDiaryApi/ccDiaryApi.csproj"
 dotnet user-secrets -p $apiProject init
-dotnet user-secrets -p $apiProject set "SA_PASSWORD" "$localDBPassword"
 dotnet user-secrets -p $apiProject set "Kestrel:Certificates:Development:Password" "$httpsCertPassword"
 dotnet user-secrets -p $apiProject set "Entra:TenantId" "$tenantId"
 if ($entraClientId) {
@@ -457,12 +451,12 @@ if ($faroUrl) {
 }
 $contentCompose | ConvertTo-StringData | Set-Content $vueComposePath
 
-Write-Host "Starting local SQL Server instance..." -ForegroundColor Cyan
-$containerName = "LocalSqlServer"
+Write-Host "Starting local Azurite instance..." -ForegroundColor Cyan
+$containerName = "ccdiary-azurite"
 $exists = docker ps -a --filter "name=$containerName" --format "{{.Names}}"
 
 if (-not $exists) {
-    docker run -p 1433:1433 --name $containerName --rm -d -v local-sql-server-volume:/var/opt/mssql -e ACCEPT_EULA=Y -e SA_PASSWORD=$localDBPassword mcr.microsoft.com/mssql/server:latest
+    docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 --name $containerName --rm -d -v ccdiary-azurite-volume:/data mcr.microsoft.com/azure-storage/azurite:latest
 }
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>

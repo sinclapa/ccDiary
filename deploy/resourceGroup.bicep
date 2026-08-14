@@ -2,18 +2,10 @@ targetScope = 'resourceGroup'
 
 param name string
 param environment string
-param adminUser string
-param adminUserSID string
 param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
-// FreeLimitExhaustionBehavior is immutable once set to BillOverUsage.
-// The deployment script reads the current value before deploying and passes it here
-// so we never attempt an illegal transition.
-@allowed(['AutoPause', 'BillOverUsage'])
-param freeLimitExhaustionBehavior string = 'AutoPause'
 var appName string = '${name}-${environment}'
-var sqlServerName string = 'sql-${appName}'
 
 // Storage account names allow only lowercase alphanumerics and cap at 24 characters.
 var storageAccountName string = take(toLower(replace('st${name}${environment}${uniqueString(resourceGroup().id)}', '-', '')), 24)
@@ -181,60 +173,6 @@ module storageRoles 'storageRoleAssignments.bicep' = {
   ]
 }
 
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
-  name: sqlServerName
-  location: location
-  identity: {
-    type: 'SystemAssigned'    
-  }
-  properties: {
-    publicNetworkAccess: 'Enabled'    
-    administrators: {
-      administratorType: 'ActiveDirectory'
-      principalType: 'User'
-      login: adminUser
-      sid: adminUserSID      
-      tenantId: subscription().tenantId
-      azureADOnlyAuthentication: true
-    }
-  }    
-}
-
-resource databaseServerFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: sqlServer
-  name: 'sql-fw-${appName}-allow-azure-services'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
-
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
-  parent: sqlServer
-  name: 'sqldb-${appName}'
-  location: location
-  sku: {
-    name: 'GP_S_Gen5_1'
-    tier: 'GeneralPurpose'
-  }
-  properties: {
-    createMode: 'Default'
-    collation: 'SQL_Latin1_General_CP1_CI_AS'
-    maxSizeBytes: 34359738368 // 32 GB
-    zoneRedundant: false
-    availabilityZone: 'NoPreference'
-    autoPauseDelay: 60
-    readScale: 'Disabled'
-    minCapacity: json('0.5')
-    requestedBackupStorageRedundancy: 'Local'
-    catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
-    isLedgerOn: false
-    useFreeLimit: true
-    freeLimitExhaustionBehavior: freeLimitExhaustionBehavior
-    maintenanceConfigurationId: subscriptionResourceId('Microsoft.Maintenance/publicMaintenanceConfigurations', 'SQL_WestEurope_DB_2')
-  }
-}
-
 resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
   name: 'stapp-${appName}'
   location: location
@@ -269,10 +207,6 @@ output containerAppId string = containerAppModule.outputs.containerAppId
 output containerAppName string = containerAppModule.outputs.containerAppName
 output containerAppUrl string = containerAppModule.outputs.containerAppUrl
 output storageAccountName string = storageAccount.name
-output databaseServer string = sqlServer.properties.fullyQualifiedDomainName
-output databaseServerName string = sqlServer.name
-output databaseId string = sqlDatabase.id
-output databaseName string = sqlDatabase.name
 output staticSiteName string = staticSite.name
 output staticSiteUrl string = staticSite.properties.defaultHostname
 output resourceGroupId string = resourceGroup().id
