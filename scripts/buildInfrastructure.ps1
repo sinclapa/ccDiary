@@ -788,16 +788,48 @@ if ($smtpHost) {
     $smtpDomain = ($smtpFrom -split "@")[-1]
     Write-Host ""
     Write-Host "=== SPF Record ===" -ForegroundColor Yellow
-    Write-Host "Add the following DNS TXT record to the domain: $smtpDomain" -ForegroundColor Yellow
-    Write-Host "  Name:  @  (or the root domain itself)" -ForegroundColor White
-    Write-Host "  Type:  TXT" -ForegroundColor White
-    Write-Host "  Value: v=spf1 include:$smtpHost ~all" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Adjust the 'include:' value to match your SMTP provider's SPF domain:" -ForegroundColor Gray
-    Write-Host "  Office 365  ->  include:spf.protection.outlook.com" -ForegroundColor Gray
-    Write-Host "  Gmail       ->  include:_spf.google.com" -ForegroundColor Gray
-    Write-Host "  SendGrid    ->  include:sendgrid.net" -ForegroundColor Gray
-    Write-Host "  Custom      ->  ip4:{your-smtp-server-ip}" -ForegroundColor Gray
+
+    # The published record is checked rather than assumed. This previously printed
+    # "include:$smtpHost" unconditionally, which is wrong twice over: it overwrites a record
+    # the mail provider may already have published, and an SMTP submission host is not an SPF
+    # include domain. smtp.ionos.co.uk, for one, has no TXT record at all, so including it is
+    # a permerror — strictly worse than publishing nothing. Note the script's own examples
+    # below are all provider SPF domains, none of them SMTP hostnames.
+    $existingSpf = $null
+    if (Get-Command -Name Resolve-DnsName -ErrorAction SilentlyContinue) {
+        try {
+            $existingSpf = Resolve-DnsName -Name $smtpDomain -Type TXT -ErrorAction Stop |
+                Where-Object { $_.Strings -and ($_.Strings -join '') -match '^v=spf1' } |
+                ForEach-Object { ($_.Strings -join '') } |
+                Select-Object -First 1
+        } catch {
+            $existingSpf = $null
+        }
+    }
+
+    if ($existingSpf) {
+        Write-Host "$smtpDomain already publishes an SPF record:" -ForegroundColor Green
+        Write-Host "  $existingSpf" -ForegroundColor White
+        Write-Host ""
+        Write-Host "No action needed unless mail is sent from somewhere this record does not cover." -ForegroundColor Gray
+        Write-Host "Adding a second SPF record is invalid — edit the existing one instead." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "No SPF record found for $smtpDomain. Publish one so invitation email is not" -ForegroundColor Yellow
+        Write-Host "treated as spoofed:" -ForegroundColor Yellow
+        Write-Host "  Name:  @  (or the root domain itself)" -ForegroundColor White
+        Write-Host "  Type:  TXT" -ForegroundColor White
+        Write-Host "  Value: v=spf1 include:{provider-spf-domain} ~all" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Take the include from your mail provider's documentation — it is usually not" -ForegroundColor Gray
+        Write-Host "the SMTP hostname you connect to ($smtpHost):" -ForegroundColor Gray
+        Write-Host "  Office 365  ->  include:spf.protection.outlook.com" -ForegroundColor Gray
+        Write-Host "  Gmail       ->  include:_spf.google.com" -ForegroundColor Gray
+        Write-Host "  SendGrid    ->  include:sendgrid.net" -ForegroundColor Gray
+        Write-Host "  IONOS       ->  include:_spf-eu.ionos.com" -ForegroundColor Gray
+        Write-Host "  Custom      ->  ip4:{your-smtp-server-ip}" -ForegroundColor Gray
+    }
+
     Write-Host ""
     Write-Host "Verify your SPF record at: https://mxtoolbox.com/spf.aspx" -ForegroundColor Gray
 }
