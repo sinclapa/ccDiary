@@ -538,9 +538,17 @@ Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
 # script failed anywhere in between, they stayed broken. Appending leaves the old secret
 # working until the new one has been distributed; the superseded ones are pruned at the end,
 # once distribution has actually succeeded.
+# The credentials to retire are captured before the new one is issued. `credential reset`
+# returns only appId/password/tenant — no keyId — so identifying the survivor from its output
+# yields null, and a "delete everything except null" filter deletes the new secret too. Taking
+# the before-list makes the delete set explicit and incapable of including the new credential.
+$priorGitHubKeyIds = @(az ad app credential list `
+  --id $entraClientId `
+  --query "[?displayName=='GIT_HUB'].keyId" `
+  --output tsv | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+
 $entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 --append | ConvertFrom-JSON
 $entraClientCredentialsPassword = $entraClientCredentials.password
-$entraClientCredentialsKeyId = $entraClientCredentials.keyId
 
 if (-not $entraClientCredentialsPassword) {
     Write-Error "Failed to create an Entra client secret."
@@ -652,20 +660,24 @@ gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
 # window; doing it never would let credentials accumulate on every run.
 Write-Host "Retiring superseded Entra client secrets..." -ForegroundColor Cyan
 
-$supersededKeyIds = az ad app credential list `
-  --id $entraClientId `
-  --query "[?displayName=='GIT_HUB' && keyId!='$entraClientCredentialsKeyId'].keyId" `
-  --output tsv
-
-if ($supersededKeyIds) {
-    foreach ($keyId in $supersededKeyIds) {
-        if ([string]::IsNullOrWhiteSpace($keyId)) { continue }
+# Only the credentials that existed before this run are removed, so the one just issued and
+# distributed cannot be caught by it however the CLI output is shaped.
+if ($priorGitHubKeyIds.Count -gt 0) {
+    foreach ($keyId in $priorGitHubKeyIds) {
         Write-Host "  Removing superseded credential $keyId" -ForegroundColor Gray
-        az ad app credential delete --id $entraClientId --key-id $keyId.Trim() --output none 2>$null
+        az ad app credential delete --id $entraClientId --key-id $keyId --output none 2>$null
     }
 }
 else {
     Write-Host "  None to retire" -ForegroundColor Gray
+}
+
+# A run that ends with no usable secret is the failure this whole section exists to prevent,
+# so it is asserted rather than assumed.
+$remainingGitHubCreds = az ad app credential list --id $entraClientId --query "length([?displayName=='GIT_HUB'])" --output tsv
+if ([int]$remainingGitHubCreds -lt 1) {
+    Write-Error "No GIT_HUB credential remains on the app registration — Graph calls will fail. Investigate before deploying."
+    exit 1
 }
 
 <# --------------------------------------------------------------------------------- #>
