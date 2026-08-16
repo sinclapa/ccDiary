@@ -13,7 +13,7 @@
       </template>
       <div
         class="entry-content"
-        :class="{ 'entry-content--with-map': (entry.showMap && entry.mapLocation) || (entry.showJourney && entry.fromLocation && entry.toLocation) }"
+        :class="{ 'entry-content--with-map': hasMapColumn(entry) }"
       >
         <div class="entry-text-col">
           <h2 class="mt-n1 headline font-weight-light mb-4 text-primary">
@@ -51,15 +51,15 @@
           />
         </div>
         <div
-          v-if="(entry.showMap && entry.mapLocation) || (entry.showJourney && entry.fromLocation && entry.toLocation)"
+          v-if="hasMapColumn(entry)"
           class="entry-map-col"
         >
-          <map-view v-if="entry.showMap && entry.mapLocation" :location="entry.mapLocation" />
+          <map-view v-if="showsMap(entry)" :location="entry.mapLocation!" />
           <journey-view
-            v-if="entry.showJourney && entry.fromLocation && entry.toLocation"
-            :from-location="entry.fromLocation"
+            v-if="showsJourney(entry)"
+            :from-location="entry.fromLocation!"
             :journey-mode="entry.journeyMode"
-            :to-location="entry.toLocation"
+            :to-location="entry.toLocation!"
           />
         </div>
       </div>
@@ -80,6 +80,21 @@
     edit: [entry: DiaryEntry]
     delete: [entry: DiaryEntry]
   }>()
+
+  // The map column is laid out by one condition and populated by two. Inlining all three
+  // meant the wrapper's condition was a copy of the other two OR'd together, so adding a
+  // third map type would render it into a column that had already decided not to exist.
+  function showsMap (entry: DiaryEntry) {
+    return Boolean(entry.showMap && entry.mapLocation)
+  }
+
+  function showsJourney (entry: DiaryEntry) {
+    return Boolean(entry.showJourney && entry.fromLocation && entry.toLocation)
+  }
+
+  function hasMapColumn (entry: DiaryEntry) {
+    return showsMap(entry) || showsJourney(entry)
+  }
 </script>
 
 <style scoped>
