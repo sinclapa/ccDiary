@@ -451,40 +451,56 @@ if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingEnvRaw))
 Write-Host ("  Preserving {0} plain variable(s), {1} secret-backed variable(s) and {2} secret(s)" -f `
     $existingEnvMap.Count, $existingSecretRefMap.Count, $existingSecretMap.Count) -ForegroundColor Gray
 
-# Passed as a parameter file rather than inline. PowerShell hands native commands their
-# arguments through a layer that strips the double quotes out of a JSON literal, so az
-# received `{Key:value}` and rejected it as malformed. A file also keeps the values —
-# several of which are secrets — off the command line entirely.
-$deployParamFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-deploy-$environment-$([guid]::NewGuid().ToString('N')).json"
-$deployParamDoc = [ordered]@{
-    '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
-    contentVersion = '1.0.0.0'
-    parameters     = [ordered]@{
-        existingEnvVars    = [ordered]@{ value = $existingEnvMap }
-        existingSecretRefs = [ordered]@{ value = $existingSecretRefMap }
-        existingSecrets    = [ordered]@{ value = $existingSecretMap }
+# Everything the template needs travels in a parameter file rather than on the command line.
+# Two separate failures forced this. PowerShell strips the double quotes out of a JSON literal
+# bound for a native command, so az saw `{Key:value}` and rejected it. And `az` on Windows is
+# a batch file, so cmd.exe re-parses the command line: a password containing | or & is split
+# into fragments and the call fails, or worse, half-succeeds. Neither is reliably escapable —
+# keeping the values out of the command line altogether is.
+function Invoke-MainDeployment {
+    param(
+        [System.Collections.IDictionary]$EnvVars,
+        [System.Collections.IDictionary]$SecretRefs,
+        [System.Collections.IDictionary]$Secrets,
+        [string]$Image
+    )
+
+    $paramFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-deploy-$environment-$([guid]::NewGuid().ToString('N')).json"
+    $doc = [ordered]@{
+        '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
+        contentVersion = '1.0.0.0'
+        parameters     = [ordered]@{
+            existingEnvVars    = [ordered]@{ value = $EnvVars }
+            existingSecretRefs = [ordered]@{ value = $SecretRefs }
+            existingSecrets    = [ordered]@{ value = $Secrets }
+        }
+    }
+
+    # WriteAllText with an explicit BOM-less UTF8: Set-Content emits a BOM under Windows
+    # PowerShell, which az refuses to parse.
+    [System.IO.File]::WriteAllText(
+        $paramFile,
+        ($doc | ConvertTo-Json -Depth 6),
+        (New-Object System.Text.UTF8Encoding($false)))
+
+    try {
+        az deployment sub create `
+          --location $location `
+          --template-file "$PSScriptRoot\..\deploy\main.bicep" `
+          --parameters "@$paramFile" `
+          --parameters name=$name environment="$environment" devApiContainerImage=$Image externalDomainName="$externalDomainName" `
+          --output json | ConvertFrom-Json
+    }
+    finally {
+        Remove-Item -Path $paramFile -Force -ErrorAction SilentlyContinue
     }
 }
 
-# WriteAllText with an explicit BOM-less UTF8: Set-Content emits a BOM under Windows
-# PowerShell, which az refuses to parse.
-[System.IO.File]::WriteAllText(
-    $deployParamFile,
-    ($deployParamDoc | ConvertTo-Json -Depth 6),
-    (New-Object System.Text.UTF8Encoding($false)))
-
-try {
-    # Deploy using Azure CLI
-    $deploymentResult = az deployment sub create `
-      --location $location `
-      --template-file "$PSScriptRoot\..\deploy\main.bicep" `
-      --parameters "@$deployParamFile" `
-      --parameters name=$name environment="$environment" devApiContainerImage=$containerImage externalDomainName="$externalDomainName" `
-      --output json | ConvertFrom-Json
-}
-finally {
-    Remove-Item -Path $deployParamFile -Force -ErrorAction SilentlyContinue
-}
+$deploymentResult = Invoke-MainDeployment `
+    -EnvVars $existingEnvMap `
+    -SecretRefs $existingSecretRefMap `
+    -Secrets $existingSecretMap `
+    -Image $containerImage
 
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
@@ -584,34 +600,40 @@ Write-Host "Storing sensitive configuration as container app secrets..." -Foregr
 # Inline values are part of the container spec, so `az containerapp show`, a what-if diff and
 # any CLI error that echoes its arguments all print them in full — which is exactly how the
 # SMTP password and Graph client secret ended up in a terminal. A secretRef shows the name.
-$secretDefinitions = [ordered]@{
-    'graph-client-secret' = $entraClientCredentialsPassword
-    'smtp-password'       = $smtpPassword
-    'otlp-headers'        = $grafanaOtlpAuthHeader
+#
+# They are written by a second deployment rather than `az containerapp secret set`, because
+# the values reach the template through the parameter file and never touch a command line.
+# The deployment has to run twice: the Entra client secret cannot exist until the first one
+# has produced the URLs the app registration is built from.
+#
+# An empty secret is rejected, and these settings are genuinely optional — SMTP falls back to
+# Entra invitation email and OTLP is disabled when unset — so only non-empty values become
+# secrets, and only those get a matching reference. A reference to a secret that does not
+# exist stops the revision from starting.
+$secretValues = [ordered]@{ 'graph-client-secret' = $entraClientCredentialsPassword }
+$secretRefs = [ordered]@{ 'Graph__ClientSecret' = 'graph-client-secret' }
+
+if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
+    $secretValues['smtp-password'] = $smtpPassword
+    $secretRefs['Smtp__Password'] = 'smtp-password'
+}
+if (-not [string]::IsNullOrWhiteSpace($grafanaOtlpAuthHeader)) {
+    $secretValues['otlp-headers'] = $grafanaOtlpAuthHeader
+    $secretRefs['OTEL_EXPORTER_OTLP_HEADERS'] = 'otlp-headers'
 }
 
-# An empty secret is rejected, and the matching settings are genuinely optional — SMTP falls
-# back to Entra invitation email, and OTLP is disabled when unset. Only non-empty values
-# become secrets; the rest are left unset entirely.
-$secretArgs = @()
-foreach ($secretName in $secretDefinitions.Keys) {
-    if (-not [string]::IsNullOrWhiteSpace($secretDefinitions[$secretName])) {
-        $secretArgs += "$secretName=$($secretDefinitions[$secretName])"
-    }
+Invoke-MainDeployment `
+    -EnvVars $existingEnvMap `
+    -SecretRefs $secretRefs `
+    -Secrets $secretValues `
+    -Image $containerImage | Out-Null
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to store container app secrets."
+    exit 1
 }
 
-if ($secretArgs.Count -gt 0) {
-    az containerapp secret set `
-      --name $containerAppName `
-      --resource-group $resourceGroupName `
-      --secrets $secretArgs `
-      --output none
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to set container app secrets."
-        exit 1
-    }
-    Write-Host "  Stored $($secretArgs.Count) secret(s)" -ForegroundColor Gray
-}
+Write-Host "  Stored $($secretValues.Count) secret(s)" -ForegroundColor Gray
 
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 
@@ -741,11 +763,22 @@ else {
 
 # A run that ends with no usable secret is the failure this whole section exists to prevent,
 # so it is asserted rather than assumed.
-$remainingGitHubCreds = az ad app credential list --id $entraClientId --query "length([?displayName=='GIT_HUB'])" --output tsv
-if ([int]$remainingGitHubCreds -lt 1) {
+#
+# The projection deliberately avoids JMESPath's length(): `az` is a batch file on Windows, so
+# cmd.exe re-parses the command line after PowerShell has stripped the quotes, and bare
+# parentheses are grouping operators to cmd — the call dies with "--output was unexpected at
+# this time". Counting in PowerShell keeps the query free of them.
+$remainingGitHubCreds = @(az ad app credential list `
+  --id $entraClientId `
+  --query "[?displayName=='GIT_HUB'].keyId" `
+  --output tsv | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+if ($remainingGitHubCreds.Count -lt 1) {
     Write-Error "No GIT_HUB credential remains on the app registration — Graph calls will fail. Investigate before deploying."
     exit 1
 }
+
+Write-Host "  $($remainingGitHubCreds.Count) GIT_HUB credential(s) in place" -ForegroundColor Gray
 
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>

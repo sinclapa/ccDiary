@@ -15,6 +15,9 @@ param externalDomainName string?
 param existingEnvVars object = {}
 
 @description('Environment variables backed by a container app secret, as a map of variable name to secret name.')
+// Holds secret names, not secret values: the linter matches on the parameter name alone.
+// Left non-secure deliberately so what-if can still evaluate the resulting env array.
+#disable-next-line secure-secrets-in-params
 param existingSecretRefs object = {}
 
 @description('Container app secrets currently configured, preserved across redeployments.')
