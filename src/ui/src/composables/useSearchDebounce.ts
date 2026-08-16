@@ -6,7 +6,7 @@ export function useSearchDebounce (query: Ref<string>, onSearch: () => void, del
   watch(query, () => {
     if (timer) clearTimeout(timer)
     timer = setTimeout(onSearch, delay)
-  }, { flush: 'sync' })
+  })
 
   // The watcher stops itself when the scope is disposed, but a timer already in flight
   // does not. Without this, typing in the search box and navigating away within the

@@ -40,7 +40,8 @@
 
 <style scoped>
   .delete-meta {
-    background: rgb(var(--v-theme-surface-variant));
-    border-radius: 8px;
+    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    border-radius: 12px;
+    background: rgb(var(--v-theme-surface));
   }
 </style>

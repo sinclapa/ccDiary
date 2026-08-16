@@ -42,7 +42,7 @@
       </div>
 
       <div class="d-flex align-center justify-center w-100 footer-row--secondary">
-        <v-btn class="text-caption text-disabled" size="x-small" variant="text" @click="openPreferences">
+        <v-btn class="text-caption text-disabled cookie-pref-btn" size="x-small" variant="text" @click="openPreferences">
           Cookie preferences
         </v-btn>
       </div>
@@ -117,6 +117,14 @@
     &:hover
       opacity: 1
       color: rgb(var(--v-theme-primary))
+
+  // v-btn uppercases its label and strips the underline. The control was a plain link-styled
+  // <button> before it became a v-btn, and it sits in a row of sentence-case footer text —
+  // "COOKIE PREFERENCES" reads as a heading rather than the link it is.
+  .cookie-pref-btn
+    text-transform: none
+    letter-spacing: normal
+    text-decoration: underline
 
   .footer-copy-link
     color: rgb(var(--v-theme-primary))
