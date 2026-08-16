@@ -52,8 +52,40 @@ function Ensure-Command {
     }
 }
 
+function Ensure-Azurite {
+    param([Parameter(Mandatory)][string]$ApiPath)
+
+    # Storage is the whole persistence tier, so the API cannot start without it: the
+    # bootstrapper throws, the host never starts, and the only symptom here would be the
+    # port timing out below. setuplocal.ps1 starts Azurite with --rm, so it does not
+    # survive a reboot — starting it here is what makes this script usable day to day.
+    if (Test-PortListening -Port 10002) {
+        Write-Host 'Azurite already running on localhost:10002' -ForegroundColor Green
+        return
+    }
+
+    Write-Host 'Azurite is not running. Starting it...' -ForegroundColor Yellow
+    $composeFile = Join-Path $ApiPath 'docker-compose.yml'
+    $azuriteProcess = Start-Process -FilePath 'docker' `
+        -ArgumentList @('compose', '-p', 'ccdiary', '-f', $composeFile, 'up', '-d', 'azurite') `
+        -WorkingDirectory $ApiPath -Wait -NoNewWindow -PassThru
+
+    if ($azuriteProcess.ExitCode -ne 0) {
+        throw "Failed to start Azurite (docker compose exited $($azuriteProcess.ExitCode)). Is Docker running?"
+    }
+
+    if (-not (Wait-ForAnyPort -Ports @(10002) -TimeoutSeconds $StartupTimeoutSeconds)) {
+        throw "Azurite did not start listening on port 10002 within $StartupTimeoutSeconds seconds."
+    }
+
+    Write-Host 'Azurite is now listening on localhost:10002' -ForegroundColor Green
+}
+
+# Docker is required either way now: compose runs the API in a container, and the host-run
+# path still needs Azurite behind it.
+Ensure-Command -Name 'docker'
+
 if ($Compose) {
-    Ensure-Command -Name 'docker'
     $ApiHttpPort = 5121
     $ApiHttpsPort = 7184
 }
@@ -69,6 +101,8 @@ if (-not (Test-Path -Path $apiProject)) {
 if (-not (Test-Path -Path $uiPath)) {
     throw "UI path not found: $uiPath"
 }
+
+Ensure-Azurite -ApiPath $apiPath
 
 $apiRunning = (Test-PortListening -Port $ApiHttpPort) -or (Test-PortListening -Port $ApiHttpsPort)
 if ($apiRunning) {

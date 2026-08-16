@@ -5,6 +5,20 @@ param environment string
 param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
+
+@description('Plain environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
+@secure()
+param existingEnvVars object = {}
+
+@description('Environment variables backed by a container app secret, as a map of variable name to secret name.')
+// Holds secret names, not secret values: the linter matches on the parameter name alone.
+// Left non-secure deliberately so what-if can still evaluate the resulting env array.
+#disable-next-line secure-secrets-in-params
+param existingSecretRefs object = {}
+
+@description('Container app secrets currently configured, preserved across redeployments.')
+@secure()
+param existingSecrets object = {}
 var appName string = '${name}-${environment}'
 
 // Storage account names allow only lowercase alphanumerics and cap at 24 characters.
@@ -200,6 +214,9 @@ module containerAppModule 'containerApps.bicep' = {
     appName: appName
     containerAppsEnvironmentId: containerAppEnvironment.id
     containerImageName: containerImageName
+    existingEnvVars: existingEnvVars
+    existingSecretRefs: existingSecretRefs
+    existingSecrets: existingSecrets
   }
 }
 

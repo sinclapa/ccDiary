@@ -27,11 +27,6 @@ if ((az extension list --query "[?name=='containerapp']" ) -eq "[]") {
     Write-Host "Installed containerapp az extension" -ForegroundColor Gray
 }
 
-if ((az extension list --query "[?name=='serviceconnector-passwordless']" ) -eq "[]") {
-    az extension add --name serviceconnector-passwordless --upgrade
-    Write-Host "Installed serviceconnector-passwordless az extension" -ForegroundColor Gray
-}
-
 <# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
 # Convert a Hashtable to string data format (key=value)
@@ -47,6 +42,27 @@ function ConvertTo-StringData {
                 "{0}={1}" -f $entry.Key, $entry.Value
             }
         }
+    }
+}
+
+# Check a SonarCloud token against the API before the script pushes it to the repo-level
+# SONAR_TOKEN secret. A stale value there is silent and expensive: every later CI run fails
+# on a quality gate that never reports, and the logs show sonar.token="" rather than the
+# masked *** a real secret renders as.
+function Test-SonarToken {
+    param([string]$Token)
+
+    if ([string]::IsNullOrWhiteSpace($Token)) { return $false }
+
+    try {
+        $response = Invoke-RestMethod `
+            -Uri "https://sonarcloud.io/api/authentication/validate" `
+            -Headers @{ Authorization = "Bearer $Token" } `
+            -Method Get `
+            -ErrorAction Stop
+        return [bool]$response.valid
+    } catch {
+        return $false
     }
 }
 
@@ -172,6 +188,29 @@ if (-Not ($params.ContainsKey("SonarToken"))) {
 else {
     $sonarToken = $params["SonarToken"]
 }
+
+# Verified here, before any Azure work, so a bad token costs a prompt rather than a deploy.
+# The token is written to the settings file below, so the following environments in a
+# buildAllInfrastructure run pick up the corrected value without asking again.
+$sonarTokenAttempts = 0
+while (-not (Test-SonarToken -Token $sonarToken)) {
+    $sonarTokenAttempts++
+    if ($sonarTokenAttempts -gt 3) {
+        Write-Error "No valid SonarCloud token supplied after 3 attempts. Aborting before any infrastructure changes."
+        exit 1
+    }
+
+    Write-Host "The stored SonarCloud token is missing, expired or rejected by sonarcloud.io." -ForegroundColor Yellow
+    $sonarTokenSecure = Read-Host -Prompt "Enter a valid SonarCloud token (My Account > Security > Generate Tokens)" -AsSecureString
+    $sonarToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sonarTokenSecure))
+
+    if ([string]::IsNullOrWhiteSpace($sonarToken)) {
+        Write-Error "A valid SonarCloud token is required — it is pushed to the repo SONAR_TOKEN secret and gates CI."
+        exit 1
+    }
+}
+$params["SonarToken"] = $sonarToken
+Write-Host "SonarCloud token validated." -ForegroundColor Green
 
 if (-Not ($params.ContainsKey("GrafanaOtlpEndpoint"))) {
     $grafanaOtlpEndpoint = Read-Host -Prompt "Enter the Grafana Cloud OTLP endpoint (leave empty to disable telemetry, e.g. https://otlp-gateway-prod-eu-west-0.grafana.net/otlp)"
@@ -339,12 +378,129 @@ Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
 
-# Deploy using Azure CLI
-$deploymentResult = az deployment sub create `
-  --location $location `
-  --template-file "$PSScriptRoot\..\deploy\main.bicep" `
-  --parameters name=$name environment="$environment" devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
-  --output json | ConvertFrom-Json
+# The bicep template is authoritative for the container spec, so the image it is handed
+# replaces whatever is running. DevApiContainerImage is an untagged dev reference, so
+# passing it to an environment CI has already promoted rolls that environment back to
+# :latest — and unlike the environment variables further down, the script never sets the
+# image again afterwards, so the downgrade is permanent and silent. Re-running against a
+# live environment must keep the tag that is deployed.
+$existingContainerApp = "ca-${name}-${environment}".ToLower()
+$existingResourceGroup = "rg-${name}-${environment}"
+
+$deployedImage = az containerapp show `
+  --name $existingContainerApp `
+  --resource-group $existingResourceGroup `
+  --query "properties.template.containers[0].image" `
+  --output tsv 2>$null
+
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($deployedImage)) {
+    $containerImage = $deployedImage.Trim()
+    Write-Host "  Preserving the image already deployed: $containerImage" -ForegroundColor Gray
+}
+else {
+    $containerImage = $devApiContainerImage
+    Write-Host "  No container app deployed yet; bootstrapping with: $containerImage" -ForegroundColor Gray
+}
+
+# The application configuration is applied further down, because it depends on outputs this
+# deployment produces. Without feeding the current values back into the template, the
+# deployment erases them, the revision fails to start for want of Storage__AccountName, and
+# ingress has already sent all traffic to it. Passing them through closes that window.
+$existingEnvMap = @{}
+$existingSecretRefMap = @{}
+$existingSecretMap = @{}
+
+$existingEnvRaw = az containerapp show `
+  --name $existingContainerApp `
+  --resource-group $existingResourceGroup `
+  --query "properties.template.containers[0].env" `
+  --output json 2>$null
+
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingEnvRaw)) {
+    foreach ($entry in ($existingEnvRaw | ConvertFrom-Json)) {
+        if (-not $entry.name) { continue }
+
+        # A variable carries either an inline value or a reference to a container app
+        # secret. The two are preserved separately because the template has to re-declare
+        # them in different shapes.
+        if ($entry.PSObject.Properties.Name -contains 'secretRef' -and $entry.secretRef) {
+            $existingSecretRefMap[$entry.name] = $entry.secretRef
+        }
+        elseif ($null -ne $entry.value) {
+            $existingEnvMap[$entry.name] = $entry.value
+        }
+    }
+
+    # The secrets themselves must be re-declared too: a template that omits them deletes
+    # them, which would leave every secretRef above pointing at nothing.
+    $existingSecretsRaw = az containerapp secret list `
+      --name $existingContainerApp `
+      --resource-group $existingResourceGroup `
+      --show-values `
+      --output json 2>$null
+
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingSecretsRaw)) {
+        foreach ($secret in ($existingSecretsRaw | ConvertFrom-Json)) {
+            if ($secret.name -and $null -ne $secret.value) {
+                $existingSecretMap[$secret.name] = $secret.value
+            }
+        }
+    }
+}
+
+Write-Host ("  Preserving {0} plain variable(s), {1} secret-backed variable(s) and {2} secret(s)" -f `
+    $existingEnvMap.Count, $existingSecretRefMap.Count, $existingSecretMap.Count) -ForegroundColor Gray
+
+# Everything the template needs travels in a parameter file rather than on the command line.
+# Two separate failures forced this. PowerShell strips the double quotes out of a JSON literal
+# bound for a native command, so az saw `{Key:value}` and rejected it. And `az` on Windows is
+# a batch file, so cmd.exe re-parses the command line: a password containing | or & is split
+# into fragments and the call fails, or worse, half-succeeds. Neither is reliably escapable —
+# keeping the values out of the command line altogether is.
+function Invoke-MainDeployment {
+    param(
+        [System.Collections.IDictionary]$EnvVars,
+        [System.Collections.IDictionary]$SecretRefs,
+        [System.Collections.IDictionary]$Secrets,
+        [string]$Image
+    )
+
+    $paramFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-deploy-$environment-$([guid]::NewGuid().ToString('N')).json"
+    $doc = [ordered]@{
+        '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
+        contentVersion = '1.0.0.0'
+        parameters     = [ordered]@{
+            existingEnvVars    = [ordered]@{ value = $EnvVars }
+            existingSecretRefs = [ordered]@{ value = $SecretRefs }
+            existingSecrets    = [ordered]@{ value = $Secrets }
+        }
+    }
+
+    # WriteAllText with an explicit BOM-less UTF8: Set-Content emits a BOM under Windows
+    # PowerShell, which az refuses to parse.
+    [System.IO.File]::WriteAllText(
+        $paramFile,
+        ($doc | ConvertTo-Json -Depth 6),
+        (New-Object System.Text.UTF8Encoding($false)))
+
+    try {
+        az deployment sub create `
+          --location $location `
+          --template-file "$PSScriptRoot\..\deploy\main.bicep" `
+          --parameters "@$paramFile" `
+          --parameters name=$name environment="$environment" devApiContainerImage=$Image externalDomainName="$externalDomainName" `
+          --output json | ConvertFrom-Json
+    }
+    finally {
+        Remove-Item -Path $paramFile -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$deploymentResult = Invoke-MainDeployment `
+    -EnvVars $existingEnvMap `
+    -SecretRefs $existingSecretRefMap `
+    -Secrets $existingSecretMap `
+    -Image $containerImage
 
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
@@ -414,12 +570,76 @@ foreach ($role in @('Storage Table Data Contributor', 'Storage Blob Data Contrib
 }
 
 Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
-$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
+
+# --append matters: without it, `credential reset` deletes every existing password before
+# issuing the new one, so the running app and CI hold a secret that is already invalid for
+# the minutes it takes to reach the container app update and the GitHub secret below. If the
+# script failed anywhere in between, they stayed broken. Appending leaves the old secret
+# working until the new one has been distributed; the superseded ones are pruned at the end,
+# once distribution has actually succeeded.
+# The credentials to retire are captured before the new one is issued. `credential reset`
+# returns only appId/password/tenant — no keyId — so identifying the survivor from its output
+# yields null, and a "delete everything except null" filter deletes the new secret too. Taking
+# the before-list makes the delete set explicit and incapable of including the new credential.
+$priorGitHubKeyIds = @(az ad app credential list `
+  --id $entraClientId `
+  --query "[?displayName=='GIT_HUB'].keyId" `
+  --output tsv | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+
+$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 --append | ConvertFrom-JSON
 $entraClientCredentialsPassword = $entraClientCredentials.password
+
+if (-not $entraClientCredentialsPassword) {
+    Write-Error "Failed to create an Entra client secret."
+    exit 1
+}
+
+Write-Host "Storing sensitive configuration as container app secrets..." -ForegroundColor Cyan
+
+# Credentials are held as container app secrets and referenced, rather than set inline.
+# Inline values are part of the container spec, so `az containerapp show`, a what-if diff and
+# any CLI error that echoes its arguments all print them in full — which is exactly how the
+# SMTP password and Graph client secret ended up in a terminal. A secretRef shows the name.
+#
+# They are written by a second deployment rather than `az containerapp secret set`, because
+# the values reach the template through the parameter file and never touch a command line.
+# The deployment has to run twice: the Entra client secret cannot exist until the first one
+# has produced the URLs the app registration is built from.
+#
+# An empty secret is rejected, and these settings are genuinely optional — SMTP falls back to
+# Entra invitation email and OTLP is disabled when unset — so only non-empty values become
+# secrets, and only those get a matching reference. A reference to a secret that does not
+# exist stops the revision from starting.
+$secretValues = [ordered]@{ 'graph-client-secret' = $entraClientCredentialsPassword }
+$secretRefs = [ordered]@{ 'Graph__ClientSecret' = 'graph-client-secret' }
+
+if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
+    $secretValues['smtp-password'] = $smtpPassword
+    $secretRefs['Smtp__Password'] = 'smtp-password'
+}
+if (-not [string]::IsNullOrWhiteSpace($grafanaOtlpAuthHeader)) {
+    $secretValues['otlp-headers'] = $grafanaOtlpAuthHeader
+    $secretRefs['OTEL_EXPORTER_OTLP_HEADERS'] = 'otlp-headers'
+}
+
+Invoke-MainDeployment `
+    -EnvVars $existingEnvMap `
+    -SecretRefs $secretRefs `
+    -Secrets $secretValues `
+    -Image $containerImage | Out-Null
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to store container app secrets."
+    exit 1
+}
+
+Write-Host "  Stored $($secretValues.Count) secret(s)" -ForegroundColor Gray
 
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 
-# Prepare environment variables as an array so PowerShell passes each as a separate argument
+# Prepare environment variables as an array so PowerShell passes each as a separate argument.
+# The three credentials are referenced by secret name rather than carried inline — see the
+# secret block above. `secretref:` is the container app syntax for that reference.
 $envVars = @(
         "Entra__TenantId=$tenantId",
         "Entra__ClientId=$entraClientId",
@@ -427,11 +647,10 @@ $envVars = @(
         "ASPNETCORE_ENVIRONMENT=$environment",
         "Storage__AccountName=$storageAccountName",
         "OTEL_EXPORTER_OTLP_ENDPOINT=$grafanaOtlpEndpoint",
-        "OTEL_EXPORTER_OTLP_HEADERS=$grafanaOtlpAuthHeader",
         "OTEL_SERVICE_NAME=ccDiaryApi",
         "Graph__TenantId=$tenantId",
         "Graph__ClientId=$entraClientId",
-        "Graph__ClientSecret=$entraClientCredentialsPassword",
+        "Graph__ClientSecret=secretref:graph-client-secret",
         "Graph__InviteRedirectUrl=https://$staticSiteUrl/",
         "Graph__AppDisplayName=Cooking Code Diary",
         "BootstrapAdmin__ObjectId=$bootstrapAdminObjectId",
@@ -440,10 +659,18 @@ $envVars = @(
         "Smtp__Host=$smtpHost",
         "Smtp__Port=$smtpPort",
         "Smtp__Username=$smtpUsername",
-        "Smtp__Password=$smtpPassword",
         "Smtp__From=$smtpFrom",
         "Smtp__FromName=$smtpFromName"
 )
+
+# Only reference secrets that were actually created; an unset optional setting must not
+# become a reference to a secret that does not exist, which the revision would fail on.
+if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
+    $envVars += "Smtp__Password=secretref:smtp-password"
+}
+if (-not [string]::IsNullOrWhiteSpace($grafanaOtlpAuthHeader)) {
+    $envVars += "OTEL_EXPORTER_OTLP_HEADERS=secretref:otlp-headers"
+}
 
 az containerapp update `
     --name $containerAppName `
@@ -513,6 +740,46 @@ gh variable set "SONAR_UI_PROJECT_KEY" --body "$sonarUiProjectKey" --repo $gitHu
 gh variable set "SONAR_INFRA_PROJECT_KEY" --body "$sonarInfraProjectKey" --repo $gitHubRepo
 gh variable set "SONAR_ORGANIZATION" --body "$sonarOrganization" --repo $gitHubRepo
 gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
+
+<# --------------------------------------------------------------------------------- #>
+<# Retire superseded Entra client secrets #>
+
+# Only now that the new secret is on the container app and in the GitHub environment is it
+# safe to withdraw the old ones. Doing this before distribution is what created the outage
+# window; doing it never would let credentials accumulate on every run.
+Write-Host "Retiring superseded Entra client secrets..." -ForegroundColor Cyan
+
+# Only the credentials that existed before this run are removed, so the one just issued and
+# distributed cannot be caught by it however the CLI output is shaped.
+if ($priorGitHubKeyIds.Count -gt 0) {
+    foreach ($keyId in $priorGitHubKeyIds) {
+        Write-Host "  Removing superseded credential $keyId" -ForegroundColor Gray
+        az ad app credential delete --id $entraClientId --key-id $keyId --output none 2>$null
+    }
+}
+else {
+    Write-Host "  None to retire" -ForegroundColor Gray
+}
+
+# A run that ends with no usable secret is the failure this whole section exists to prevent,
+# so it is asserted rather than assumed.
+#
+# The projection deliberately avoids JMESPath's length(): `az` is a batch file on Windows, so
+# cmd.exe re-parses the command line after PowerShell has stripped the quotes, and bare
+# parentheses are grouping operators to cmd — the call dies with "--output was unexpected at
+# this time". Counting in PowerShell keeps the query free of them.
+$remainingGitHubCreds = @(az ad app credential list `
+  --id $entraClientId `
+  --query "[?displayName=='GIT_HUB'].keyId" `
+  --output tsv | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+if ($remainingGitHubCreds.Count -lt 1) {
+    Write-Error "No GIT_HUB credential remains on the app registration — Graph calls will fail. Investigate before deploying."
+    exit 1
+}
+
+Write-Host "  $($remainingGitHubCreds.Count) GIT_HUB credential(s) in place" -ForegroundColor Gray
+
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished ${name} ${environment}" -ForegroundColor Green
@@ -521,16 +788,48 @@ if ($smtpHost) {
     $smtpDomain = ($smtpFrom -split "@")[-1]
     Write-Host ""
     Write-Host "=== SPF Record ===" -ForegroundColor Yellow
-    Write-Host "Add the following DNS TXT record to the domain: $smtpDomain" -ForegroundColor Yellow
-    Write-Host "  Name:  @  (or the root domain itself)" -ForegroundColor White
-    Write-Host "  Type:  TXT" -ForegroundColor White
-    Write-Host "  Value: v=spf1 include:$smtpHost ~all" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Adjust the 'include:' value to match your SMTP provider's SPF domain:" -ForegroundColor Gray
-    Write-Host "  Office 365  ->  include:spf.protection.outlook.com" -ForegroundColor Gray
-    Write-Host "  Gmail       ->  include:_spf.google.com" -ForegroundColor Gray
-    Write-Host "  SendGrid    ->  include:sendgrid.net" -ForegroundColor Gray
-    Write-Host "  Custom      ->  ip4:{your-smtp-server-ip}" -ForegroundColor Gray
+
+    # The published record is checked rather than assumed. This previously printed
+    # "include:$smtpHost" unconditionally, which is wrong twice over: it overwrites a record
+    # the mail provider may already have published, and an SMTP submission host is not an SPF
+    # include domain. smtp.ionos.co.uk, for one, has no TXT record at all, so including it is
+    # a permerror — strictly worse than publishing nothing. Note the script's own examples
+    # below are all provider SPF domains, none of them SMTP hostnames.
+    $existingSpf = $null
+    if (Get-Command -Name Resolve-DnsName -ErrorAction SilentlyContinue) {
+        try {
+            $existingSpf = Resolve-DnsName -Name $smtpDomain -Type TXT -ErrorAction Stop |
+                Where-Object { $_.Strings -and ($_.Strings -join '') -match '^v=spf1' } |
+                ForEach-Object { ($_.Strings -join '') } |
+                Select-Object -First 1
+        } catch {
+            $existingSpf = $null
+        }
+    }
+
+    if ($existingSpf) {
+        Write-Host "$smtpDomain already publishes an SPF record:" -ForegroundColor Green
+        Write-Host "  $existingSpf" -ForegroundColor White
+        Write-Host ""
+        Write-Host "No action needed unless mail is sent from somewhere this record does not cover." -ForegroundColor Gray
+        Write-Host "Adding a second SPF record is invalid — edit the existing one instead." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "No SPF record found for $smtpDomain. Publish one so invitation email is not" -ForegroundColor Yellow
+        Write-Host "treated as spoofed:" -ForegroundColor Yellow
+        Write-Host "  Name:  @  (or the root domain itself)" -ForegroundColor White
+        Write-Host "  Type:  TXT" -ForegroundColor White
+        Write-Host "  Value: v=spf1 include:{provider-spf-domain} ~all" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Take the include from your mail provider's documentation — it is usually not" -ForegroundColor Gray
+        Write-Host "the SMTP hostname you connect to ($smtpHost):" -ForegroundColor Gray
+        Write-Host "  Office 365  ->  include:spf.protection.outlook.com" -ForegroundColor Gray
+        Write-Host "  Gmail       ->  include:_spf.google.com" -ForegroundColor Gray
+        Write-Host "  SendGrid    ->  include:sendgrid.net" -ForegroundColor Gray
+        Write-Host "  IONOS       ->  include:_spf-eu.ionos.com" -ForegroundColor Gray
+        Write-Host "  Custom      ->  ip4:{your-smtp-server-ip}" -ForegroundColor Gray
+    }
+
     Write-Host ""
     Write-Host "Verify your SPF record at: https://mxtoolbox.com/spf.aspx" -ForegroundColor Gray
 }

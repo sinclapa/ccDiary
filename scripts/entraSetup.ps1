@@ -18,11 +18,18 @@
 .PARAMETER resourceGroupId
     The resource group ID used for generating unique identifiers.
 
+.PARAMETER CreateClientSecret
+    Create a client secret and return it in ClientSecret. Off by default: an app registration
+    is capped at two secrets, so minting one for a caller that never reads it forces an
+    eviction. Pass this only when the secret is actually consumed, as local development setup
+    does; buildInfrastructure.ps1 issues its own credential and does not.
+
 .OUTPUTS
     A PSCustomObject containing:
     - EntraApplicationIdURI: The Application ID URI of the created/updated Entra application.
     - EntraClientId: The Client ID of the created/updated Entra application.
     - EntraObjectId: The Object ID of the created/updated Entra application.
+    - ClientSecret: The created client secret, or $null when -CreateClientSecret was not passed.
 
 .EXAMPLE
     .\entraSetup.ps1 -AppName "App-Name" -spaUris @("https://example.com/") -webUris @("https://api.example.com/") -resourceGroupId "/subscriptions/xxxx/resourceGroups/Name"
@@ -53,7 +60,15 @@ param(
     [Parameter(Mandatory = $true,
                HelpMessage = "Enter the resource group ID")]
     [ValidateNotNullOrEmpty()]
-    [string]$resourceGroupId
+    [string]$resourceGroupId,
+
+    # Entra caps an app registration at two client secrets. Minting one unconditionally
+    # therefore consumed a slot on every run and forced an eviction, even for callers that
+    # never read the returned secret — buildInfrastructure.ps1 issues its own GIT_HUB
+    # credential and ignores this one. Creating it only on request keeps the slot free.
+    [Parameter(Mandatory = $false,
+               HelpMessage = "Create a client secret and return it. Only needed by callers that use it, such as local development setup.")]
+    [switch]$CreateClientSecret
 )
 
 # Function to generate a deterministic GUID from a string using SHA-256 (not for security-sensitive uses)
@@ -276,34 +291,55 @@ try {
         Write-Host "  WARNING: Could not find Microsoft Graph service principal - skipping consent grant." -ForegroundColor Yellow
     }
 
-    # Create a client secret for the app (used by the API to call Graph)
-    Write-Host "  Creating client secret for Graph API access..."
-
-    # Entra allows a maximum of 2 secrets per app; remove the oldest if already at the limit
-    $existingSecrets = az ad app credential list --id $appId --output json | ConvertFrom-Json
-    if ($existingSecrets.Count -ge 2) {
-        $oldest = $existingSecrets | Sort-Object -Property startDateTime | Select-Object -First 1
-        Write-Host "  Secret limit reached — removing oldest secret ($($oldest.displayName))..."
-        az ad app credential delete --id $appId --key-id $oldest.keyId
-    }
-
-    $secretBody = @{
-        passwordCredential = @{
-            displayName = "Local Dev - $(Get-Date -Format 'yyyy-MM-dd')"
-        }
-    } | ConvertTo-Json
-    $tempSecretFile = [System.IO.Path]::GetTempFileName()
+    # Create a client secret for the app, for callers that actually consume it.
     $clientSecret = $null
-    try {
-        Set-Content -Path $tempSecretFile -Value $secretBody -Encoding UTF8
-        $secretResult = Get-Content -Path $tempSecretFile | az rest --method POST `
-            --uri "https://graph.microsoft.com/v1.0/applications/$objectId/addPassword" `
-            --headers "Content-Type=application/json" `
-            --body "@-" | ConvertFrom-Json
-        $clientSecret = $secretResult.secretText
-        Write-Host "  Client secret created."
-    } finally {
-        Remove-Item -Path $tempSecretFile -Force -ErrorAction SilentlyContinue
+    $localSecretPrefix = 'Local Dev'
+
+    if (-not $CreateClientSecret) {
+        Write-Host "  Skipping client secret creation (not requested)."
+    }
+    else {
+        Write-Host "  Creating client secret for Graph API access..."
+
+        # Entra allows a maximum of 2 secrets per app, so making room may be necessary — but
+        # only ever by removing a secret this script created. Evicting the oldest regardless
+        # of owner deleted the GIT_HUB credential the deployed API authenticates with, taking
+        # Graph down while every health check still reported UP.
+        $existingSecrets = @(az ad app credential list --id $appId --output json | ConvertFrom-Json)
+        if ($existingSecrets.Count -ge 2) {
+            $evictable = $existingSecrets |
+                Where-Object { $_.displayName -and $_.displayName.StartsWith($localSecretPrefix) } |
+                Sort-Object -Property startDateTime
+
+            if (-not $evictable) {
+                Write-Error ("Secret limit reached on '$AppName' and no '$localSecretPrefix' secret is available to remove. " +
+                             "The remaining secrets belong to another process and will not be deleted. " +
+                             "Remove one by hand if a new secret is genuinely needed.")
+                exit 1
+            }
+
+            $oldest = $evictable | Select-Object -First 1
+            Write-Host "  Secret limit reached — removing oldest '$localSecretPrefix' secret ($($oldest.displayName))..."
+            az ad app credential delete --id $appId --key-id $oldest.keyId
+        }
+
+        $secretBody = @{
+            passwordCredential = @{
+                displayName = "$localSecretPrefix - $(Get-Date -Format 'yyyy-MM-dd')"
+            }
+        } | ConvertTo-Json
+        $tempSecretFile = [System.IO.Path]::GetTempFileName()
+        try {
+            Set-Content -Path $tempSecretFile -Value $secretBody -Encoding UTF8
+            $secretResult = Get-Content -Path $tempSecretFile | az rest --method POST `
+                --uri "https://graph.microsoft.com/v1.0/applications/$objectId/addPassword" `
+                --headers "Content-Type=application/json" `
+                --body "@-" | ConvertFrom-Json
+            $clientSecret = $secretResult.secretText
+            Write-Host "  Client secret created."
+        } finally {
+            Remove-Item -Path $tempSecretFile -Force -ErrorAction SilentlyContinue
+        }
     }
 
     $EntraObjectId = $objectId
