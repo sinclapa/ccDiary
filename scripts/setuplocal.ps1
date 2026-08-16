@@ -81,7 +81,8 @@ $entraOut = & "$PSScriptRoot/entraSetup.ps1" `
     -AppName "ccdiary-local-$machineName" `
     -spaUris @("$baseUrlApi/swagger/oauth2-redirect.html", "$baseUrlApiAlt/swagger/oauth2-redirect.html", "$baseUrlUI/") `
     -webUris @("$baseUrlApi/", "$baseUrlApiAlt/") `
-    -resourceGroupId $machineName
+    -resourceGroupId $machineName `
+    -CreateClientSecret
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
 $entraClientSecret = $entraOut.ClientSecret
