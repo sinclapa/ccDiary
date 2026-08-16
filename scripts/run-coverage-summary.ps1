@@ -128,6 +128,30 @@ function Write-CoverageRow {
     Write-Host $branchText -ForegroundColor (Get-PercentColor -Rate $BranchRate)
 }
 
+# The storage tests fail rather than skip when Azurite is absent, so without this a clean
+# machine reports a wall of test failures for what is purely a missing dependency.
+$azuriteListening = $null -ne (Get-NetTCPConnection -LocalPort 10002 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1)
+if (-not $azuriteListening) {
+    Write-Host 'Azurite is not running; starting it for the API storage tests...' -ForegroundColor Yellow
+    $apiComposeFile = Join-Path $repoRoot 'src/api/docker-compose.yml'
+    docker compose -p ccdiary -f $apiComposeFile up -d azurite | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to start Azurite. The API storage tests cannot run without it.'
+    }
+
+    $deadline = (Get-Date).AddSeconds(60)
+    while ((Get-Date) -lt $deadline -and -not $azuriteListening) {
+        Start-Sleep -Seconds 1
+        $azuriteListening = $null -ne (Get-NetTCPConnection -LocalPort 10002 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1)
+    }
+
+    if (-not $azuriteListening) {
+        throw 'Azurite did not start listening on port 10002 within 60 seconds.'
+    }
+
+    Write-Host 'Azurite is ready.' -ForegroundColor Green
+}
+
 Write-Host 'Running API and UI coverage in parallel...' -ForegroundColor Cyan
 New-Item -ItemType Directory -Path (Split-Path -Parent $apiCoverageFile) -Force | Out-Null
 if (Test-Path -Path $apiCoverageFile) {

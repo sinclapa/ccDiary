@@ -1,32 +1,6 @@
 services:
-  ccdiary:
-    image: "mcr.microsoft.com/mssql/server:2022-latest" 
-    container_name: ccdiarydb
-    hostname: ccdiarydb
-    env_file:
-      - .env
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "51433:1433"
-    volumes:
-      - ccdiarydbvolume:/var/opt/mssql
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\"; else /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\"; fi || exit 1"
-        ]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
-    networks:
-      - ccdiarynet
-  # Azure Table + Blob emulator, backing the storage layer and its tests.
-  # Runs alongside SQL Server for now: the application still reads and writes SQL,
-  # and only the storage primitives and their tests use Azurite.
+  # Azure Table + Blob emulator. This is the whole persistence tier — the application
+  # reads and writes storage exclusively, so there is no database service to depend on.
   azurite:
     image: "mcr.microsoft.com/azure-storage/azurite:latest"
     container_name: ccdiary-azurite
@@ -56,8 +30,6 @@ services:
     env_file:
       - .env
     depends_on:
-      ccdiary:
-        condition: service_healthy
       azurite:
         condition: service_healthy
     build:
@@ -66,7 +38,6 @@ services:
     networks:
       - ccdiarynet
 volumes:
-  ccdiarydbvolume:
   ccdiaryazuritevolume:
 networks:
   ccdiarynet:

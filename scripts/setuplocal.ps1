@@ -452,11 +452,34 @@ if ($faroUrl) {
 $contentCompose | ConvertTo-StringData | Set-Content $vueComposePath
 
 Write-Host "Starting local Azurite instance..." -ForegroundColor Cyan
-$containerName = "ccdiary-azurite"
-$exists = docker ps -a --filter "name=$containerName" --format "{{.Names}}"
 
-if (-not $exists) {
-    docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 --name $containerName --rm -d -v ccdiary-azurite-volume:/data mcr.microsoft.com/azure-storage/azurite:latest
+# Started through compose rather than a bare `docker run`. The compose file already declares
+# azurite under the same container name, so a standalone container claimed the name and made
+# `docker compose up` fail outright — and the two used different volumes, so data written in
+# one mode was invisible in the other. One definition avoids both.
+$apiComposeDir = Join-Path $PSScriptRoot "..\src\api"
+$apiComposeFile = Join-Path $apiComposeDir "docker-compose.yml"
+
+$azuriteListening = $null -ne (Get-NetTCPConnection -LocalPort 10002 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1)
+if ($azuriteListening) {
+    Write-Host "  Azurite is already listening on 10002 — leaving it alone." -ForegroundColor Green
+}
+else {
+    # Machines set up before this changed still have the standalone container, which holds
+    # the name compose wants. It was created with --rm and its data lives in the old
+    # ccdiary-azurite-volume, so removing it costs nothing that startLocal.ps1 does not
+    # re-seed; the old volume is left in place rather than deleted.
+    $stale = docker ps -a --filter "name=^ccdiary-azurite$" --filter "label=com.docker.compose.project" --format "{{.Names}}"
+    $anyExisting = docker ps -a --filter "name=^ccdiary-azurite$" --format "{{.Names}}"
+    if ($anyExisting -and -not $stale) {
+        Write-Host "  Removing the pre-compose Azurite container so compose can manage it..." -ForegroundColor Yellow
+        docker rm -f ccdiary-azurite | Out-Null
+    }
+
+    docker compose -p ccdiary -f $apiComposeFile up -d azurite
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Failed to start Azurite. The API cannot start without it." -ForegroundColor Red
+    }
 }
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
