@@ -4,9 +4,16 @@ param appName string
 param containerAppsEnvironmentId string
 param containerImageName string
 
-@description('Environment variables currently set on a deployed container app, as a name/value map. Empty on a first deployment.')
+@description('Plain environment variables currently set on a deployed container app, as a name/value map. Empty on a first deployment.')
 @secure()
 param existingEnvVars object = {}
+
+@description('Environment variables backed by a container app secret, as a map of variable name to secret name.')
+param existingSecretRefs object = {}
+
+@description('Container app secrets currently configured, as a name/value map. Empty on a first deployment.')
+@secure()
+param existingSecrets object = {}
 
 var location string = resourceGroup().location
 
@@ -34,7 +41,21 @@ var preservedEnv = [for item in items(existingEnvVars): {
   value: item.value
 }]
 
-var containerEnv = union(defaultEnv, preservedEnv)
+// Secret-backed variables carry a secretRef instead of a value, so they need preserving
+// separately — and the secrets themselves must be declared too. The template not declaring
+// `secrets` is a deletion as far as ARM is concerned, which would leave every secretRef
+// pointing at nothing and the revision unable to start.
+var preservedSecretEnv = [for item in items(existingSecretRefs): {
+  name: item.key
+  secretRef: item.value
+}]
+
+var containerEnv = union(defaultEnv, preservedEnv, preservedSecretEnv)
+
+var preservedSecrets = [for item in items(existingSecrets): {
+  name: item.key
+  value: item.value
+}]
 
 resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
   name: toLower('ca-${appName}')
@@ -46,6 +67,7 @@ resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: containerAppsEnvironmentId
     configuration: {
       activeRevisionsMode: 'Single'
+      secrets: preservedSecrets
       ingress: {
         external: true
         targetPort: 8080

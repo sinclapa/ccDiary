@@ -10,9 +10,16 @@ param environment string
 param devApiContainerImage string
 param externalDomainName string?
 
-@description('Environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
+@description('Plain environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
 @secure()
 param existingEnvVars object = {}
+
+@description('Environment variables backed by a container app secret, as a map of variable name to secret name.')
+param existingSecretRefs object = {}
+
+@description('Container app secrets currently configured, preserved across redeployments.')
+@secure()
+param existingSecrets object = {}
 param location string = deployment().location
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
@@ -29,6 +36,8 @@ module resourceGroupModule 'resourceGroup.bicep' = {
     containerImageName: devApiContainerImage
     externalDomainName: externalDomainName
     existingEnvVars: existingEnvVars
+    existingSecretRefs: existingSecretRefs
+    existingSecrets: existingSecrets
     location: location
   }
 }

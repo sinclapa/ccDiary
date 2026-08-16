@@ -6,9 +6,16 @@ param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
 
-@description('Environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
+@description('Plain environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
 @secure()
 param existingEnvVars object = {}
+
+@description('Environment variables backed by a container app secret, as a map of variable name to secret name.')
+param existingSecretRefs object = {}
+
+@description('Container app secrets currently configured, preserved across redeployments.')
+@secure()
+param existingSecrets object = {}
 var appName string = '${name}-${environment}'
 
 // Storage account names allow only lowercase alphanumerics and cap at 24 characters.
@@ -205,6 +212,8 @@ module containerAppModule 'containerApps.bicep' = {
     containerAppsEnvironmentId: containerAppEnvironment.id
     containerImageName: containerImageName
     existingEnvVars: existingEnvVars
+    existingSecretRefs: existingSecretRefs
+    existingSecrets: existingSecrets
   }
 }
 

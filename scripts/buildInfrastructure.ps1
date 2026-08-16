@@ -407,6 +407,9 @@ else {
 # deployment erases them, the revision fails to start for want of Storage__AccountName, and
 # ingress has already sent all traffic to it. Passing them through closes that window.
 $existingEnvMap = @{}
+$existingSecretRefMap = @{}
+$existingSecretMap = @{}
+
 $existingEnvRaw = az containerapp show `
   --name $existingContainerApp `
   --resource-group $existingResourceGroup `
@@ -415,20 +418,38 @@ $existingEnvRaw = az containerapp show `
 
 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingEnvRaw)) {
     foreach ($entry in ($existingEnvRaw | ConvertFrom-Json)) {
-        # secretRef-backed variables carry no inline value; they are owned by the container
-        # app's secret store and survive the deployment on their own.
-        if ($entry.name -and $null -ne $entry.value) {
+        if (-not $entry.name) { continue }
+
+        # A variable carries either an inline value or a reference to a container app
+        # secret. The two are preserved separately because the template has to re-declare
+        # them in different shapes.
+        if ($entry.PSObject.Properties.Name -contains 'secretRef' -and $entry.secretRef) {
+            $existingSecretRefMap[$entry.name] = $entry.secretRef
+        }
+        elseif ($null -ne $entry.value) {
             $existingEnvMap[$entry.name] = $entry.value
+        }
+    }
+
+    # The secrets themselves must be re-declared too: a template that omits them deletes
+    # them, which would leave every secretRef above pointing at nothing.
+    $existingSecretsRaw = az containerapp secret list `
+      --name $existingContainerApp `
+      --resource-group $existingResourceGroup `
+      --show-values `
+      --output json 2>$null
+
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingSecretsRaw)) {
+        foreach ($secret in ($existingSecretsRaw | ConvertFrom-Json)) {
+            if ($secret.name -and $null -ne $secret.value) {
+                $existingSecretMap[$secret.name] = $secret.value
+            }
         }
     }
 }
 
-if ($existingEnvMap.Count -gt 0) {
-    Write-Host "  Preserving $($existingEnvMap.Count) existing environment variable(s) through the deployment" -ForegroundColor Gray
-}
-else {
-    Write-Host "  No existing environment variables to preserve" -ForegroundColor Gray
-}
+Write-Host ("  Preserving {0} plain variable(s), {1} secret-backed variable(s) and {2} secret(s)" -f `
+    $existingEnvMap.Count, $existingSecretRefMap.Count, $existingSecretMap.Count) -ForegroundColor Gray
 
 # Passed as a parameter file rather than inline. PowerShell hands native commands their
 # arguments through a layer that strips the double quotes out of a JSON literal, so az
@@ -439,7 +460,9 @@ $deployParamDoc = [ordered]@{
     '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
     contentVersion = '1.0.0.0'
     parameters     = [ordered]@{
-        existingEnvVars = [ordered]@{ value = $existingEnvMap }
+        existingEnvVars    = [ordered]@{ value = $existingEnvMap }
+        existingSecretRefs = [ordered]@{ value = $existingSecretRefMap }
+        existingSecrets    = [ordered]@{ value = $existingSecretMap }
     }
 }
 
@@ -555,9 +578,46 @@ if (-not $entraClientCredentialsPassword) {
     exit 1
 }
 
+Write-Host "Storing sensitive configuration as container app secrets..." -ForegroundColor Cyan
+
+# Credentials are held as container app secrets and referenced, rather than set inline.
+# Inline values are part of the container spec, so `az containerapp show`, a what-if diff and
+# any CLI error that echoes its arguments all print them in full — which is exactly how the
+# SMTP password and Graph client secret ended up in a terminal. A secretRef shows the name.
+$secretDefinitions = [ordered]@{
+    'graph-client-secret' = $entraClientCredentialsPassword
+    'smtp-password'       = $smtpPassword
+    'otlp-headers'        = $grafanaOtlpAuthHeader
+}
+
+# An empty secret is rejected, and the matching settings are genuinely optional — SMTP falls
+# back to Entra invitation email, and OTLP is disabled when unset. Only non-empty values
+# become secrets; the rest are left unset entirely.
+$secretArgs = @()
+foreach ($secretName in $secretDefinitions.Keys) {
+    if (-not [string]::IsNullOrWhiteSpace($secretDefinitions[$secretName])) {
+        $secretArgs += "$secretName=$($secretDefinitions[$secretName])"
+    }
+}
+
+if ($secretArgs.Count -gt 0) {
+    az containerapp secret set `
+      --name $containerAppName `
+      --resource-group $resourceGroupName `
+      --secrets $secretArgs `
+      --output none
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to set container app secrets."
+        exit 1
+    }
+    Write-Host "  Stored $($secretArgs.Count) secret(s)" -ForegroundColor Gray
+}
+
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 
-# Prepare environment variables as an array so PowerShell passes each as a separate argument
+# Prepare environment variables as an array so PowerShell passes each as a separate argument.
+# The three credentials are referenced by secret name rather than carried inline — see the
+# secret block above. `secretref:` is the container app syntax for that reference.
 $envVars = @(
         "Entra__TenantId=$tenantId",
         "Entra__ClientId=$entraClientId",
@@ -565,11 +625,10 @@ $envVars = @(
         "ASPNETCORE_ENVIRONMENT=$environment",
         "Storage__AccountName=$storageAccountName",
         "OTEL_EXPORTER_OTLP_ENDPOINT=$grafanaOtlpEndpoint",
-        "OTEL_EXPORTER_OTLP_HEADERS=$grafanaOtlpAuthHeader",
         "OTEL_SERVICE_NAME=ccDiaryApi",
         "Graph__TenantId=$tenantId",
         "Graph__ClientId=$entraClientId",
-        "Graph__ClientSecret=$entraClientCredentialsPassword",
+        "Graph__ClientSecret=secretref:graph-client-secret",
         "Graph__InviteRedirectUrl=https://$staticSiteUrl/",
         "Graph__AppDisplayName=Cooking Code Diary",
         "BootstrapAdmin__ObjectId=$bootstrapAdminObjectId",
@@ -578,10 +637,18 @@ $envVars = @(
         "Smtp__Host=$smtpHost",
         "Smtp__Port=$smtpPort",
         "Smtp__Username=$smtpUsername",
-        "Smtp__Password=$smtpPassword",
         "Smtp__From=$smtpFrom",
         "Smtp__FromName=$smtpFromName"
 )
+
+# Only reference secrets that were actually created; an unset optional setting must not
+# become a reference to a secret that does not exist, which the revision would fail on.
+if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
+    $envVars += "Smtp__Password=secretref:smtp-password"
+}
+if (-not [string]::IsNullOrWhiteSpace($grafanaOtlpAuthHeader)) {
+    $envVars += "OTEL_EXPORTER_OTLP_HEADERS=secretref:otlp-headers"
+}
 
 az containerapp update `
     --name $containerAppName `
