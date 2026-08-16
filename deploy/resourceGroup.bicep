@@ -5,6 +5,10 @@ param environment string
 param externalDomainName string?
 param location string = resourceGroup().location
 param containerImageName string
+
+@description('Environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
+@secure()
+param existingEnvVars object = {}
 var appName string = '${name}-${environment}'
 
 // Storage account names allow only lowercase alphanumerics and cap at 24 characters.
@@ -200,6 +204,7 @@ module containerAppModule 'containerApps.bicep' = {
     appName: appName
     containerAppsEnvironmentId: containerAppEnvironment.id
     containerImageName: containerImageName
+    existingEnvVars: existingEnvVars
   }
 }
 

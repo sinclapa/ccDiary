@@ -27,11 +27,6 @@ if ((az extension list --query "[?name=='containerapp']" ) -eq "[]") {
     Write-Host "Installed containerapp az extension" -ForegroundColor Gray
 }
 
-if ((az extension list --query "[?name=='serviceconnector-passwordless']" ) -eq "[]") {
-    az extension add --name serviceconnector-passwordless --upgrade
-    Write-Host "Installed serviceconnector-passwordless az extension" -ForegroundColor Gray
-}
-
 <# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
 # Convert a Hashtable to string data format (key=value)
@@ -47,6 +42,27 @@ function ConvertTo-StringData {
                 "{0}={1}" -f $entry.Key, $entry.Value
             }
         }
+    }
+}
+
+# Check a SonarCloud token against the API before the script pushes it to the repo-level
+# SONAR_TOKEN secret. A stale value there is silent and expensive: every later CI run fails
+# on a quality gate that never reports, and the logs show sonar.token="" rather than the
+# masked *** a real secret renders as.
+function Test-SonarToken {
+    param([string]$Token)
+
+    if ([string]::IsNullOrWhiteSpace($Token)) { return $false }
+
+    try {
+        $response = Invoke-RestMethod `
+            -Uri "https://sonarcloud.io/api/authentication/validate" `
+            -Headers @{ Authorization = "Bearer $Token" } `
+            -Method Get `
+            -ErrorAction Stop
+        return [bool]$response.valid
+    } catch {
+        return $false
     }
 }
 
@@ -172,6 +188,29 @@ if (-Not ($params.ContainsKey("SonarToken"))) {
 else {
     $sonarToken = $params["SonarToken"]
 }
+
+# Verified here, before any Azure work, so a bad token costs a prompt rather than a deploy.
+# The token is written to the settings file below, so the following environments in a
+# buildAllInfrastructure run pick up the corrected value without asking again.
+$sonarTokenAttempts = 0
+while (-not (Test-SonarToken -Token $sonarToken)) {
+    $sonarTokenAttempts++
+    if ($sonarTokenAttempts -gt 3) {
+        Write-Error "No valid SonarCloud token supplied after 3 attempts. Aborting before any infrastructure changes."
+        exit 1
+    }
+
+    Write-Host "The stored SonarCloud token is missing, expired or rejected by sonarcloud.io." -ForegroundColor Yellow
+    $sonarTokenSecure = Read-Host -Prompt "Enter a valid SonarCloud token (My Account > Security > Generate Tokens)" -AsSecureString
+    $sonarToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sonarTokenSecure))
+
+    if ([string]::IsNullOrWhiteSpace($sonarToken)) {
+        Write-Error "A valid SonarCloud token is required — it is pushed to the repo SONAR_TOKEN secret and gates CI."
+        exit 1
+    }
+}
+$params["SonarToken"] = $sonarToken
+Write-Host "SonarCloud token validated." -ForegroundColor Green
 
 if (-Not ($params.ContainsKey("GrafanaOtlpEndpoint"))) {
     $grafanaOtlpEndpoint = Read-Host -Prompt "Enter the Grafana Cloud OTLP endpoint (leave empty to disable telemetry, e.g. https://otlp-gateway-prod-eu-west-0.grafana.net/otlp)"
@@ -339,12 +378,90 @@ Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
 
-# Deploy using Azure CLI
-$deploymentResult = az deployment sub create `
-  --location $location `
-  --template-file "$PSScriptRoot\..\deploy\main.bicep" `
-  --parameters name=$name environment="$environment" devApiContainerImage=$devApiContainerImage externalDomainName="$externalDomainName" `
-  --output json | ConvertFrom-Json
+# The bicep template is authoritative for the container spec, so the image it is handed
+# replaces whatever is running. DevApiContainerImage is an untagged dev reference, so
+# passing it to an environment CI has already promoted rolls that environment back to
+# :latest — and unlike the environment variables further down, the script never sets the
+# image again afterwards, so the downgrade is permanent and silent. Re-running against a
+# live environment must keep the tag that is deployed.
+$existingContainerApp = "ca-${name}-${environment}".ToLower()
+$existingResourceGroup = "rg-${name}-${environment}"
+
+$deployedImage = az containerapp show `
+  --name $existingContainerApp `
+  --resource-group $existingResourceGroup `
+  --query "properties.template.containers[0].image" `
+  --output tsv 2>$null
+
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($deployedImage)) {
+    $containerImage = $deployedImage.Trim()
+    Write-Host "  Preserving the image already deployed: $containerImage" -ForegroundColor Gray
+}
+else {
+    $containerImage = $devApiContainerImage
+    Write-Host "  No container app deployed yet; bootstrapping with: $containerImage" -ForegroundColor Gray
+}
+
+# The application configuration is applied further down, because it depends on outputs this
+# deployment produces. Without feeding the current values back into the template, the
+# deployment erases them, the revision fails to start for want of Storage__AccountName, and
+# ingress has already sent all traffic to it. Passing them through closes that window.
+$existingEnvMap = @{}
+$existingEnvRaw = az containerapp show `
+  --name $existingContainerApp `
+  --resource-group $existingResourceGroup `
+  --query "properties.template.containers[0].env" `
+  --output json 2>$null
+
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingEnvRaw)) {
+    foreach ($entry in ($existingEnvRaw | ConvertFrom-Json)) {
+        # secretRef-backed variables carry no inline value; they are owned by the container
+        # app's secret store and survive the deployment on their own.
+        if ($entry.name -and $null -ne $entry.value) {
+            $existingEnvMap[$entry.name] = $entry.value
+        }
+    }
+}
+
+if ($existingEnvMap.Count -gt 0) {
+    Write-Host "  Preserving $($existingEnvMap.Count) existing environment variable(s) through the deployment" -ForegroundColor Gray
+}
+else {
+    Write-Host "  No existing environment variables to preserve" -ForegroundColor Gray
+}
+
+# Passed as a parameter file rather than inline. PowerShell hands native commands their
+# arguments through a layer that strips the double quotes out of a JSON literal, so az
+# received `{Key:value}` and rejected it as malformed. A file also keeps the values —
+# several of which are secrets — off the command line entirely.
+$deployParamFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-deploy-$environment-$([guid]::NewGuid().ToString('N')).json"
+$deployParamDoc = [ordered]@{
+    '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
+    contentVersion = '1.0.0.0'
+    parameters     = [ordered]@{
+        existingEnvVars = [ordered]@{ value = $existingEnvMap }
+    }
+}
+
+# WriteAllText with an explicit BOM-less UTF8: Set-Content emits a BOM under Windows
+# PowerShell, which az refuses to parse.
+[System.IO.File]::WriteAllText(
+    $deployParamFile,
+    ($deployParamDoc | ConvertTo-Json -Depth 6),
+    (New-Object System.Text.UTF8Encoding($false)))
+
+try {
+    # Deploy using Azure CLI
+    $deploymentResult = az deployment sub create `
+      --location $location `
+      --template-file "$PSScriptRoot\..\deploy\main.bicep" `
+      --parameters "@$deployParamFile" `
+      --parameters name=$name environment="$environment" devApiContainerImage=$containerImage externalDomainName="$externalDomainName" `
+      --output json | ConvertFrom-Json
+}
+finally {
+    Remove-Item -Path $deployParamFile -Force -ErrorAction SilentlyContinue
+}
 
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
@@ -414,8 +531,21 @@ foreach ($role in @('Storage Table Data Contributor', 'Storage Blob Data Contrib
 }
 
 Write-Host "Set entra client app credentials..." -ForegroundColor Cyan
-$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 | ConvertFrom-JSON
+
+# --append matters: without it, `credential reset` deletes every existing password before
+# issuing the new one, so the running app and CI hold a secret that is already invalid for
+# the minutes it takes to reach the container app update and the GitHub secret below. If the
+# script failed anywhere in between, they stayed broken. Appending leaves the old secret
+# working until the new one has been distributed; the superseded ones are pruned at the end,
+# once distribution has actually succeeded.
+$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 --append | ConvertFrom-JSON
 $entraClientCredentialsPassword = $entraClientCredentials.password
+$entraClientCredentialsKeyId = $entraClientCredentials.keyId
+
+if (-not $entraClientCredentialsPassword) {
+    Write-Error "Failed to create an Entra client secret."
+    exit 1
+}
 
 Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
 
@@ -513,6 +643,31 @@ gh variable set "SONAR_UI_PROJECT_KEY" --body "$sonarUiProjectKey" --repo $gitHu
 gh variable set "SONAR_INFRA_PROJECT_KEY" --body "$sonarInfraProjectKey" --repo $gitHubRepo
 gh variable set "SONAR_ORGANIZATION" --body "$sonarOrganization" --repo $gitHubRepo
 gh secret set "SONAR_TOKEN" --body "$sonarToken" --repo $gitHubRepo
+
+<# --------------------------------------------------------------------------------- #>
+<# Retire superseded Entra client secrets #>
+
+# Only now that the new secret is on the container app and in the GitHub environment is it
+# safe to withdraw the old ones. Doing this before distribution is what created the outage
+# window; doing it never would let credentials accumulate on every run.
+Write-Host "Retiring superseded Entra client secrets..." -ForegroundColor Cyan
+
+$supersededKeyIds = az ad app credential list `
+  --id $entraClientId `
+  --query "[?displayName=='GIT_HUB' && keyId!='$entraClientCredentialsKeyId'].keyId" `
+  --output tsv
+
+if ($supersededKeyIds) {
+    foreach ($keyId in $supersededKeyIds) {
+        if ([string]::IsNullOrWhiteSpace($keyId)) { continue }
+        Write-Host "  Removing superseded credential $keyId" -ForegroundColor Gray
+        az ad app credential delete --id $entraClientId --key-id $keyId.Trim() --output none 2>$null
+    }
+}
+else {
+    Write-Host "  None to retire" -ForegroundColor Gray
+}
+
 <# --------------------------------------------------------------------------------- #>
 <# Update Build Pipeline #>
 Write-Host "Finished ${name} ${environment}" -ForegroundColor Green

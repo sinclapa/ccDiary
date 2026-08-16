@@ -9,6 +9,10 @@ param name string
 param environment string
 param devApiContainerImage string
 param externalDomainName string?
+
+@description('Environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
+@secure()
+param existingEnvVars object = {}
 param location string = deployment().location
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
@@ -24,6 +28,7 @@ module resourceGroupModule 'resourceGroup.bicep' = {
     environment: environment
     containerImageName: devApiContainerImage
     externalDomainName: externalDomainName
+    existingEnvVars: existingEnvVars
     location: location
   }
 }
