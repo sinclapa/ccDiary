@@ -28,7 +28,7 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 
 - IaC: Bicep (targeting Azure subscription scope)
 - Containerization: Docker for API
-- Cloud Platform: Microsoft Azure (Container Apps, SQL Database serverless, Static Web Apps, Entra ID)
+- Cloud Platform: Microsoft Azure (Container Apps, Table + Blob Storage, Static Web Apps, Entra ID)
 - Code Quality: SonarCloud (3 separate projects: API, UI, Infra — quality gate blocks CI on failure)
 
 ## Repository Structure
@@ -43,7 +43,7 @@ ccDiary/
     │   ├── ccDiaryApi/                # Main API project
     │   │   ├── Controllers/v1/        # API v1 controllers
     │   │   ├── Data/
-    │   │   │   ├── Context/           # Database interactions
+    │   │   │   ├── Storage/           # TableStore, BlobStore, StorageKeys, TableJson
     │   │   │   └── Model/             # Data models
     │   │   │
     │   │   ├── Services/              # Service layer
@@ -116,12 +116,25 @@ ccDiary/
 ### Scripts (scripts)
 | Script | Description |
 |---|---|
-| buildAllInfrastructure.ps1 | Deploy infrastructure for all environments (dev, staging, prod) sequentially |
-| buildInfrastructure.ps1 | Build infrastructure in Azure |
-| startLocal.ps1 | Run UI and API if not running |
+| buildAllInfrastructure.ps1 | Deploy dev → staging → prod sequentially; **stops at the first failure** |
+| buildInfrastructure.ps1 | Provision one environment end to end (bicep, Entra, RBAC, GitHub secrets/variables) |
+| entraSetup.ps1 | Create or update the Entra app registration; called by the two setup scripts |
+| startLocal.ps1 | Ensure Azurite, then run API and UI if not already running |
 | stopLocal.ps1 | Kill UI and API processes (preserves VS Code and Visual Studio) |
-| run-coverage-summary.ps1 | Run coverage for API and UI |
+| run-coverage-summary.ps1 | Ensure Azurite, then run coverage for API and UI |
 | setuplocal.ps1 | Setup local environment |
+
+#### Re-running buildInfrastructure.ps1 against a live environment
+
+The bicep template is authoritative for the container spec, but most application configuration is applied *after* deployment because it depends on outputs that deployment produces. Anything the template does not declare is therefore erased. `existingEnvVars`, `existingSecretRefs` and `existingSecrets` exist solely to feed the running state back in, and the deployed image tag is read back and re-passed — without them a redeploy takes the environment down and rolls it to `:latest`. The deployment runs twice, because the Entra client secret cannot exist until the first run produces the URLs the app registration is built from.
+
+Sensitive values are container app secrets referenced with `secretref:`, never inline environment variables. `az ad app credential reset` returns no `keyId`, so credentials to retire are captured before the new one is issued. An app registration caps at two secrets; `entraSetup.ps1` mints one only with `-CreateClientSecret` and evicts only its own.
+
+#### Windows shell hazard
+
+`az` is a batch file, so cmd.exe re-parses the command line after PowerShell strips the quotes. Values containing `|`, `&` or `()` break and are not reliably escapable — passing plainly is rejected, and embedded quotes can return exit 0 while doing nothing. Secrets travel in the deployment parameter file (BOM-less UTF-8), and `--query` expressions avoid parentheses.
+
+**Azurite must be running for anything that touches storage** — it is the whole persistence tier, so the API fails to start without it and the symptom is a port timeout. Compose owns the single definition: `docker compose -p ccdiary -f src/api/docker-compose.yml up -d azurite`.
 
 ## Testing
 
@@ -216,4 +229,4 @@ SonarCloud organization (`cookingcode`)
 
 ---
 
-**Last Updated**: 2026-04-06
+**Last Updated**: 2026-08-18

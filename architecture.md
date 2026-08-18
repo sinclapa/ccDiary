@@ -21,17 +21,27 @@ architecture-beta
             service ca(azure:container-apps)["ca-ccdiary-{env}\nASP.NET Core 8 · port 8080\n0.25 vCPU · 0.5 GiB · 0–1 replicas"]
         end
         service logs(azure:log-analytics-workspaces)["logs-ccdiary-{env}\n30-day retention\nAzure Monitor"]
-        service db(azure:sql-database)["sql-ccdiary-{env}.database.windows.net\nDB: sqldb-ccdiary-{env}\nGP_S_Gen5_1 serverless · Managed Identity"]
+        service store(azure:storage-accounts)["st{name}{env}{hash}\nStandard_LRS · Hot\n6 tables · 3 blob containers"]
     end
 
     user:R --> L:swa
     entra:B --> T:swa
     swa:B --> T:ca
     ghcr:R --> L:ca
-    ca:B --> T:db
+    ca:B --> T:store
     ca:R --> L:logs
     grafana:B --> T:logs
 ```
+
+The Container App reaches storage with its **system-assigned managed identity**, holding no connection string: `allowSharedKeyAccess` is `false`, and the resource group template grants the identity *Storage Table Data Contributor* and *Storage Blob Data Contributor* on the account. Those are data-plane roles — the control-plane *Storage Account Contributor* grants no access to the tables or blobs themselves.
+
+| Container | Contents | Retention |
+|---|---|---|
+| `images` | `{diaryId}/{diaryEntryId}` — entry images | blob soft delete, 7 days |
+| `mapcache` | `tiles/{source}/{z}/{x}/{y}`, `routes/{profile}/{key}.json` | lifecycle policy deletes after 90 days |
+| `content` | `entries/{diaryEntryId}.json` — spill for oversized entry JSON | blob soft delete, 7 days |
+
+Tables: `diary`, `diaryentry`, `appuser`, `accessrequest`, `appinfo`, `geocodingcache`. They are declared in bicep *and* created at boot by `StorageBootstrapper`, so local development against Azurite works without a deployment.
 
 ---
 
@@ -59,9 +69,9 @@ flowchart TB
         direction LR
         DevSWA["stapp-ccdiary-dev\n.azurestaticapps.net"]
         DevCA["ca-ccdiary-dev\n(cae-ccdiary-dev)"]
-        DevDB[("sql-ccdiary-dev\nsqldb-ccdiary-dev")]
+        DevStore[("st-ccdiary-dev\nTable + Blob")]
         DevLog["logs-ccdiary-dev"]
-        DevSWA --> DevCA --> DevDB
+        DevSWA --> DevCA -->|managed identity| DevStore
         DevCA --> DevLog
     end
 
@@ -69,9 +79,9 @@ flowchart TB
         direction LR
         StgSWA["stapp-ccdiary-staging\n.azurestaticapps.net"]
         StgCA["ca-ccdiary-staging\n(cae-ccdiary-staging)"]
-        StgDB[("sql-ccdiary-staging\nsqldb-ccdiary-staging")]
+        StgStore[("st-ccdiary-staging\nTable + Blob")]
         StgLog["logs-ccdiary-staging"]
-        StgSWA --> StgCA --> StgDB
+        StgSWA --> StgCA -->|managed identity| StgStore
         StgCA --> StgLog
     end
 
@@ -79,9 +89,9 @@ flowchart TB
         direction LR
         ProdSWA["stapp-ccdiary-prod\n+ custom domain"]
         ProdCA["ca-ccdiary-prod\n(cae-ccdiary-prod)"]
-        ProdDB[("sql-ccdiary-prod\nsqldb-ccdiary-prod")]
+        ProdStore[("st-ccdiary-prod\nTable + Blob")]
         ProdLog["logs-ccdiary-prod"]
-        ProdSWA --> ProdCA --> ProdDB
+        ProdSWA --> ProdCA -->|managed identity| ProdStore
         ProdCA --> ProdLog
     end
 
@@ -109,13 +119,12 @@ Resource names follow the pattern `{prefix}-ccdiary-{env}`. Container App FQDNs 
 | **Container App** | `ca-ccdiary-dev.{suffix}.azurecontainerapps.io` | `ca-ccdiary-staging.{suffix}.azurecontainerapps.io` | `ca-ccdiary-prod.{suffix}.azurecontainerapps.io` |
 | **Container App Env** | `cae-ccdiary-dev` | `cae-ccdiary-staging` | `cae-ccdiary-prod` |
 | **Storage account** | `stccdiarydevcog5wcxyf3cz` | `stccdiarystagingn5tdd4wc` | `stccdiaryprod6vcphn6hsut` |
-| **SQL Database** | `sqldb-ccdiary-dev` | `sqldb-ccdiary-staging` | `sqldb-ccdiary-prod` |
 | **Log Analytics** | `logs-ccdiary-dev` | `logs-ccdiary-staging` | `logs-ccdiary-prod` |
 | **Container Image** | `ghcr.io/sinclapa/ccdiary-api:{semver}` | `ghcr.io/sinclapa/ccdiary-api:{semver}` | `ghcr.io/sinclapa/ccdiary-api:{semver}` |
 | **GitHub Environment** | `dev` | `staging` | `prod` |
 | **Deploy Trigger** | Push to any non-main branch | Push / merge to `main` | GitHub Release tag `v*` |
-| **SQL Auth** | Managed Identity (Entra-only) | Managed Identity (Entra-only) | Managed Identity (Entra-only) |
-| **SQL SKU** | GP_S_Gen5_1 serverless | GP_S_Gen5_1 serverless | GP_S_Gen5_1 serverless |
+| **Storage Auth** | Managed identity + RBAC (`allowSharedKeyAccess: false`) | Managed identity + RBAC | Managed identity + RBAC |
+| **Storage SKU** | Standard_LRS · Hot | Standard_LRS · Hot | Standard_LRS · Hot |
 | **CA Resources** | 0.25 vCPU · 0.5 GiB | 0.25 vCPU · 0.5 GiB | 0.25 vCPU · 0.5 GiB |
 | **CA Scale** | 0–1 replicas | 0–1 replicas | 0–1 replicas |
 | **OTLP Endpoint** | `otlp-gateway-prod-gb-south-1.grafana.net/otlp` | `otlp-gateway-prod-gb-south-1.grafana.net/otlp` | `otlp-gateway-prod-gb-south-1.grafana.net/otlp` |
@@ -134,13 +143,13 @@ flowchart LR
         ViteDev["⚡ Vite Dev Server\nlocalhost:8080\nnpm run dev"]
         API["🔧 ASP.NET Core API\nlocalhost:7183 HTTPS\ndotnet run"]
         subgraph Docker["🐳 Docker Compose"]
-            SQL[("🗄️ Azurite\nlocalhost:10000-10002\nazure-storage/azurite")]
+            Azurite[("🗄️ Azurite\nlocalhost:10000-10002\nazure-storage/azurite")]
         end
     end
 
     Browser -->|"http://localhost:8080"| ViteDev
     ViteDev -->|"REST /api/v1/"| API
-    API -->|"Table + Blob SDK\nbootstrap on startup"| SQL
+    API -->|"Table + Blob SDK\nbootstrap on startup"| Azurite
 ```
 
 | Component | Value |
@@ -148,7 +157,11 @@ flowchart LR
 | UI | `http://localhost:8080` |
 | API | `https://localhost:7183` |
 | Swagger | `https://localhost:7183/swagger` |
-| SQL port | `51433` (mapped from container `1433`) |
+| Azurite ports | `10000` blob · `10001` queue · `10002` table |
 | Auth config | User secrets (`Entra:ClientId`, `Entra:TenantId`) |
-| DB password | `.env` → `SA_PASSWORD` |
+| Storage config | `Storage:ConnectionString` in `appsettings.{Development,Local}.json` (Azurite well-known account) |
 | `VITE_ENVIRONMENT` | `local` (from `.env.dev.local`) |
+
+Azurite is not optional: it is the entire persistence tier, so `StorageBootstrapper` throws and the host never starts without it — the symptom is the API port never opening rather than a storage error. `scripts/startLocal.ps1` and `scripts/run-coverage-summary.ps1` start it; otherwise `docker compose -p ccdiary -f src/api/docker-compose.yml up -d azurite`. Compose owns the single definition, so do not start a second container by hand — it claims the same name.
+
+Container-hosted modes (`LocalCompose`, `LocalContainer`) reach it at the `azurite` hostname rather than `127.0.0.1`, which is why they have their own `appsettings` files.
