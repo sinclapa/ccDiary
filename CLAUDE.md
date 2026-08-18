@@ -33,7 +33,7 @@ ccDiary is a full-stack diary application — ASP.NET Core 8 API + Vue 3/Vuetify
 
 - IaC: Bicep (targeting Azure subscription scope)
 - Containerization: Docker for API, image pushed to GHCR
-- Cloud Platform: Microsoft Azure (Container Apps, SQL Database serverless, Static Web Apps, Entra ID)
+- Cloud Platform: Microsoft Azure (Container Apps, Table + Blob Storage, Static Web Apps, Entra ID)
 - Code Quality: SonarCloud (3 separate projects: API, UI, Infra — quality gate blocks CI on failure)
 
 ## Repository Structure
@@ -209,12 +209,37 @@ npx playwright test --grep "cookie preferences"
 
 | Script | Description |
 |---|---|
-| buildAllInfrastructure.ps1 | Deploy infrastructure for all environments (dev, staging, prod) sequentially |
-| buildInfrastructure.ps1 | Build infrastructure in Azure |
-| startLocal.ps1 | Run UI and API if not running |
+| buildAllInfrastructure.ps1 | Deploy dev → staging → prod sequentially; **stops at the first failure** |
+| buildInfrastructure.ps1 | Provision one environment end to end (bicep, Entra, RBAC, GitHub secrets/variables) |
+| entraSetup.ps1 | Create or update the Entra app registration; called by the two setup scripts |
+| startLocal.ps1 | Ensure Azurite, then run API and UI if not already running |
 | stopLocal.ps1 | Kill UI and API processes (preserves VS Code and Visual Studio) |
-| run-coverage-summary.ps1 | Run coverage for API and UI |
+| run-coverage-summary.ps1 | Ensure Azurite, then run coverage for API and UI |
 | setuplocal.ps1 | Setup local environment |
+
+Ordering in `buildAllInfrastructure.ps1` is deliberate: each environment rehearses the next, so a dev failure is evidence prod should not be attempted. Remaining environments are reported as `Skipped`, not omitted.
+
+#### Re-running `buildInfrastructure.ps1` against a live environment
+
+This is the part that is not visible from any single file. The bicep template is **authoritative for the container spec**, but most application configuration is applied *after* deployment, because it depends on outputs that deployment produces (the container and static site FQDNs feed the Entra app registration, which yields the client id and secret). Anything the template does not declare is therefore erased on redeployment.
+
+Three parameters exist solely to feed the running state back in — `existingEnvVars`, `existingSecretRefs`, `existingSecrets` — captured from the deployed app immediately before deploying. Removing that plumbing takes the environment down rather than merely losing configuration: the app fails fast without `Storage__AccountName`, and ingress sends 100% of traffic to the latest revision. A template that omits `secrets` deletes them, leaving every `secretRef` pointing at nothing.
+
+The deployed **image tag** is read back and re-passed for the same reason. `DevApiContainerImage` is an untagged dev reference, and unlike the environment variables the script never sets the image again afterwards, so passing it would permanently and silently roll a promoted environment to `:latest`.
+
+The deployment runs **twice**: the Entra client secret cannot exist until the first run has produced the URLs the app registration is built from.
+
+#### Credentials
+
+- Sensitive values are **container app secrets** referenced with `secretref:`, never inline environment variables. An inline value is part of the container spec, so `az containerapp show`, what-if diffs and any CLI error that echoes its arguments print it in full.
+- `az ad app credential reset` returns `appId`/`password`/`tenant` and **no `keyId`**, so the credentials to retire are captured *before* the new one is issued. Identifying the survivor from the reset output yields null and deletes everything.
+- An app registration caps at two secrets. `entraSetup.ps1` mints one only when passed `-CreateClientSecret` (`setuplocal.ps1` does, `buildInfrastructure.ps1` does not, since it issues its own), and evicts only secrets it created.
+
+#### Windows shell hazard
+
+`az` is a batch file, so **cmd.exe re-parses the command line after PowerShell has stripped the quotes**. Values containing `|`, `&` or `()` break: a password is split into fragments, and JMESPath `length()` dies with `--output was unexpected at this time`. This is not reliably escapable — passing a value plainly is rejected, and passing it with embedded quotes can return exit 0 while doing nothing at all.
+
+Consequently: secrets travel in the deployment **parameter file** (BOM-less UTF-8 via `WriteAllText`; `Set-Content` emits a BOM that az refuses), and `--query` expressions avoid parentheses — project the field and count in PowerShell instead.
 
 ## Testing
 
@@ -306,6 +331,10 @@ Sensitive values are never committed — use **user secrets** (`dotnet user-secr
 
 Environment names are matched case-insensitively in `Program.cs` for `Local`, `LocalContainer`, and `LocalCompose` — user secrets load for all of them.
 
+In the deployed environments `Graph__ClientSecret`, `Smtp__Password` and `OTEL_EXPORTER_OTLP_HEADERS` are **container app secrets**, so the container spec shows `secretRef` names rather than values. Set them through the deployment, not `az containerapp update --set-env-vars`.
+
+**Azurite must be running for anything that touches storage** — it is the whole persistence tier, so the API's `StorageBootstrapper` throws and the host never starts without it. The symptom is a port timeout, not a storage error. `startLocal.ps1` and `run-coverage-summary.ps1` start it; otherwise `docker compose -p ccdiary -f src/api/docker-compose.yml up -d azurite`. Compose owns the single definition — do not `docker run` a second container, since it claims the same name.
+
 ### OpenTelemetry (API)
 
 Configured in `OpenTelemetryExtensions.cs`. When `OTEL_EXPORTER_OTLP_ENDPOINT` is set:
@@ -365,4 +394,4 @@ Pick the project key matching the directory you are working in. After fixing iss
 
 ---
 
-**Last Updated**: 2026-08-12
+**Last Updated**: 2026-08-18
