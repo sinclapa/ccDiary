@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMe } from '@/services/modules/userService'
+import { ApiUnavailableError } from '@/services/modules/apiClient'
 import type { AppUser } from '@/services/models/appUser'
 
 const baseUrl = 'http://localhost'
@@ -34,5 +35,13 @@ describe('userService', () => {
     const result = await getMe()
 
     expect(result).toBeNull()
+  })
+
+  it('getMe throws rather than returning null when the API is still starting', async () => {
+    // A null here means "no account", which routes the user to registration. A container
+    // that has not finished starting must not be able to produce that answer.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 503 } as Response)
+
+    await expect(getMe()).rejects.toThrow(ApiUnavailableError)
   })
 })

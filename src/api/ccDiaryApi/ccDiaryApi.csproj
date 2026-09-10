@@ -17,6 +17,25 @@
     <AnalysisMode>Recommended</AnalysisMode>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 
+    <!--
+    Cold-start settings. The app runs on Container Apps at zero minimum replicas, so a real
+    user waits through process start; everything here trades a little throughput or image
+    size for a shorter wake.
+
+    InvariantGlobalization also lets the runtime image drop ICU (see src/api/Dockerfile).
+    The app formats through CultureInfo.InvariantCulture explicitly, so nothing depends on
+    the loaded locale data.
+
+    Server GC allocates a heap and a background thread per core up front, which is the wrong
+    trade for a single low-traffic replica that is measured on how fast it starts.
+
+    ReadyToRun was measured and rejected: ~165ms off startup at 1 vCPU for ~13MB more image
+    to pull on every wake. See the publish step in .github/workflows/build-and-test.yml.
+    -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
 
     <!--
     CS1591: Missing XML comment for publicly visible type or member 'Type_or_Member'

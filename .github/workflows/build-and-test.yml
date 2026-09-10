@@ -196,6 +196,10 @@ jobs:
           header: api-coverage
           path: /tmp/api-coverage.md
 
+      # Deliberately no -p:PublishReadyToRun: measured against this app it saved ~165ms of
+      # startup at 1 vCPU while adding ~13MB to every image pull, and the pull is on the
+      # critical path of a user's cold start. It also needs a runtime identifier, which
+      # forces a RID-specific restore and a second target in packages.lock.json.
       - name: Publish api
         run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish
   

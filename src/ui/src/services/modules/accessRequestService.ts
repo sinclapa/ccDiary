@@ -1,8 +1,8 @@
-import { getAppConfigField } from '@/utils/appConfig'
+import { apiFetch, apiUrl } from '@/services/modules/apiClient'
 
 export async function submitAccessRequest (displayName: string, email: string): Promise<void> {
-  const api = new URL('v1/AccessRequest/Submit', getAppConfigField('VITE_API'))
-  const response = await fetch(api, {
+  const api = apiUrl('v1/AccessRequest/Submit')
+  const response = await apiFetch(api, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ displayName, email }),

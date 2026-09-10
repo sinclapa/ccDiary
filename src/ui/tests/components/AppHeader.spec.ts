@@ -20,9 +20,15 @@ vi.mock('@/stores/auth', () => ({
     isAdmin: false,
     isContributor: false,
     appUser: null,
+    appUserUnavailable: false,
     fetchAppUser: vi.fn().mockResolvedValue(undefined),
     clearAppUser: vi.fn(),
   }),
+}))
+
+// The header retries the role lookup when the API comes back, so it now reads recoveryCount.
+vi.mock('@/stores/apiStatus', () => ({
+  useApiStatusStore: () => ({ recoveryCount: 0 }),
 }))
 
 vi.mock('@/services/authentication/msalConfig')

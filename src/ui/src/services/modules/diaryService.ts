@@ -1,72 +1,44 @@
 import Diary from '@/services/models/diary'
 import PagedResult from '@/services/models/pagedResult'
-import { getAppConfigField } from '@/utils/appConfig'
+import { apiFetch, apiFetchJson, apiUrl } from '@/services/modules/apiClient'
+
+const jsonHeaders = {
+  Accept: 'application/json',
+  'Content-Type': 'application/json',
+}
 
 export default class DiaryAPIService {
   async createDiary (diary: Diary) : Promise<Diary | null> {
-    const api = new URL('v1/Diary/Create', getAppConfigField('VITE_API'))
-    const request = {
+    return apiFetchJson<Diary | null>(apiUrl('v1/Diary/Create'), null, {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: jsonHeaders,
       body: JSON.stringify(diary),
-    }
-    let output : Diary | null = null
-    await fetch(api, request)
-      .then(response => response.json())
-      .then(data => { output = data as Diary })
-    return output
+    })
   }
 
   async updateDiary (diary: Diary) : Promise<Diary | null> {
-    const api = new URL('v1/Diary/Update', getAppConfigField('VITE_API'))
-    const request = {
+    return apiFetchJson<Diary | null>(apiUrl('v1/Diary/Update'), null, {
       method: 'PUT',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: jsonHeaders,
       body: JSON.stringify(diary),
-    }
-    let output : Diary | null = null
-    await fetch(api, request)
-      .then(response => response.json())
-      .then(data => { output = data as Diary })
-    return output
+    })
   }
 
   async deleteDiary (diaryId: string) : Promise<boolean> {
-    const api = new URL(`v1/Diary/Delete/${diaryId}`, getAppConfigField('VITE_API'))
-    const request = {
-      method: 'DELETE',
-    }
-    let output : boolean = false
-    await fetch(api, request)
-      .then(response => { output = response.ok })
-    return output
+    const response = await apiFetch(apiUrl(`v1/Diary/Delete/${diaryId}`), { method: 'DELETE' })
+    return response.ok
   }
 
   async getDiaries (page: number = 1, pageSize: number = 12, search?: string) : Promise<PagedResult<Diary>> {
-    const api = new URL('v1/Diary/Get', getAppConfigField('VITE_API'))
+    const api = apiUrl('v1/Diary/Get')
     api.searchParams.set('page', String(page))
     api.searchParams.set('pageSize', String(pageSize))
     if (search) api.searchParams.set('search', search)
-    let output : PagedResult<Diary> = { items: [], totalCount: 0, page, pageSize }
-    await fetch(api)
-      .then(response => response.json())
-      .then(data => output = data as PagedResult<Diary>)
-    return output
+    return apiFetchJson<PagedResult<Diary>>(api, { items: [], totalCount: 0, page, pageSize })
   }
 
   async getDiary (diaryId: string) : Promise<Diary | undefined> {
-    const api = new URL(`v1/Diary/Get/${diaryId}`, getAppConfigField('VITE_API'))
-    let output : Diary | undefined
-    await fetch(api)
-      .then(response => response.json())
-      .then(data => output = data as Diary)
-    return output
+    return apiFetchJson<Diary | undefined>(apiUrl(`v1/Diary/Get/${diaryId}`), undefined)
   }
 }
 
