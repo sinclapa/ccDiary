@@ -81,8 +81,19 @@ namespace ccDiaryApi.Services
                 return;
             }
 
-            // Small table, and this runs once per boot: a partition scan projecting only
-            // the Role column is cheaper than maintaining a second index.
+            // The overwhelmingly common case is that this has already been done and the
+            // configured administrator is sitting in their own row, so try the point read
+            // first: the row key is the oid. Only when that does not settle it is the
+            // partition scan worth paying for, on the startup path, on every boot.
+            var configured = await GetUserByOidAsync(objectId);
+            if (configured?.Role == AppRole.DiaryAdmin)
+            {
+                return;
+            }
+
+            // Small table, and this only runs before the first administrator exists: a
+            // partition scan projecting only the Role column is cheaper than maintaining a
+            // second index.
             var rows = await TableJson.QueryAsync(
                 _tables.AppUsers,
                 TableClient.CreateQueryFilter($"PartitionKey eq {StorageKeys.UserPartition}"),

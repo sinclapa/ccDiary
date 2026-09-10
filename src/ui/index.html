@@ -15,6 +15,29 @@
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
     <script src="/config.js"></script>
+    <!--
+      The API scales to zero, so the first request after an idle period waits for a container
+      to start. That wait runs in parallel with anything else the browser is doing, so it is
+      started here — as a classic script, straight after config.js populates APP_CONFIG and
+      before the deferred module bundle is fetched, parsed and mounted. The store picks this
+      same promise up rather than issuing its own request, so the wake begins seconds earlier
+      without costing an extra round trip.
+    -->
+    <script>
+      (function () {
+        try {
+          var config = globalThis.APP_CONFIG || {}
+          var api = config.VITE_API
+          if (!api || api === '__PLACEHOLDER__') return
+          var url = new URL('/actuator/health', new URL(api).origin)
+          globalThis.__ccdiaryApiWarmup = fetch(url)
+            .then(function (response) { return response.ok })
+            .catch(function () { return false })
+        } catch (error) {
+          // A warm-up is an optimisation; never let it stop the page rendering.
+        }
+      })()
+    </script>
 </body>
 
 </html>

@@ -471,8 +471,13 @@
   }
 
   async function loadCalendar (diaryId: string) : Promise<Date> {
-    maxDate.value = await diaryEntryAPI.getMaxDate(diaryId)
-    const minDiaryEntryDate = await diaryEntryAPI.getMinDate(diaryId)
+    // Two independent lookups, so they go together. Awaiting them one after the other cost
+    // two round trips of latency on a page that already waits for the API to wake up.
+    const [maxDiaryEntryDate, minDiaryEntryDate] = await Promise.all([
+      diaryEntryAPI.getMaxDate(diaryId),
+      diaryEntryAPI.getMinDate(diaryId),
+    ])
+    maxDate.value = maxDiaryEntryDate
     minDate.value = new Date(minDiaryEntryDate.getFullYear(), minDiaryEntryDate.getMonth(), minDiaryEntryDate.getDate())
     return minDate.value
   }

@@ -16,6 +16,31 @@ describe('useAuthStore', () => {
     expect(store.appUser).toBeNull()
   })
 
+  it('fetchAppUser keeps the known user when the API cannot be reached', async () => {
+    const user = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin' as const, entraObjectId: 'oid' }
+    const store = useAuthStore()
+    store.appUser = user
+
+    vi.mocked(getMe).mockRejectedValue(new Error('unavailable'))
+    await store.fetchAppUser()
+
+    // Overwriting this with null silently stripped the user of their role.
+    expect(store.appUser).toEqual(user)
+    expect(store.appUserUnavailable).toBe(true)
+    expect(store.isAdmin).toBe(true)
+  })
+
+  it('fetchAppUser clears the unavailable flag once the lookup succeeds', async () => {
+    const user = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin' as const, entraObjectId: 'oid' }
+    const store = useAuthStore()
+    store.appUserUnavailable = true
+
+    vi.mocked(getMe).mockResolvedValue(user)
+    await store.fetchAppUser()
+
+    expect(store.appUserUnavailable).toBe(false)
+  })
+
   it('fetchAppUser sets appUser from getMe', async () => {
     const user = { userId: 'u1', displayName: 'Admin', email: 'a@b.com', role: 'diary-admin' as const, entraObjectId: 'oid' }
     vi.mocked(getMe).mockResolvedValue(user)

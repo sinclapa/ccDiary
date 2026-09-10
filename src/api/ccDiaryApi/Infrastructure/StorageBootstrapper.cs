@@ -68,23 +68,32 @@ namespace ccDiaryApi.Infrastructure
                 return;
             }
 
-            foreach (var table in _tables.All)
+            // Nine independent round trips that used to run one after another, on the path a
+            // cold-starting user is waiting on. Nothing here depends on anything else here,
+            // so the whole set costs one round trip's latency instead of nine.
+            var tables = _tables.All;
+            var containers = ContainerNames().Select(name => _blobs.Container(name)).ToArray();
+
+            await Task.WhenAll(
+                tables.Select(table => table.CreateIfNotExistsAsync(cancellationToken))
+                    .Concat<Task>(containers.Select(client =>
+                        client.CreateIfNotExistsAsync(cancellationToken: cancellationToken))));
+
+            foreach (var table in tables)
             {
-                await table.CreateIfNotExistsAsync(cancellationToken);
                 _logger.LogInformation("Table ready: {Table}", table.Name);
             }
 
-            foreach (var container in ContainerNames())
+            foreach (var client in containers)
             {
-                var client = _blobs.Container(container);
-                await client.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
                 _logger.LogInformation("Container ready: {Container}", client.Name);
             }
 
             // Ordering matters: both of these write rows, so they cannot run until the
-            // tables above exist.
-            await UpdateAppInfoAsync(cancellationToken);
-            await SeedBootstrapAdminAsync(cancellationToken);
+            // tables above exist. They are independent of each other, though.
+            await Task.WhenAll(
+                UpdateAppInfoAsync(cancellationToken),
+                SeedBootstrapAdminAsync(cancellationToken));
         }
 
         /// <inheritdoc/>

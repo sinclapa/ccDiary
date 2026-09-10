@@ -60,7 +60,7 @@ var preservedSecrets = [for item in items(existingSecrets): {
   value: item.value
 }]
 
-resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
+resource containerApps 'Microsoft.App/containerApps@2025-01-01' = {
   name: toLower('ca-${appName}')
   location: location
   identity: {
@@ -90,16 +90,47 @@ resource containerApps 'Microsoft.App/containerApps@2024-03-01' = {
         {
           image: containerImageName
           name: toLower('ca-${appName}')
+          // Sized for cold start rather than throughput. The app idles at zero replicas, so
+          // CPU is only billed while a replica is actually up — and nearly all of that time
+          // is .NET runtime init and JIT, which is CPU bound. A quarter vCPU made every wake
+          // roughly four times longer than it needed to be for no saving, because the whole
+          // month's usage sits inside the free grant either way.
           resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
+            cpu: json('1.0')
+            memory: '2.0Gi'
           }
           env: containerEnv
+          // Without a probe the platform falls back to a TCP check on the target port, and
+          // Kestrel binds before StorageBootstrapper runs — so ingress starts routing while
+          // the tables and containers are still being created, and the first request can see
+          // a DOWN health check complaining the app info row is missing. Gating readiness on
+          // the actuator instead means traffic waits for bootstrap. Poll fast: bootstrap
+          // takes ~2s, and every second spent probing is a second added to a user's wait.
+          probes: [
+            {
+              type: 'Startup'
+              httpGet: {
+                path: '/actuator/health'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              periodSeconds: 2
+              failureThreshold: 10
+              timeoutSeconds: 5
+            }
+          ]
         }
       ]
+      // No liveness probe deliberately: maxReplicas is 1, so a false positive has nothing to
+      // fail over to and would take the app down rather than heal it.
       scale: {
         minReplicas: 0
         maxReplicas: 1
+        // The wake is expensive and the app is read-heavy, so the thing worth minimising is
+        // how often it is paid, not just how long it takes. At the 300s default a five minute
+        // pause mid-read costs another full cold start; 30 minutes means roughly one per
+        // browsing session. Still inside the monthly free grant at this traffic level.
+        cooldownPeriod: 1800
       }
     }
   }

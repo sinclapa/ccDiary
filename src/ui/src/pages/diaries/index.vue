@@ -89,7 +89,24 @@
       />
     </v-expand-transition>
 
-    <v-row>
+    <!--
+      Placeholder cards while the first load is outstanding. This page can be waiting on the
+      API to wake up, and an empty grid under a 2px progress bar reads as "you have no
+      diaries" rather than "still loading".
+    -->
+    <v-row v-if="loading && diaries.length === 0">
+      <v-col
+        v-for="n in 6"
+        :key="`skeleton-${n}`"
+        cols="12"
+        md="4"
+        sm="6"
+      >
+        <v-skeleton-loader type="article" />
+      </v-col>
+    </v-row>
+
+    <v-row v-else>
       <v-col
         v-for="item in diaries"
         :key="item.diaryId"

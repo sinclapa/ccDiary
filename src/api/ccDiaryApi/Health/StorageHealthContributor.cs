@@ -21,15 +21,27 @@ namespace ccDiaryApi.Health
     /// Two checks, because the table and blob data planes are granted by two separate
     /// role assignments and can fail independently. Reading the app info row also proves
     /// the bootstrapper ran, which is what replaces the old pending-migrations check.
+    /// They run concurrently: neither depends on the other, and this sits on the path of
+    /// the container's startup probe.
+    /// </para>
+    /// <para>
+    /// A healthy result is cached briefly so that probe polling does not turn into a
+    /// steady stream of storage round trips. Failures are deliberately not cached — during
+    /// startup the first probes legitimately report the app info row missing, and holding
+    /// on to that would keep the container out of rotation after it was ready.
     /// </para>
     /// </remarks>
     public class StorageHealthContributor : IHealthContributor
     {
-        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan HealthyFor = TimeSpan.FromSeconds(5);
 
         private readonly ITableStore _tables;
         private readonly IBlobStore _blobs;
         private readonly StorageOptions _options;
+
+        private HealthCheckResult? _cachedHealthy;
+        private DateTime _cachedHealthyUntilUtc = DateTime.MinValue;
 
         /// <summary>Initializes a new instance of the <see cref="StorageHealthContributor"/> class.</summary>
         /// <param name="tables">The table store.</param>
@@ -48,6 +60,12 @@ namespace ccDiaryApi.Health
         /// <inheritdoc/>
         public HealthCheckResult Health()
         {
+            var cached = _cachedHealthy;
+            if (cached != null && DateTime.UtcNow < _cachedHealthyUntilUtc)
+            {
+                return cached;
+            }
+
             var stopwatch = Stopwatch.StartNew();
 
             try
@@ -57,23 +75,20 @@ namespace ccDiaryApi.Health
                 // actuator endpoint.
                 using var cts = new CancellationTokenSource(Timeout);
 
-                var appInfo = TableJson
-                    .GetIfExistsAsync(_tables.AppInfo, StorageKeys.AppInfoPartition, StorageKeys.AppInfoRow, cts.Token)
-                    .GetAwaiter()
-                    .GetResult();
+                var appInfoTask = TableJson.GetIfExistsAsync(
+                    _tables.AppInfo, StorageKeys.AppInfoPartition, StorageKeys.AppInfoRow, cts.Token);
+                var blobTask = _blobs.Container(_options.ImagesContainer)
+                    .GetPropertiesAsync(cancellationToken: cts.Token);
 
-                if (appInfo == null)
+                Task.WhenAll(appInfoTask, blobTask).GetAwaiter().GetResult();
+
+                if (appInfoTask.Result == null)
                 {
                     return Down("storage bootstrap incomplete: app info row is missing", stopwatch);
                 }
 
-                _blobs.Container(_options.ImagesContainer)
-                    .GetPropertiesAsync(cancellationToken: cts.Token)
-                    .GetAwaiter()
-                    .GetResult();
-
                 stopwatch.Stop();
-                return new HealthCheckResult
+                var healthy = new HealthCheckResult
                 {
                     Status = HealthStatus.UP,
                     Details = new Dictionary<string, object>
@@ -83,6 +98,10 @@ namespace ccDiaryApi.Health
                         { "latencyMs", stopwatch.ElapsedMilliseconds },
                     },
                 };
+
+                _cachedHealthy = healthy;
+                _cachedHealthyUntilUtc = DateTime.UtcNow.Add(HealthyFor);
+                return healthy;
             }
             catch (Exception ex)
             {

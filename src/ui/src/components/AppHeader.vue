@@ -51,6 +51,7 @@
   import { useRouter } from 'vue-router'
   import { msalService } from '@/services/authentication/msalService'
   import { state } from '@/services/authentication/msalConfig'
+  import { useApiStatusStore } from '@/stores/apiStatus'
   import { useAuthStore } from '@/stores/auth'
   import { saveTheme } from '@/utils/browserTheme'
   import { getAppConfigField } from '@/utils/appConfig'
@@ -102,7 +103,17 @@
   })
 
   const authStore = useAuthStore()
+  const apiStatus = useApiStatusStore()
   const { initializeInstance, login, logout, handleRedirect, registerAuthorizationHeaderInterceptor } = msalService()
+
+  // The role lookup runs while the API may still be starting. When it could not be reached,
+  // retry as soon as the API answers again — otherwise a user who arrived during a cold
+  // start keeps a header with no contributor or admin actions in it until they reload.
+  watch(() => apiStatus.recoveryCount, async () => {
+    if (authStore.appUserUnavailable && state.isAuthenticated) {
+      await authStore.fetchAppUser()
+    }
+  })
 
   const handleLogin = async () => {
     await login()

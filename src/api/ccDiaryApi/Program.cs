@@ -2,7 +2,6 @@
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
@@ -31,7 +30,6 @@ using Steeltoe.Management.Endpoint.Health;
 using Steeltoe.Management.Endpoint.Info;
 
 var builder = WebApplication.CreateBuilder(args);
-var startupActivitySource = new ActivitySource("ccDiaryApi.Startup");
 builder.Configuration.AddEnvironmentVariables();
 if (builder.Environment.IsEnvironment("local"))
 {
@@ -39,26 +37,35 @@ if (builder.Environment.IsEnvironment("local"))
     builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 }
 
-if (builder.Environment.IsEnvironment("Local")
+var isLocalEnvironment = builder.Environment.IsEnvironment("Local")
     || builder.Environment.IsEnvironment("local")
     || builder.Environment.IsEnvironment("LocalContainer")
     || builder.Environment.IsEnvironment("localcompose")
     || builder.Environment.IsEnvironment("LocalCompose")
-    || builder.Environment.IsEnvironment("localcontainer"))
+    || builder.Environment.IsEnvironment("localcontainer");
+
+if (isLocalEnvironment)
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-Log.Logger = new LoggerConfiguration()
+var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
     .WriteTo.OpenTelemetry(o => OpenTelemetryExtensions.ConfigureSerilogOtelSink(o, builder.Configuration), ignoreEnvironment: true)
-    .ReadFrom.Configuration(builder.Configuration)
-    .CreateLogger();
+    .ReadFrom.Configuration(builder.Configuration);
+
+// The debug sink writes to an attached debugger, so it is dead weight in a container: it is
+// constructed and handed every log event only for them to be discarded.
+if (isLocalEnvironment)
+{
+    loggerConfiguration = loggerConfiguration.WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture);
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
 
 builder.Host.UseSerilog();
 
@@ -127,8 +134,6 @@ builder.Services.AddHttpClient("MapTileProxy", client =>
 
 builder.Services.AddScoped<IMapTileService, MapTileService>();
 
-builder.Services.AddConfigurationDiscoveryClient(builder.Configuration);
-
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(
@@ -141,12 +146,24 @@ builder.Services.AddHealthActuator();
 
 builder.Services.AddInfoActuator();
 
+// Swagger is off in production. It is not free at startup: AddSwaggerUI resolves
+// IApiVersionDescriptionProvider while the pipeline is being built, which forces the whole
+// action descriptor collection to materialise before the app can serve anything, on top of
+// loading and JIT-ing Swashbuckle and Microsoft.OpenApi. Turning it off also stops the
+// generated UI publishing the Entra client id and application id URI to anonymous callers.
+// Set Swagger:Enabled to override either way.
+var swaggerEnabled = builder.Configuration.GetValue<bool?>("Swagger:Enabled")
+    ?? !builder.Environment.IsEnvironment("prod");
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
+if (swaggerEnabled)
+{
+    builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen();
 
-builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+    builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
+}
 
 builder.Services.Add(new ServiceDescriptor(typeof(IWebHostEnvironment), builder.Environment));
 
@@ -169,8 +186,10 @@ var app = builder.Build();
 var hostLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
 hostLifetime.ApplicationStopping.Register(() =>
 {
-    app.Services.GetRequiredService<TracerProvider>().ForceFlush(5000);
-    app.Services.GetRequiredService<MeterProvider>().ForceFlush(5000);
+    // Resolved optionally: with no OTLP endpoint configured the providers are never
+    // registered, and demanding them here turned every clean shutdown into an exception.
+    app.Services.GetService<TracerProvider>()?.ForceFlush(5000);
+    app.Services.GetService<MeterProvider>()?.ForceFlush(5000);
 });
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -182,9 +201,12 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.UseRequestCompletionLogging();
 
-app.UseSwagger();
+if (swaggerEnabled)
+{
+    app.UseSwagger();
 
-app.AddSwaggerUI(builder.Configuration);
+    app.AddSwaggerUI(builder.Configuration);
+}
 
 // Only use HTTPS redirection when not behind a proxy (e.g., true localhost, not Codespaces)
 if (!app.Configuration.GetValue<bool>("DisableHttpsRedirection", false))
