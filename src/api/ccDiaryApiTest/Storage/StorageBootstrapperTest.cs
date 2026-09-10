@@ -59,6 +59,14 @@ namespace ccDiaryApiTest.Storage
         }
 
         [TestMethod]
+        public void MarksTheProcessReadyOnceBootstrapCompletes()
+        {
+            // The fixture bootstrapped in Init. The startup probe reads this flag, so ingress
+            // only lets traffic in once it is set.
+            Assert.IsTrue(_fixture.Readiness.IsReady);
+        }
+
+        [TestMethod]
         public async Task IsIdempotent_SoRestartsAndScaleOutAreSafe()
         {
             // Every replica runs this on boot, so a second run must be a no-op rather
@@ -75,14 +83,19 @@ namespace ccDiaryApiTest.Storage
             // Absent configuration must not throw here; Program.cs validates and fails
             // fast with a clear message instead.
             var options = Options.Create(new StorageOptions());
+            var readiness = new StartupReadiness();
             var bootstrapper = new StorageBootstrapper(
                 new TableStore(options),
                 new BlobStore(options),
                 options,
                 new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
-                NullLogger<StorageBootstrapper>.Instance);
+                NullLogger<StorageBootstrapper>.Instance,
+                readiness);
 
             await bootstrapper.StartAsync(CancellationToken.None);
+
+            // Nothing to prepare must not leave the startup probe waiting forever.
+            Assert.IsTrue(readiness.IsReady);
         }
 
         [TestMethod]
@@ -94,7 +107,8 @@ namespace ccDiaryApiTest.Storage
                 new BlobStore(options),
                 options,
                 new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
-                NullLogger<StorageBootstrapper>.Instance);
+                NullLogger<StorageBootstrapper>.Instance,
+                new StartupReadiness());
 
             await bootstrapper.StopAsync(CancellationToken.None);
         }

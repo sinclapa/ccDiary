@@ -126,9 +126,9 @@ ccDiary/
 
 #### Re-running buildInfrastructure.ps1 against a live environment
 
-The bicep template is authoritative for the container spec, but most application configuration is applied *after* deployment because it depends on outputs that deployment produces. Anything the template does not declare is therefore erased. `existingEnvVars`, `existingSecretRefs` and `existingSecrets` exist solely to feed the running state back in, and the deployed image tag is read back and re-passed — without them a redeploy takes the environment down and rolls it to `:latest`. The deployment runs twice, because the Entra client secret cannot exist until the first run produces the URLs the app registration is built from.
+The bicep template is authoritative for the container spec, but most application configuration is applied *after* deployment because it depends on outputs that deployment produces. Anything the template does not declare is therefore erased. `existingEnvVars`, `existingSecretRefs` and `existingSecrets` exist solely to feed the running state back in, and the deployed image tag is read back and re-passed — without them a redeploy takes the environment down and rolls it to `:latest`. The deployment runs twice, because the Entra client secret cannot exist until the first run produces the URLs the app registration is built from. The startup and readiness probes poll `/health/startup`, an in-memory flag `StorageBootstrapper` sets when it finishes, served from a branch mounted ahead of the rest of the pipeline. Readiness is declared because the implicit one polls only every 5 s. Its path is declared in the template, so deploy an image that serves it before running the script; otherwise every probe returns 404 and the replica never becomes ready.
 
-Sensitive values are container app secrets referenced with `secretref:`, never inline environment variables. `az ad app credential reset` returns no `keyId`, so credentials to retire are captured before the new one is issued. An app registration caps at two secrets; `entraSetup.ps1` mints one only with `-CreateClientSecret` and evicts only its own.
+Sensitive values are container app secrets referenced with `secretref:`, never inline environment variables. The CI and release workflows leave `Graph__ClientSecret`, `Smtp__Password` and `OTEL_EXPORTER_OTLP_HEADERS` out of `--set-env-vars` on purpose, because passing them rewrote each as an inline value. For the same reason, the template drops a plain preserved value whenever the same name is a secret reference. `az ad app credential reset` returns no `keyId`, so credentials to retire are captured before the new one is issued. An app registration caps at two secrets; `entraSetup.ps1` mints one only with `-CreateClientSecret` and evicts only its own.
 
 #### Windows shell hazard
 
@@ -229,4 +229,4 @@ SonarCloud organization (`cookingcode`)
 
 ---
 
-**Last Updated**: 2026-08-18
+**Last Updated**: 2026-09-10

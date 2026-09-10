@@ -38,6 +38,7 @@ namespace ccDiaryApi.Infrastructure
         private readonly StorageOptions _options;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<StorageBootstrapper> _logger;
+        private readonly StartupReadiness _readiness;
 
         /// <summary>Initializes a new instance of the <see cref="StorageBootstrapper"/> class.</summary>
         /// <param name="tables">The table store.</param>
@@ -45,18 +46,21 @@ namespace ccDiaryApi.Infrastructure
         /// <param name="options">The storage options.</param>
         /// <param name="scopeFactory">Resolves the scoped services used for seeding.</param>
         /// <param name="logger">The logger.</param>
+        /// <param name="readiness">Marked once bootstrap completes; the startup and readiness probes read it.</param>
         public StorageBootstrapper(
             ITableStore tables,
             IBlobStore blobs,
             IOptions<StorageOptions> options,
             IServiceScopeFactory scopeFactory,
-            ILogger<StorageBootstrapper> logger)
+            ILogger<StorageBootstrapper> logger,
+            StartupReadiness readiness)
         {
             _tables = tables;
             _blobs = blobs;
             _options = options.Value;
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _readiness = readiness;
         }
 
         /// <inheritdoc/>
@@ -65,6 +69,10 @@ namespace ccDiaryApi.Infrastructure
             if (!_tables.IsConfigured || !_blobs.IsConfigured)
             {
                 _logger.LogWarning("Storage is not configured; skipping storage bootstrap.");
+
+                // Nothing to prepare means nothing to wait for. Program.cs refuses to start
+                // without storage configuration, so outside tests this path is unreachable.
+                _readiness.MarkReady();
                 return;
             }
 
@@ -94,6 +102,10 @@ namespace ccDiaryApi.Infrastructure
             await Task.WhenAll(
                 UpdateAppInfoAsync(cancellationToken),
                 SeedBootstrapAdminAsync(cancellationToken));
+
+            // Only now may the probes let traffic in. A throw above never reaches this,
+            // and stops the host instead.
+            _readiness.MarkReady();
         }
 
         /// <inheritdoc/>

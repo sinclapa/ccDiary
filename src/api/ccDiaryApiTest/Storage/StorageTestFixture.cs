@@ -58,6 +58,9 @@ namespace ccDiaryApiTest.Storage
         /// <summary>Gets the blob store under test.</summary>
         public IBlobStore Blobs { get; }
 
+        /// <summary>Gets the readiness flag the bootstrapper marks when it completes.</summary>
+        public StartupReadiness Readiness { get; } = new StartupReadiness();
+
         /// <summary>
         /// Creates a fixture with a unique prefix and its tables and containers already made.
         /// </summary>
@@ -208,7 +211,8 @@ namespace ccDiaryApiTest.Storage
                 Blobs,
                 AsOptions(),
                 provider.GetRequiredService<IServiceScopeFactory>(),
-                NullLogger<StorageBootstrapper>.Instance);
+                NullLogger<StorageBootstrapper>.Instance,
+                Readiness);
 
             await bootstrapper.StartAsync(CancellationToken.None);
         }

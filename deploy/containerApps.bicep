@@ -39,10 +39,16 @@ var defaultEnv = [
   }
 ]
 
-var preservedEnv = [for item in items(existingEnvVars): {
-  name: item.key
-  value: item.value
-}]
+// A name that is a secret reference must not also be preserved as a plain value. The read-back
+// sorts entries by shape, so after a deploy had set one of these names inline, both shapes came
+// back; union() only drops identical objects, so both were declared and the name appeared twice
+// in the container spec, one copy holding the credential in the clear. The reference wins.
+var preservedEnv = map(
+  filter(items(existingEnvVars), item => !contains(existingSecretRefs, item.key)),
+  item => {
+    name: item.key
+    value: item.value
+  })
 
 // Secret-backed variables carry a secretRef instead of a value, so they need preserving
 // separately — and the secrets themselves must be declared too. The template not declaring
@@ -100,29 +106,57 @@ resource containerApps 'Microsoft.App/containerApps@2025-01-01' = {
             memory: '2.0Gi'
           }
           env: containerEnv
-          // Without a probe the platform falls back to a TCP check on the target port, and
-          // Kestrel binds before StorageBootstrapper runs — so ingress starts routing while
-          // the tables and containers are still being created, and the first request can see
-          // a DOWN health check complaining the app info row is missing. Gating readiness on
-          // the actuator instead means traffic waits for bootstrap. Poll fast: bootstrap
-          // takes ~2s, and every second spent probing is a second added to a user's wait.
+          // Both probes poll /health/startup, an in-memory flag served from a branch mounted
+          // ahead of the rest of the pipeline, so a cold replica answers without JIT-compiling
+          // logging, auth or MVC and without touching storage.
+          //
+          // Declaring them replaces the platform's implicit TCP probes, and readiness is the one
+          // that matters. Left implicit, it polls every 5 seconds after a 3-second delay, and a
+          // waiting user's request is not routed until it passes. On staging the first request
+          // was served 2-3 seconds after the app was ready. The startup probe, at one second,
+          // only matches the implicit one: Kestrel starts after StorageBootstrapper, so even the
+          // implicit TCP check already waited for bootstrap. An explicit /actuator/health probe
+          // every 2 seconds made that worse, paying a Steeltoe JIT and two storage round trips
+          // on its first hit.
+          //
+          // Startup gets ten one-second attempts against the ~1.7s bootstrap measured at 1 vCPU.
+          // Readiness runs for the replica's whole life, so it tolerates a slow answer (2s) and
+          // needs three misses in a row before taking the only replica out of rotation.
+          //
+          // ORDERING: the image must serve /health/startup before these probes are deployed.
+          // Point them at an image without the endpoint and every attempt 404s, the replica
+          // restarts after ten, and the app never comes up. Deploy the image first, then run
+          // the infrastructure script.
           probes: [
             {
               type: 'Startup'
               httpGet: {
-                path: '/actuator/health'
+                path: '/health/startup'
                 port: 8080
                 scheme: 'HTTP'
               }
-              periodSeconds: 2
+              periodSeconds: 1
               failureThreshold: 10
-              timeoutSeconds: 5
+              timeoutSeconds: 1
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: '/health/startup'
+                port: 8080
+                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 1
+              periodSeconds: 1
+              failureThreshold: 3
+              timeoutSeconds: 2
             }
           ]
         }
       ]
-      // No liveness probe deliberately: maxReplicas is 1, so a false positive has nothing to
-      // fail over to and would take the app down rather than heal it.
+      // No explicit liveness probe: maxReplicas is 1, so a false positive has nothing to fail
+      // over to and would restart the only replica rather than heal it. The platform's implicit
+      // TCP liveness check, which only fails if the process stops listening, stays in place.
       scale: {
         minReplicas: 0
         maxReplicas: 1
