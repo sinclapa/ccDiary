@@ -127,6 +127,8 @@ There are no migrations. `StorageBootstrapper` is an `IHostedService` that creat
 
 Throwing there stops the host, which the deploy workflow already treats as a failed revision — that is what replaces the old pending-migrations gate. `StorageHealthContributor` then point-reads the `appinfo` row, so a missing bootstrap shows up as a DOWN health check rather than a silently empty application.
 
+The Container App's startup and readiness probes do **not** use that check. Both poll `/health/startup` (`StartupProbeEndpoint`), which reads a `StartupReadiness` flag the bootstrapper sets when it finishes. It's mounted ahead of the rest of the pipeline, so a cold replica answers without JIT-compiling logging, auth or MVC and without touching storage. Readiness is declared because Container Apps otherwise adds an implicit one that polls every 5 s after a 3 s delay, and a waiting request isn't routed until it passes. The host starts hosted services before Kestrel, so the flag is always set by the time the endpoint is reachable. It exists so readiness doesn't depend on that ordering.
+
 ### UI auto-imports and generated files
 
 `vite.config.mts` wires up auto-imports; do not add manual imports for these, and **never hand-edit the generated `.d.ts` files** (`src/components.d.ts`, `src/auto-imports.d.ts`, `src/typed-router.d.ts` — they are regenerated on build/dev):
@@ -229,9 +231,12 @@ The deployed **image tag** is read back and re-passed for the same reason. `DevA
 
 The deployment runs **twice**: the Entra client secret cannot exist until the first run has produced the URLs the app registration is built from.
 
+The probes' path is declared in the template, so **the image must serve it before the infrastructure script points the probes at it**. Deploy the image first. The other order has every probe return 404, the replica restarts after ten failures, and the app never becomes ready.
+
 #### Credentials
 
 - Sensitive values are **container app secrets** referenced with `secretref:`, never inline environment variables. An inline value is part of the container spec, so `az containerapp show`, what-if diffs and any CLI error that echoes its arguments print it in full.
+- The CI and release workflows leave `Graph__ClientSecret`, `Smtp__Password` and `OTEL_EXPORTER_OTLP_HEADERS` out of `--set-env-vars` on purpose. That flag only touches the names it's given, so omitting them keeps the references intact; passing them rewrote each as an inline value on every deploy. The template also drops a plain preserved value whenever the same name is a secret reference, since `union()` alone kept both and duplicated the name.
 - `az ad app credential reset` returns `appId`/`password`/`tenant` and **no `keyId`**, so the credentials to retire are captured *before* the new one is issued. Identifying the survivor from the reset output yields null and deletes everything.
 - An app registration caps at two secrets. `entraSetup.ps1` mints one only when passed `-CreateClientSecret` (`setuplocal.ps1` does, `buildInfrastructure.ps1` does not, since it issues its own), and evicts only secrets it created.
 
@@ -394,4 +399,4 @@ Pick the project key matching the directory you are working in. After fixing iss
 
 ---
 
-**Last Updated**: 2026-08-18
+**Last Updated**: 2026-09-10

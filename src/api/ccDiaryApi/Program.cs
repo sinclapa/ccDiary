@@ -75,6 +75,7 @@ Program.ValidateStorageConfiguration(builder.Configuration);
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.AddSingleton<ITableStore, TableStore>();
 builder.Services.AddSingleton<IBlobStore, BlobStore>();
+builder.Services.AddSingleton<StartupReadiness>();
 
 // Creates the tables and containers, records the running version and seeds the first
 // administrator. Throwing here stops the host from starting, which the deployment
@@ -191,6 +192,10 @@ hostLifetime.ApplicationStopping.Register(() =>
     app.Services.GetService<TracerProvider>()?.ForceFlush(5000);
     app.Services.GetService<MeterProvider>()?.ForceFlush(5000);
 });
+
+// First in the pipeline, so the startup and readiness probes never run any of the middleware
+// below while a cold replica is still coming up. See StartupProbeEndpoint.
+app.UseStartupProbe();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {

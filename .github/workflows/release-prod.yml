@@ -78,11 +78,9 @@ jobs:
           ENV_VARS=(
             "Storage__AccountName=${{ vars.STORAGE_ACCOUNT_NAME }}"
             "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}"
-            "OTEL_EXPORTER_OTLP_HEADERS=${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}"
             "OTEL_SERVICE_NAME=ccDiaryApi"
             "Graph__TenantId=${{ vars.TENANT_ID }}"
             "Graph__ClientId=${{ vars.ENTRA_CLIENT_ID }}"
-            "Graph__ClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}"
             "Graph__InviteRedirectUrl=${{ vars.GRAPH_INVITE_REDIRECT_URL }}"
             "Graph__AppDisplayName=Cooking Code Diary"
             "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}"
@@ -91,13 +89,20 @@ jobs:
             "Smtp__Host=${{ vars.SMTP_HOST }}"
             "Smtp__Port=${{ vars.SMTP_PORT }}"
             "Smtp__Username=${{ vars.SMTP_USERNAME }}"
-            "Smtp__Password=${{ secrets.SMTP_PASSWORD }}"
             "Smtp__From=${{ vars.SMTP_FROM }}"
             "Smtp__FromName=${{ vars.SMTP_FROM_NAME }}"
           )
           # Managed identity supplies the credential, so only the account name is passed.
           # Any stale SQL connection string is removed so a later image-only rollback
           # cannot pick it up again.
+          #
+          # Graph__ClientSecret, Smtp__Password and OTEL_EXPORTER_OTLP_HEADERS are left out on
+          # purpose. scripts/buildInfrastructure.ps1 stores them as container app secrets and
+          # points these names at them with secretref:. Setting them here rewrote each as an
+          # inline value, which puts the credential in the container spec for anyone who can
+          # run `az containerapp show`. --set-env-vars only touches the names it is given, so
+          # omitting them leaves the references alone. Rotate them with the infrastructure
+          # script, which updates the secret and the GitHub copy together.
           az containerapp update \
             --name "${{ vars.CONTAINER_APP_NAME }}" \
             --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
