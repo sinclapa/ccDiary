@@ -28,7 +28,7 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 
 - IaC: Bicep (targeting Azure subscription scope)
 - Containerization: Docker for API
-- Cloud Platform: Microsoft Azure (Container Apps, Table + Blob Storage, Static Web Apps, Entra ID)
+- Cloud Platform: Microsoft Azure (Functions Flex Consumption hosts the API, Table + Blob Storage, Static Web Apps, Key Vault, Entra ID)
 - Code Quality: SonarCloud (3 separate projects: API, UI, Infra — quality gate blocks CI on failure)
 
 ## Repository Structure
@@ -36,7 +36,7 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 ```
 ccDiary/
 ├── data/                              # Database initialization & sample data
-├── deploy/                            # Infrastructure as Code (Bicep)
+├── deploy/                            # Bicep: main / resourceGroup / functionApp / containerApps / *RoleAssignments
 ├── scripts/                           # Setup and deployment scripts
 └── src/                               # Application source code
     ├── api/                           # Backend API (ASP.NET Core)
@@ -130,6 +130,18 @@ The bicep template is authoritative for the container spec, but most application
 
 Sensitive values are container app secrets referenced with `secretref:`, never inline environment variables. The CI and release workflows leave `Graph__ClientSecret`, `Smtp__Password` and `OTEL_EXPORTER_OTLP_HEADERS` out of `--set-env-vars` on purpose, because passing them rewrote each as an inline value. For the same reason, the template drops a plain preserved value whenever the same name is a secret reference. `az ad app credential reset` returns no `keyId`, so credentials to retire are captured before the new one is issued. An app registration caps at two secrets; `entraSetup.ps1` mints one only with `-CreateClientSecret` and evicts only its own.
 
+The function app's settings work the opposite way: ARM replaces `siteConfig.appSettings` wholesale, so the template is authoritative for all of them, the script passes the complete set, and the deploy workflows set none — a name missing from the script is removed from the app. Its three credentials live in Key Vault and the settings carry `@Microsoft.KeyVault(SecretUri=...)` references the platform resolves with the app's managed identity, since an inline value would be readable through `az functionapp config appsettings list`. The CI service principal also needs Storage Blob Data Contributor: Contributor manages the storage account but cannot write the deployment package blob, and shared-key access is disabled.
+
+#### Hosting: the API runs as a Functions custom handler
+
+The API is an ordinary ASP.NET Core app; nothing in `Program.cs` knows it is hosted by Azure Functions. Three files at the root of `ccDiaryApi` make it one: `host.json` (custom handler with `enableProxyingHttpRequest` and `routePrefix: ""`), `proxy/function.json` (one anonymous catch-all HTTP trigger, `route: "{*path}"`), and `run.sh` (execs the binary with `--urls http://127.0.0.1:$FUNCTIONS_CUSTOMHANDLER_PORT`).
+
+Two consequences are invisible from the app's code. CORS must be configured on the platform (`siteConfig.cors.allowedOrigins`), because the Functions front end answers preflight `OPTIONS` itself and never forwards it, so `app.UseCors` never sees it and browsers block authenticated calls. And the package must be zipped on Linux, because `ccDiaryApi` and `run.sh` need their executable bit, which a Windows-built zip drops.
+
+Deploying is not `az functionapp deploy` — that endpoint rejects this package (415 for a trivial zip, 502 for the real one). The workflows upload it to the deployment container as `released-package.zip`, call `syncfunctiontriggers`, then restart the app.
+
+The reason for this hosting is cold start: ~23 s median on Container Apps, 13–22 s of it Azure scheduling a pod, pulling the image and building a sandbox, against ~3.6 s measured on Flex Consumption. The Container App stays deployed as the rollback target — flipping the UI's `API_URL` back is the rollback.
+
 #### Windows shell hazard
 
 `az` is a batch file, so cmd.exe re-parses the command line after PowerShell strips the quotes. Values containing `|`, `&` or `()` break and are not reliably escapable — passing plainly is rejected, and embedded quotes can return exit 0 while doing nothing. Secrets travel in the deployment parameter file (BOM-less UTF-8), and `--query` expressions avoid parentheses.
@@ -202,6 +214,8 @@ Tracing excludes `/swagger`, `/actuator`, `/api/assembly-info`, and `/health` pa
 
 ## Infrastructure as Code (Bicep)
 
+`deploy/main.bicep` (subscription scope) → `resourceGroup.bicep` → `functionApp.bicep` (the API's host) and `containerApps.bicep` (the rollback target), plus `storageRoleAssignments.bicep` and `keyVaultRoleAssignment.bicep`. The two role modules exist because a role assignment's name must be computable at the start of a deployment and the principal ids they grant to are module outputs; assigning one inline fails with BCP120.
+
 ### Deployment
 
 ```powershell
@@ -229,4 +243,4 @@ SonarCloud organization (`cookingcode`)
 
 ---
 
-**Last Updated**: 2026-09-10
+**Last Updated**: 2026-09-12

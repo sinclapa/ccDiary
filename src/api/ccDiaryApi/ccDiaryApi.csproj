@@ -56,6 +56,22 @@
     <InternalsVisibleTo Include="ccDiaryApiTest" />
   </ItemGroup>
 
+  <!--
+  Azure Functions custom-handler metadata. The published output is the deployment package:
+  the Functions host reads host.json, starts run.sh, and proxies every route matched by
+  proxy/function.json to Kestrel. They are published but not copied to the build output,
+  since nothing local runs behind the Functions host.
+
+  run.sh must keep its Unix line endings and gain the executable bit when the package is
+  zipped (the CI publish job zips on Linux) — a zip built on Windows carries neither.
+  -->
+  <ItemGroup>
+    <None Update="host.json;run.sh;proxy\function.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
     <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />

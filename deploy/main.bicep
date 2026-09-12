@@ -23,6 +23,15 @@ param existingSecretRefs object = {}
 @description('Container app secrets currently configured, preserved across redeployments.')
 @secure()
 param existingSecrets object = {}
+
+@description('Non-secret application settings for the function app, as a name/value map.')
+param functionAppSettings object = {}
+
+@description('Function app settings whose value lives in Key Vault, as a map of setting name to secret URI.')
+// Holds secret URIs, not secret values: the linter matches on the parameter name alone.
+#disable-next-line secure-secrets-in-params
+param functionAppSecretUris object = {}
+
 param location string = deployment().location
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
@@ -41,6 +50,8 @@ module resourceGroupModule 'resourceGroup.bicep' = {
     existingEnvVars: existingEnvVars
     existingSecretRefs: existingSecretRefs
     existingSecrets: existingSecrets
+    functionAppSettings: functionAppSettings
+    functionAppSecretUris: functionAppSecretUris
     location: location
   }
 }

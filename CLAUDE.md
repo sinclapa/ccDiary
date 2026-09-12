@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ccDiary is a full-stack diary application — ASP.NET Core 8 API + Vue 3/Vuetify SPA, deployed to Azure (Container Apps + Static Web Apps + serverless SQL), authenticated with Microsoft Entra ID.
+ccDiary is a full-stack diary application — ASP.NET Core 8 API + Vue 3/Vuetify SPA, deployed to Azure (Functions Flex Consumption + Static Web Apps + Table/Blob Storage), authenticated with Microsoft Entra ID.
 
 ## Technology Stack
 
@@ -32,8 +32,8 @@ ccDiary is a full-stack diary application — ASP.NET Core 8 API + Vue 3/Vuetify
 ### Infrastructure & DevOps
 
 - IaC: Bicep (targeting Azure subscription scope)
-- Containerization: Docker for API, image pushed to GHCR
-- Cloud Platform: Microsoft Azure (Container Apps, Table + Blob Storage, Static Web Apps, Entra ID)
+- Containerization: Docker for API, image pushed to GHCR — used by local compose and by the Container App kept as the migration's rollback target
+- Cloud Platform: Microsoft Azure (Functions Flex Consumption hosts the API, Table + Blob Storage, Static Web Apps, Key Vault, Entra ID)
 - Code Quality: SonarCloud (3 separate projects: API, UI, Infra — quality gate blocks CI on failure)
 
 ## Repository Structure
@@ -41,7 +41,7 @@ ccDiary is a full-stack diary application — ASP.NET Core 8 API + Vue 3/Vuetify
 ```
 ccDiary/
 ├── data/                              # Database initialization & sample data
-├── deploy/                            # Bicep: main / resourceGroup / containerApps
+├── deploy/                            # Bicep: main / resourceGroup / functionApp / containerApps / *RoleAssignments
 ├── scripts/                           # Setup and deployment scripts
 └── src/
     ├── api/                           # ccDiary.sln
@@ -128,6 +128,21 @@ There are no migrations. `StorageBootstrapper` is an `IHostedService` that creat
 Throwing there stops the host, which the deploy workflow already treats as a failed revision — that is what replaces the old pending-migrations gate. `StorageHealthContributor` then point-reads the `appinfo` row, so a missing bootstrap shows up as a DOWN health check rather than a silently empty application.
 
 The Container App's startup and readiness probes do **not** use that check. Both poll `/health/startup` (`StartupProbeEndpoint`), which reads a `StartupReadiness` flag the bootstrapper sets when it finishes. It's mounted ahead of the rest of the pipeline, so a cold replica answers without JIT-compiling logging, auth or MVC and without touching storage. Readiness is declared because Container Apps otherwise adds an implicit one that polls every 5 s after a 3 s delay, and a waiting request isn't routed until it passes. The host starts hosted services before Kestrel, so the flag is always set by the time the endpoint is reachable. It exists so readiness doesn't depend on that ordering.
+
+### Hosting: the API runs as a Functions custom handler
+
+The API is an ordinary ASP.NET Core app, and nothing in `Program.cs` knows it is hosted by Azure Functions. Three files at the root of `ccDiaryApi` make it one:
+
+- `host.json` declares a **custom handler** with `enableProxyingHttpRequest`, so the Functions host forwards raw HTTP rather than a binding payload, and sets `routePrefix: ""` so the app's own `api/v1/...` routes are unchanged.
+- `proxy/function.json` is a single catch-all HTTP trigger (`route: "{*path}"`, anonymous) — the app still does its own authentication.
+- `run.sh` execs the published binary with `--urls http://127.0.0.1:$FUNCTIONS_CUSTOMHANDLER_PORT`, the port the host assigns per instance.
+
+Two consequences are not visible from the app's own code:
+
+- **CORS must be configured on the platform** (`siteConfig.cors.allowedOrigins`). The Functions front end answers preflight `OPTIONS` itself and never forwards it, so `app.UseCors` never sees it and the browser blocks every authenticated call.
+- **The package must be zipped on Linux.** The published `ccDiaryApi` and `run.sh` need their executable bit, which a zip built on Windows drops; the host then cannot start the handler.
+
+Why this hosting at all: the cold start. On Container Apps a wake measured ~23 s median, 13–22 s of it Azure scheduling a pod, pulling the image and building a sandbox before the process started. Flex Consumption draws instances from a pre-provisioned pool, which measured **~3.6 s median** for the same application. The Container App is still deployed alongside as the rollback target — flipping the UI's `API_URL` back is the whole rollback.
 
 ### UI auto-imports and generated files
 
@@ -233,12 +248,18 @@ The deployment runs **twice**: the Entra client secret cannot exist until the fi
 
 The probes' path is declared in the template, so **the image must serve it before the infrastructure script points the probes at it**. Deploy the image first. The other order has every probe return 404, the replica restarts after ten failures, and the app never becomes ready.
 
+The **function app's settings work the opposite way** to the container app's. ARM replaces `siteConfig.appSettings` wholesale, so the template is authoritative for every one of them: the script passes the complete set (`functionAppSettings`, plus `functionAppSecretUris` for the three credentials), and the deploy workflows set none. A name missing from the script is therefore removed from the app, which is why there is no read-back plumbing for it — nothing else writes them.
+
+That is also why the deployment's **two passes** matter more than before: most settings depend on the Entra registration built from the first pass's outputs, so the first pass deploys the function app with only its host storage setting and the second pass carries the real configuration.
+
 #### Credentials
 
 - Sensitive values are **container app secrets** referenced with `secretref:`, never inline environment variables. An inline value is part of the container spec, so `az containerapp show`, what-if diffs and any CLI error that echoes its arguments print it in full.
 - The CI and release workflows leave `Graph__ClientSecret`, `Smtp__Password` and `OTEL_EXPORTER_OTLP_HEADERS` out of `--set-env-vars` on purpose. That flag only touches the names it's given, so omitting them keeps the references intact; passing them rewrote each as an inline value on every deploy. The template also drops a plain preserved value whenever the same name is a secret reference, since `union()` alone kept both and duplicated the name.
 - `az ad app credential reset` returns `appId`/`password`/`tenant` and **no `keyId`**, so the credentials to retire are captured *before* the new one is issued. Identifying the survivor from the reset output yields null and deletes everything.
 - An app registration caps at two secrets. `entraSetup.ps1` mints one only when passed `-CreateClientSecret` (`setuplocal.ps1` does, `buildInfrastructure.ps1` does not, since it issues its own), and evicts only secrets it created.
+- The **function app holds no credential of its own**: the same three values go into Key Vault, and its settings carry `@Microsoft.KeyVault(SecretUri=...)` references that the platform resolves with the app's managed identity. An inline settings value would be readable by anyone who can run `az functionapp config appsettings list`, which is the same exposure `secretref:` avoids on the container app. The vault is RBAC-authorised, so the script grants itself Key Vault Secrets Officer before writing and the app Key Vault Secrets User to read.
+- The **CI service principal needs a data-plane role too**. It holds Contributor on the resource group, which manages the storage account but cannot write a blob — and the deploy workflows upload the function app's package to the deployment container on an account with shared-key access disabled. `buildInfrastructure.ps1` grants it Storage Blob Data Contributor; without that the upload fails with 403.
 
 #### Windows shell hazard
 
@@ -317,7 +338,11 @@ Consequently: secrets travel in the deployment **parameter file** (BOM-less UTF-
 
 ## CI/CD (`.github/workflows/build-and-test.yml`)
 
-Jobs: `build-prep` (semver bump + tag) → `build-api` (Sonar scan wraps build+test, publish, push image to GHCR) → deploy to Container App (deploy → wait for revision → health check; no wake step and no migration flag, since storage is always on) → `build-ui` (build, test, Sonar, deploy Static Web App with `config.js` substitution).
+Jobs: `build-prep` (semver bump + tag) → `build-api` (Sonar scan wraps build+test, publish, push image to GHCR, **and package the same app as a Functions custom handler**: self-contained `linux-x64`, `chmod +x`, zipped on Linux) → `deploy-api` (container app, then the function app) → `build-ui` (build, test, Sonar, deploy Static Web App with `config.js` substitution).
+
+Deploying the function app is **not** `az functionapp deploy`. That one-deploy endpoint rejects this custom-handler package — 415 for a trivial zip, 502 for the real one — so the workflow uploads the package to the deployment container as `released-package.zip`, calls `syncfunctiontriggers`, and restarts the app. Skipping the sync leaves the old routes served; skipping the restart leaves running instances on the old code.
+
+Prod works from the release assets rather than a rebuild: `create-release` attaches `func-package.zip` next to `ui-dist.zip` and `api-image.txt`, and `release-prod.yml` fetches and deploys exactly what staging ran.
 
 After pushing a CI/deploy fix, report the run URL rather than polling `gh run list/view`. When a deploy fails, read the actual logs before adding more logging.
 
@@ -378,7 +403,9 @@ Configured in `src/ui/src/plugins/faro.ts`; enabled when `VITE_FARO_URL` resolve
 
 ## Infrastructure as Code (Bicep)
 
-`deploy/main.bicep` (subscription scope) → `resourceGroup.bicep` → `containerApps.bicep`.
+`deploy/main.bicep` (subscription scope) → `resourceGroup.bicep` → `functionApp.bicep` (the API's host) and `containerApps.bicep` (the rollback target), plus `storageRoleAssignments.bicep` and `keyVaultRoleAssignment.bicep`.
+
+The two role modules exist for the same reason: a role assignment's name must be computable at the start of a deployment, and the principal ids they grant to are module outputs. Assigning one inline fails with BCP120.
 
 ```powershell
 ./scripts/buildInfrastructure.ps1        # single environment
@@ -399,4 +426,4 @@ Pick the project key matching the directory you are working in. After fixing iss
 
 ---
 
-**Last Updated**: 2026-09-10
+**Last Updated**: 2026-09-12

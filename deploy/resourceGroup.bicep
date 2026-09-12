@@ -19,7 +19,19 @@ param existingSecretRefs object = {}
 @description('Container app secrets currently configured, preserved across redeployments.')
 @secure()
 param existingSecrets object = {}
+
+@description('Non-secret application settings for the function app, as a name/value map.')
+param functionAppSettings object = {}
+
+@description('Function app settings whose value lives in Key Vault, as a map of setting name to secret URI.')
+// Holds secret URIs, not secret values: the linter matches on the parameter name alone.
+#disable-next-line secure-secrets-in-params
+param functionAppSecretUris object = {}
+
 var appName string = '${name}-${environment}'
+
+// Blob container the function app reads its deployment package from.
+var deploymentContainerName string = 'app-package'
 
 // Storage account names allow only lowercase alphanumerics and cap at 24 characters.
 var storageAccountName string = take(toLower(replace('st${name}${environment}${uniqueString(resourceGroup().id)}', '-', '')), 24)
@@ -129,6 +141,41 @@ resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2
   }
 ]
 
+// The Flex Consumption app runs from a zip in this container rather than from a mounted
+// file share. It sits on the application's own account so the Functions host can reach it
+// with the same managed identity, which keeps shared-key access disabled account-wide.
+resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobServices
+  name: deploymentContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Holds the three credentials the app needs at runtime. They are referenced from the
+// function app's settings rather than stored in them: a settings value is readable by
+// anyone who can run `az functionapp config appsettings list`, which is the exposure the
+// container app secrets existed to avoid. Purge protection is left off deliberately —
+// these are rotatable credentials, and it would block tearing an environment down.
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  // Vault names are global, so a readable name like kv-ccdiary-prod would collide with
+  // someone else's. Same shape as the storage account name above: 24 characters, and the
+  // suffix keeps it unique without ever leaving a trailing hyphen.
+  name: take('kv-${name}${environment}${take(uniqueString(resourceGroup().id), 6)}', 24)
+  location: location
+  properties: {
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    tenantId: subscription().tenantId
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 7
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
 // Automatic cache eviction. The previous SQL implementation never removed expired
 // entries, so the cache grew without bound; this is why the tile and route caches were
 // moved to blobs, since Table Storage offers nothing equivalent.
@@ -220,9 +267,68 @@ module containerAppModule 'containerApps.bicep' = {
   }
 }
 
+// The browser only ever reaches the API from the site itself, so the allowed origins are
+// the static site's own hostnames. The custom domain is only bound in prod.
+var staticSiteOrigins = union(
+  ['https://${staticSite.properties.defaultHostname}'],
+  empty(externalDomainName ?? '') ? [] : ['https://${externalDomainName}']
+)
+
+module functionAppModule 'functionApp.bicep' = {
+  name: 'functionApp'
+  params: {
+    appName: appName
+    location: location
+    storageAccountName: storageAccount.name
+    deploymentContainerName: deploymentContainerName
+    allowedOrigins: staticSiteOrigins
+    appSettings: functionAppSettings
+    secretSettingUris: functionAppSecretUris
+  }
+  dependsOn: [
+    deploymentContainer
+  ]
+}
+
+// The Functions host keeps its own leases, queues and secrets on this account alongside
+// the application's data, so it needs more than the application's own two roles: Blob Data
+// Owner to manage its containers, plus queue and table access for the host's bookkeeping.
+module functionAppStorageRoles 'storageRoleAssignments.bicep' = {
+  name: 'storage-roles-func-${appName}'
+  params: {
+    principalId: functionAppModule.outputs.functionAppPrincipalId
+    storageAccountName: storageAccount.name
+    roleDefinitionIds: [
+      '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3' // Storage Table Data Contributor
+      'b7e6dc6d-f1e8-4753-8033-0f276bb0955b' // Storage Blob Data Owner
+      '974c5e8b-45b9-4653-ba55-5f855dd0fb88' // Storage Queue Data Contributor
+    ]
+  }
+  dependsOn: [
+    tables
+    containers
+    deploymentContainer
+  ]
+}
+
+// Key Vault Secrets User: read a secret's value, nothing else. This is what resolves the
+// @Microsoft.KeyVault(...) references in the function app's settings at startup.
+module functionAppKeyVaultRole 'keyVaultRoleAssignment.bicep' = {
+  name: 'kv-role-func-${appName}'
+  params: {
+    principalId: functionAppModule.outputs.functionAppPrincipalId
+    keyVaultName: keyVault.name
+  }
+}
+
 output containerAppId string = containerAppModule.outputs.containerAppId
 output containerAppName string = containerAppModule.outputs.containerAppName
 output containerAppUrl string = containerAppModule.outputs.containerAppUrl
+output functionAppName string = functionAppModule.outputs.functionAppName
+output functionAppUrl string = functionAppModule.outputs.functionAppUrl
+output functionAppPrincipalId string = functionAppModule.outputs.functionAppPrincipalId
+output keyVaultName string = keyVault.name
+output deploymentContainerName string = deploymentContainerName
 output storageAccountName string = storageAccount.name
 output staticSiteName string = staticSite.name
 output staticSiteUrl string = staticSite.properties.defaultHostname

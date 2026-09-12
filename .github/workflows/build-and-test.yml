@@ -203,6 +203,24 @@ jobs:
       - name: Publish api
         run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish
   
+      # The Flex Consumption package: the same application, published self-contained because
+      # the custom-handler worker is not guaranteed to carry a .NET runtime, and zipped here
+      # on Linux so ccDiaryApi and run.sh keep their executable bit — a zip built on Windows
+      # loses it and the host then cannot start the handler.
+      - name: Package api as a Functions custom handler
+        run: |
+          dotnet publish ccDiaryApi/ccDiaryApi.csproj -c Release -r linux-x64 --self-contained true \
+            -o ./func-publish -p:Version=${{ needs.build-prep.outputs.app_version }}
+          chmod +x ./func-publish/ccDiaryApi ./func-publish/run.sh
+          (cd ./func-publish && zip -qr ../func-package.zip .)
+
+      - name: Upload Functions package
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-func-package
+          path: ${{ github.workspace }}/src/api/func-package.zip
+          retention-days: 5
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -360,15 +378,75 @@ jobs:
       # run the bootstrapper on every boot. That also removes the race where this second
       # update could collide with the deploy still in progress.
 
-      - name: Get Container App URL
+      # Every Functions step below is skipped until buildInfrastructure.ps1 has created the
+      # function app for this environment and published FUNCTION_APP_NAME. That lets the
+      # code merge before the infrastructure run, in either order, without turning CI red.
+      - name: Download Functions package
+        if: vars.FUNCTION_APP_NAME != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: api-func-package
+          path: ${{ github.workspace }}/func-package
+
+      # Flex Consumption runs the app from a zip in a blob container. The one-deploy endpoint
+      # (az functionapp deploy) rejects this custom-handler package — 415 for a trivial zip and
+      # 502 for the real one — so the package goes straight to the container and the host is
+      # then told to pick it up. Without the trigger sync the platform keeps serving the old
+      # package's routes; without the restart, running instances keep the old code.
+      #
+      # --auth-mode login because the account has shared-key access disabled; the deploying
+      # service principal is granted Storage Blob Data Contributor by buildInfrastructure.ps1.
+      - name: Deploy package to Function App
+        if: vars.FUNCTION_APP_NAME != ''
+        run: |
+          az storage blob upload \
+            --account-name "${{ vars.STORAGE_ACCOUNT_NAME }}" \
+            --container-name "${{ vars.DEPLOYMENT_CONTAINER_NAME }}" \
+            --name released-package.zip \
+            --file "${{ github.workspace }}/func-package/func-package.zip" \
+            --auth-mode login \
+            --overwrite \
+            --output none
+          SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          az rest --method post \
+            --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${{ vars.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ vars.FUNCTION_APP_NAME }}/syncfunctiontriggers?api-version=2023-12-01" \
+            --output none
+          az functionapp restart \
+            --name "${{ vars.FUNCTION_APP_NAME }}" \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --output none
+
+      - name: Verify Function App health
+        if: vars.FUNCTION_APP_NAME != ''
+        run: |
+          API_URL="${{ vars.FUNCTION_APP_URL }}"
+          echo "Polling ${API_URL}/actuator/health ..."
+          for i in $(seq 1 20); do
+            HTTP_STATUS=$(curl -s --max-time 30 -o /tmp/func-health.json -w "%{http_code}" "${API_URL}/actuator/health" || echo "000")
+            HEALTH_STATUS=$(jq -r '.status' /tmp/func-health.json 2>/dev/null || echo "unknown")
+            echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
+            if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
+              echo "Function app is healthy."
+              break
+            fi
+            if [ "$i" = "20" ]; then
+              echo "Function app health check failed after 20 attempts." >&2
+              cat /tmp/func-health.json >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Get app URLs
         run: |
           APP_URL=$(az containerapp show \
             --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
             --name ${{ vars.CONTAINER_APP_NAME }} \
             --query 'properties.configuration.ingress.fqdn' \
             --output tsv)
-          echo "Container App deployed successfully!"
-          echo "App URL: https://${APP_URL}"
+          echo "Deployed successfully!"
+          echo "Function App (serving the UI): ${{ vars.FUNCTION_APP_URL }}"
+          echo "Container App (kept during the migration, rollback target): https://${APP_URL}"
 
   build-ui:
     runs-on: ubuntu-latest
@@ -666,14 +744,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Get Container App API URL
+      # The function app is what the UI calls, so it is what the end-to-end run exercises —
+      # falling back to the container app until this environment has one.
+      - name: Get API URL
         id: api_url
         run: |
-          APP_FQDN=$(az containerapp show \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --query 'properties.configuration.ingress.fqdn' -o tsv)
-          echo "value=https://${APP_FQDN}" >> $GITHUB_OUTPUT
+          if [ -n "${{ vars.FUNCTION_APP_URL }}" ]; then
+            echo "value=${{ vars.FUNCTION_APP_URL }}" >> $GITHUB_OUTPUT
+          else
+            APP_FQDN=$(az containerapp show \
+              --name ${{ vars.CONTAINER_APP_NAME }} \
+              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
+              --query 'properties.configuration.ingress.fqdn' -o tsv)
+            echo "value=https://${APP_FQDN}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Get API bearer token
         id: api_token
@@ -766,6 +850,14 @@ jobs:
           name: ui-dist
           path: ui-dist
 
+      # The prod release deploys exactly what staging ran, so the Functions package travels
+      # with the release rather than being rebuilt when the release is published.
+      - name: Download Functions package
+        uses: actions/download-artifact@v4
+        with:
+          name: api-func-package
+          path: func-package
+
       - name: Zip Artifact
         run: |
           zip -r ui-dist.zip ui-dist
@@ -791,3 +883,4 @@ jobs:
           files: |
             ui-dist.zip
             api-image.txt
+            func-package/func-package.zip
