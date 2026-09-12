@@ -15,35 +15,29 @@ param storageAccountName string
 @description('Principal type; ServicePrincipal for a managed identity, User for a developer.')
 param principalType string = 'ServicePrincipal'
 
-var storageTableDataContributorRoleId string = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
-var storageBlobDataContributorRoleId string = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+@description('''Role definition ids to grant. Defaults to what the application itself needs:
+Storage Table Data Contributor and Storage Blob Data Contributor. The function app asks for
+more, because the Functions host keeps its own leases and queues on the same account.''')
+param roleDefinitionIds array = [
+  '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3' // Storage Table Data Contributor
+  'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+]
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: storageAccountName
 }
 
-resource tableDataRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storageAccount
-  name: guid(storageAccount.id, principalId, storageTableDataContributorRoleId)
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      storageTableDataContributorRoleId
-    )
-    principalId: principalId
-    principalType: principalType
+// Named by the same guid() formula as the separate resources this replaced, so re-running
+// against an environment deployed by the earlier template reuses the assignments rather
+// than creating duplicates.
+resource dataRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for roleDefinitionId in roleDefinitionIds: {
+    scope: storageAccount
+    name: guid(storageAccount.id, principalId, roleDefinitionId)
+    properties: {
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitionId)
+      principalId: principalId
+      principalType: principalType
+    }
   }
-}
-
-resource blobDataRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storageAccount
-  name: guid(storageAccount.id, principalId, storageBlobDataContributorRoleId)
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      storageBlobDataContributorRoleId
-    )
-    principalId: principalId
-    principalType: principalType
-  }
-}
+]

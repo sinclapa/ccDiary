@@ -462,7 +462,14 @@ function Invoke-MainDeployment {
         [System.Collections.IDictionary]$EnvVars,
         [System.Collections.IDictionary]$SecretRefs,
         [System.Collections.IDictionary]$Secrets,
-        [string]$Image
+        [string]$Image,
+        # The function app's settings are declared entirely by the template — ARM replaces the
+        # whole collection on every deployment — so the full set travels here rather than being
+        # applied afterwards the way the container app's environment is. On the first pass they
+        # are empty, because most of them depend on the Entra registration this deployment's own
+        # outputs produce; the second pass carries the real values.
+        [System.Collections.IDictionary]$FunctionAppSettings = @{},
+        [System.Collections.IDictionary]$FunctionAppSecretUris = @{}
     )
 
     $paramFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-deploy-$environment-$([guid]::NewGuid().ToString('N')).json"
@@ -470,9 +477,11 @@ function Invoke-MainDeployment {
         '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
         contentVersion = '1.0.0.0'
         parameters     = [ordered]@{
-            existingEnvVars    = [ordered]@{ value = $EnvVars }
-            existingSecretRefs = [ordered]@{ value = $SecretRefs }
-            existingSecrets    = [ordered]@{ value = $Secrets }
+            existingEnvVars       = [ordered]@{ value = $EnvVars }
+            existingSecretRefs    = [ordered]@{ value = $SecretRefs }
+            existingSecrets       = [ordered]@{ value = $Secrets }
+            functionAppSettings   = [ordered]@{ value = $FunctionAppSettings }
+            functionAppSecretUris = [ordered]@{ value = $FunctionAppSecretUris }
         }
     }
 
@@ -520,6 +529,10 @@ $staticSiteName = $deploymentResult.properties.outputs.environment.value.staticS
 $staticSiteUrl = $deploymentResult.properties.outputs.environment.value.staticSiteUrl.value
 $resourceGroupId = $deploymentResult.properties.outputs.environment.value.resourceGroupId.value
 $appName = $deploymentResult.properties.outputs.environment.value.appName.value
+$functionAppName = $deploymentResult.properties.outputs.environment.value.functionAppName.value
+$functionAppUrl = $deploymentResult.properties.outputs.environment.value.functionAppUrl.value
+$keyVaultName = $deploymentResult.properties.outputs.environment.value.keyVaultName.value
+$deploymentContainerName = $deploymentResult.properties.outputs.environment.value.deploymentContainerName.value
 
 Write-Output "  resourceGroupName = $resourceGroupName"
 Write-Output "  resourceGroupId = $resourceGroupId"
@@ -529,11 +542,20 @@ Write-Output "  containerAppUrl = $containerAppUrl"
 Write-Output "  staticSiteName = $staticSiteName"
 Write-Output "  staticSiteUrl = $staticSiteUrl"
 Write-Output "  appName = $appName"
+Write-Output "  functionAppName = $functionAppName"
+Write-Output "  functionAppUrl = $functionAppUrl"
+Write-Output "  keyVaultName = $keyVaultName"
 
 Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
 
 # Build SPA URIs array - add custom domain if configured for prod
-$spaUris = @("https://${staticSiteUrl}/", "https://${containerAppUrl}/swagger/oauth2-redirect.html")
+$spaUris = @(
+    "https://${staticSiteUrl}/",
+    "https://${containerAppUrl}/swagger/oauth2-redirect.html",
+    # Swagger is served by the function app outside prod, and its OAuth flow redirects back
+    # to the host it was loaded from.
+    "https://${functionAppUrl}/swagger/oauth2-redirect.html"
+)
 if (-not [string]::IsNullOrWhiteSpace($externalDomainName)) {
     $spaUris += "https://${externalDomainName}/"
     Write-Host "  Adding custom domain to SPA URIs: https://${externalDomainName}/" -ForegroundColor Gray
@@ -622,11 +644,98 @@ if (-not [string]::IsNullOrWhiteSpace($grafanaOtlpAuthHeader)) {
     $secretRefs['OTEL_EXPORTER_OTLP_HEADERS'] = 'otlp-headers'
 }
 
+# The function app holds no credential of its own: its settings carry Key Vault references
+# that the platform resolves with the app's managed identity, so `az functionapp config
+# appsettings list` shows a URI rather than a password. The vault is RBAC-authorised, so the
+# account running this script needs a data-plane role before it can write.
+Write-Host "Storing sensitive configuration in Key Vault..." -ForegroundColor Cyan
+
+$keyVaultId = az keyvault show --name $keyVaultName --resource-group $resourceGroupName --query id -o tsv
+az role assignment create `
+  --assignee-object-id $userId `
+  --assignee-principal-type User `
+  --role 'Key Vault Secrets Officer' `
+  --scope $keyVaultId `
+  --output none 2>$null
+
+$functionAppSecretUris = [ordered]@{}
+foreach ($secret in $secretValues.GetEnumerator()) {
+    # The value travels in a file: az is a batch file, so cmd.exe re-parses the command line
+    # after PowerShell has stripped the quotes, and a secret containing | & or () is split
+    # into fragments or silently mangled.
+    $secretFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-secret-$([guid]::NewGuid().ToString('N')).txt"
+    [System.IO.File]::WriteAllText($secretFile, $secret.Value, (New-Object System.Text.UTF8Encoding($false)))
+
+    try {
+        # A freshly granted data-plane role takes a moment to reach the vault, and the first
+        # write of a run is the one that meets it — so a 403 here is retried rather than fatal.
+        $secretUri = $null
+        foreach ($attempt in 1..5) {
+            $secretUri = az keyvault secret set `
+              --vault-name $keyVaultName `
+              --name $secret.Key `
+              --file $secretFile `
+              --encoding utf-8 `
+              --query id -o tsv 2>$null
+            if (-not [string]::IsNullOrWhiteSpace($secretUri)) { break }
+            Start-Sleep -Seconds 10
+        }
+    }
+    finally {
+        Remove-Item -Path $secretFile -Force -ErrorAction SilentlyContinue
+    }
+
+    if ([string]::IsNullOrWhiteSpace($secretUri)) {
+        Write-Error "Failed to store secret '$($secret.Key)' in $keyVaultName."
+        exit 1
+    }
+
+    # $secretRefs already maps each setting name to its secret name; invert it so the setting
+    # points at the vault instead.
+    $settingName = ($secretRefs.GetEnumerator() | Where-Object { $_.Value -eq $secret.Key }).Key
+    $functionAppSecretUris[$settingName] = $secretUri.Trim()
+}
+
+Write-Host "  Stored $($secretValues.Count) secret(s) in $keyVaultName" -ForegroundColor Gray
+
+# Every non-secret setting the function app runs with. Unlike the container app, whose
+# environment is applied after deployment, ARM replaces this collection wholesale — so a
+# name missing here is removed from the app, and the deploy workflows set none of them.
+$functionAppSettings = [ordered]@{
+    'ASPNETCORE_ENVIRONMENT'      = $environment
+    # The Functions front end terminates TLS and forwards plain HTTP to the handler on
+    # localhost, so the app's own HTTPS redirect would bounce every request.
+    'DisableHttpsRedirection'     = 'true'
+    'Storage__AccountName'        = $storageAccountName
+    'Entra__TenantId'             = $tenantId
+    'Entra__ClientId'             = $entraClientId
+    'Entra__ApplicationIdUri'     = $entraApplicationIdURI
+    'Graph__TenantId'             = $tenantId
+    'Graph__ClientId'             = $entraClientId
+    'Graph__InviteRedirectUrl'    = "https://${staticSiteUrl}/"
+    'Graph__AppDisplayName'       = 'Cooking Code Diary'
+    'OTEL_EXPORTER_OTLP_ENDPOINT' = $grafanaOtlpEndpoint
+    'OTEL_SERVICE_NAME'           = 'ccDiaryApi'
+    'BootstrapAdmin__ObjectId'    = $bootstrapAdminObjectId
+    'BootstrapAdmin__Email'       = $bootstrapAdminEmail
+    'BootstrapAdmin__DisplayName' = $bootstrapAdminDisplayName
+}
+
+if ($smtpHost) {
+    $functionAppSettings['Smtp__Host'] = $smtpHost
+    $functionAppSettings['Smtp__Port'] = $smtpPort
+    $functionAppSettings['Smtp__Username'] = $smtpUsername
+    $functionAppSettings['Smtp__From'] = $smtpFrom
+    $functionAppSettings['Smtp__FromName'] = $smtpFromName
+}
+
 Invoke-MainDeployment `
     -EnvVars $existingEnvMap `
     -SecretRefs $secretRefs `
     -Secrets $secretValues `
-    -Image $containerImage | Out-Null
+    -Image $containerImage `
+    -FunctionAppSettings $functionAppSettings `
+    -FunctionAppSecretUris $functionAppSecretUris | Out-Null
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to store container app secrets."
@@ -691,6 +800,24 @@ $azureCredentials = az ad sp create-for-rbac `
   --json-auth `
   --output json
 
+# Contributor is a control-plane role: it can manage the storage account but cannot write a
+# blob. The deploy workflows upload the function app's package to the deployment container,
+# and shared-key access is disabled on the account, so the credential needs a data-plane
+# role as well — without it the upload fails with 403 and the deploy never lands.
+$ciClientId = ($azureCredentials | ConvertFrom-Json).clientId
+$ciPrincipalId = az ad sp show --id $ciClientId --query id -o tsv
+if ($ciPrincipalId) {
+    az role assignment create `
+      --assignee-object-id $ciPrincipalId `
+      --assignee-principal-type ServicePrincipal `
+      --role 'Storage Blob Data Contributor' `
+      --scope $storageAccountId `
+      --output none 2>$null
+}
+else {
+    Write-Warning "Could not resolve the CI service principal; grant it Storage Blob Data Contributor on $storageAccountName before the next deploy."
+}
+
 Write-Host "Configure GitHub Actions Secrets..." -ForegroundColor Cyan
 gh auth status --hostname github.com > $null 2>&1
 if ($LASTEXITCODE -eq 0) { 
@@ -706,10 +833,16 @@ gh api --method PUT repos/${gitHubOwnerRepo}/environments/${environment}
 gh variable set "CONTAINER_APP_NAME" --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
 gh variable set "RESOURCE_GROUP_NAME" --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
 gh variable set "STORAGE_ACCOUNT_NAME" --body "$storageAccountName" --repo $gitHubRepo --env "${environment}"
+# The deploy workflows upload the package to this container and then tell the host to reload.
+gh variable set "FUNCTION_APP_NAME" --body "$functionAppName" --repo $gitHubRepo --env "${environment}"
+gh variable set "FUNCTION_APP_URL" --body "https://$functionAppUrl" --repo $gitHubRepo --env "${environment}"
+gh variable set "DEPLOYMENT_CONTAINER_NAME" --body "$deploymentContainerName" --repo $gitHubRepo --env "${environment}"
 # The SQL variables are deleted so a stale value cannot be picked up by the deploy workflow.
 gh variable delete "SQL_DB_NAME" --repo $gitHubRepo --env "${environment}" 2>$null
 gh variable delete "SQL_SERVER_NAME" --repo $gitHubRepo --env "${environment}" 2>$null
-gh variable set "API_URL" --body "https://$containerAppUrl/api/" --repo $gitHubRepo --env "${environment}"
+# The UI calls the function app. The container app stays deployed and reachable during the
+# migration, so flipping this back is the rollback.
+gh variable set "API_URL" --body "https://$functionAppUrl/api/" --repo $gitHubRepo --env "${environment}"
 gh variable set "ENTRA_CLIENT_ID" --body "$entraClientId" --repo $gitHubRepo --env "${environment}"
 gh variable set "ENTRA_APP_OBJECT_ID" --body "$entraObjectId" --repo $gitHubRepo --env "${environment}"
 gh variable set "ENTRA_APPLICATION_ID_URI" --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
