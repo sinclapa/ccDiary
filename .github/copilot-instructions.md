@@ -27,7 +27,7 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 ### Infrastructure & DevOps
 
 - IaC: Bicep (targeting Azure subscription scope)
-- Containerization: Docker for API
+- Containerization: Docker for local development only; nothing in Azure runs a container image
 - Cloud Platform: Microsoft Azure (Functions Flex Consumption hosts the API, Table + Blob Storage, Static Web Apps, Key Vault, Entra ID)
 - Code Quality: SonarCloud (3 separate projects: API, UI, Infra — quality gate blocks CI on failure)
 
@@ -36,7 +36,7 @@ ccDiary is a full-stack diary application that allows users to create, manage, a
 ```
 ccDiary/
 ├── data/                              # Database initialization & sample data
-├── deploy/                            # Bicep: main / resourceGroup / functionApp / containerApps / *RoleAssignments
+├── deploy/                            # Bicep: main / resourceGroup / functionApp / *RoleAssignments
 ├── scripts/                           # Setup and deployment scripts
 └── src/                               # Application source code
     ├── api/                           # Backend API (ASP.NET Core)
@@ -128,7 +128,7 @@ ccDiary/
 
 The bicep template is authoritative for the container spec, but most application configuration is applied *after* deployment because it depends on outputs that deployment produces. Anything the template does not declare is therefore erased. `existingEnvVars`, `existingSecretRefs` and `existingSecrets` exist solely to feed the running state back in, and the deployed image tag is read back and re-passed — without them a redeploy takes the environment down and rolls it to `:latest`. The deployment runs twice, because the Entra client secret cannot exist until the first run produces the URLs the app registration is built from. The startup and readiness probes poll `/health/startup`, an in-memory flag `StorageBootstrapper` sets when it finishes, served from a branch mounted ahead of the rest of the pipeline. Readiness is declared because the implicit one polls only every 5 s. Its path is declared in the template, so deploy an image that serves it before running the script; otherwise every probe returns 404 and the replica never becomes ready.
 
-Sensitive values are container app secrets referenced with `secretref:`, never inline environment variables. The CI and release workflows leave `Graph__ClientSecret`, `Smtp__Password` and `OTEL_EXPORTER_OTLP_HEADERS` out of `--set-env-vars` on purpose, because passing them rewrote each as an inline value. For the same reason, the template drops a plain preserved value whenever the same name is a secret reference. `az ad app credential reset` returns no `keyId`, so credentials to retire are captured before the new one is issued. An app registration caps at two secrets; `entraSetup.ps1` mints one only with `-CreateClientSecret` and evicts only its own.
+`az ad app credential reset` returns no `keyId`, so credentials to retire are captured before the new one is issued. An app registration caps at two secrets; `entraSetup.ps1` mints one only with `-CreateClientSecret` and evicts only its own.
 
 The function app's settings work the opposite way: ARM replaces `siteConfig.appSettings` wholesale, so the template is authoritative for all of them, the script passes the complete set, and the deploy workflows set none — a name missing from the script is removed from the app. Its three credentials live in Key Vault and the settings carry `@Microsoft.KeyVault(SecretUri=...)` references the platform resolves with the app's managed identity, since an inline value would be readable through `az functionapp config appsettings list`. The CI service principal also needs Storage Blob Data Contributor: Contributor manages the storage account but cannot write the deployment package blob, and shared-key access is disabled.
 
@@ -144,7 +144,7 @@ Deploying is not `az functionapp deploy` — that endpoint rejects this package 
 Per environment: run `buildInfrastructure.ps1 -EnvironmentParam <env>`, then deploy the package (upload `released-package.zip`, `syncfunctiontriggers`, restart), then let CI redeploy that environment's UI — `API_URL` is baked into `config.js` at deploy time, so the site keeps calling the Container App until then. That last step is the actual switch, and redeploying the UI against the Container App URL is the rollback. For prod, run the infrastructure and deploy the package *before* publishing the release: the Functions steps are guarded on `FUNCTION_APP_NAME`, so publishing first skips them.
 
 
-The reason for this hosting is cold start: ~23 s median on Container Apps, 13–22 s of it Azure scheduling a pod, pulling the image and building a sandbox, against ~3.6 s measured on Flex Consumption. The Container App stays deployed as the rollback target — flipping the UI's `API_URL` back is the rollback.
+The reason for this hosting is cold start: ~23 s median on Container Apps, 13–22 s of it Azure scheduling a pod, pulling the image and building a sandbox, against ~3.6 s measured on Flex Consumption. Rolling back a bad deploy means uploading a previous release's `func-package.zip`, syncing triggers and restarting; the Container Apps were removed once all three environments were stable.
 
 #### Windows shell hazard
 
@@ -218,7 +218,7 @@ Tracing excludes `/swagger`, `/actuator`, `/api/assembly-info`, and `/health` pa
 
 ## Infrastructure as Code (Bicep)
 
-`deploy/main.bicep` (subscription scope) → `resourceGroup.bicep` → `functionApp.bicep` (the API's host) and `containerApps.bicep` (the rollback target), plus `storageRoleAssignments.bicep` and `keyVaultRoleAssignment.bicep`. The two role modules exist because a role assignment's name must be computable at the start of a deployment and the principal ids they grant to are module outputs; assigning one inline fails with BCP120.
+`deploy/main.bicep` (subscription scope) → `resourceGroup.bicep` → `functionApp.bicep` (the API's host), plus `storageRoleAssignments.bicep` and `keyVaultRoleAssignment.bicep`. The two role modules exist because a role assignment's name must be computable at the start of a deployment and the principal ids they grant to are module outputs; assigning one inline fails with BCP120.
 
 ### Deployment
 

@@ -20,17 +20,8 @@ jobs:
           version: ${{ github.event.release.id }}
           file: ui-dist.zip
 
-      - name: Get API image tag from Release
-        uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          version: ${{ github.event.release.id }}
-          file: api-image.txt
-
       # The same Functions package staging ran, rather than a fresh build of the same commit.
-      # Skipped until buildInfrastructure.ps1 has created prod's function app and published
-      # FUNCTION_APP_NAME — releases cut before that carry no such asset.
       - name: Get Functions package from Release
-        if: vars.FUNCTION_APP_NAME != ''
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: ${{ github.event.release.id }}
@@ -38,10 +29,6 @@ jobs:
 
       - name: Unzip Artifact
         run: unzip ui-dist.zip
-
-      - name: Read API image tag
-        id: api_image
-        run: echo "value=$(tr -d '\n\r' < api-image.txt)" >> $GITHUB_OUTPUT
 
       - name: "Configure UI (prod)"
         env:
@@ -80,98 +67,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # The "wake SQL database" step that used to sit here is gone: storage is always
-      # on, so there is no paused resource to resume before deploying.
-
-      - name: Deploy public GHCR image to Container App
-        run: |
-          ENV_VARS=(
-            "Storage__AccountName=${{ vars.STORAGE_ACCOUNT_NAME }}"
-            "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}"
-            "OTEL_SERVICE_NAME=ccDiaryApi"
-            "Graph__TenantId=${{ vars.TENANT_ID }}"
-            "Graph__ClientId=${{ vars.ENTRA_CLIENT_ID }}"
-            "Graph__InviteRedirectUrl=${{ vars.GRAPH_INVITE_REDIRECT_URL }}"
-            "Graph__AppDisplayName=Cooking Code Diary"
-            "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}"
-            "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
-            "BootstrapAdmin__DisplayName=${{ vars.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
-            "Smtp__Host=${{ vars.SMTP_HOST }}"
-            "Smtp__Port=${{ vars.SMTP_PORT }}"
-            "Smtp__Username=${{ vars.SMTP_USERNAME }}"
-            "Smtp__From=${{ vars.SMTP_FROM }}"
-            "Smtp__FromName=${{ vars.SMTP_FROM_NAME }}"
-          )
-          # Managed identity supplies the credential, so only the account name is passed.
-          # Any stale SQL connection string is removed so a later image-only rollback
-          # cannot pick it up again.
-          #
-          # Graph__ClientSecret, Smtp__Password and OTEL_EXPORTER_OTLP_HEADERS are left out on
-          # purpose. scripts/buildInfrastructure.ps1 stores them as container app secrets and
-          # points these names at them with secretref:. Setting them here rewrote each as an
-          # inline value, which puts the credential in the container spec for anyone who can
-          # run `az containerapp show`. --set-env-vars only touches the names it is given, so
-          # omitting them leaves the references alone. Rotate them with the infrastructure
-          # script, which updates the secret and the GitHub copy together.
-          az containerapp update \
-            --name "${{ vars.CONTAINER_APP_NAME }}" \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --image "${{ steps.api_image.outputs.value }}" \
-            --set-env-vars "${ENV_VARS[@]}" \
-            --remove-env-vars AZURE_SQL_CONNECTIONSTRING RUN_MIGRATIONS \
-            --no-wait \
-            --output none
-
-      - name: Wait for revision to be running
-        run: |
-          APP_FQDN=$(az containerapp show \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --query 'properties.configuration.ingress.fqdn' -o tsv)
-          echo "Waking app at https://${APP_FQDN}..."
-          curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
-          echo "Waiting for new revision to become active..."
-          for i in $(seq 1 30); do
-            STATUS=$(az containerapp revision list \
-              --name ${{ vars.CONTAINER_APP_NAME }} \
-              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-              --query "sort_by([], &properties.createdTime)[-1].properties.runningState" -o tsv 2>/dev/null || echo "unknown")
-            if [ "$STATUS" = "Running" ] || [ "$STATUS" = "RunningAtMaxScale" ]; then
-              echo "Revision is running ($STATUS)."
-              break
-            fi
-            if [ "$STATUS" = "ActivationFailed" ]; then
-              echo "Revision activation failed — app crashed on startup. Check Container App logs in the Azure Portal." >&2
-              exit 1
-            fi
-            echo "  Status: $STATUS (attempt $i/30)"
-            curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
-            sleep 10
-          done
-
-      - name: Verify deployment health
-        run: |
-          APP_FQDN=$(az containerapp show \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --query 'properties.configuration.ingress.fqdn' -o tsv)
-          echo "Polling https://${APP_FQDN}/actuator/health ..."
-          for i in $(seq 1 20); do
-            HTTP_STATUS=$(curl -s --max-time 15 -o /tmp/health.json -w "%{http_code}" "https://${APP_FQDN}/actuator/health" || echo "000")
-            HEALTH_STATUS=$(jq -r '.status' /tmp/health.json 2>/dev/null || echo "unknown")
-            echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
-            if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
-              echo "Deployment is healthy."
-              break
-            fi
-            if [ "$i" = "20" ]; then
-              echo "Health check failed after 20 attempts." >&2
-              cat /tmp/health.json >&2
-              exit 1
-            fi
-            sleep 10
-          done
-
       # Flex Consumption runs the app from a zip in a blob container. The one-deploy endpoint
       # (az functionapp deploy) rejects this custom-handler package — 415 for a trivial zip and
       # 502 for the real one — so the package goes straight to the container and the host is
@@ -181,7 +76,6 @@ jobs:
       # --auth-mode login because the account has shared-key access disabled; the deploying
       # service principal is granted Storage Blob Data Contributor by buildInfrastructure.ps1.
       - name: Deploy package to Function App
-        if: vars.FUNCTION_APP_NAME != ''
         run: |
           az storage blob upload \
             --account-name "${{ vars.STORAGE_ACCOUNT_NAME }}" \
@@ -201,7 +95,6 @@ jobs:
             --output none
 
       - name: Verify Function App health
-        if: vars.FUNCTION_APP_NAME != ''
         run: |
           API_URL="${{ vars.FUNCTION_APP_URL }}"
           echo "Polling ${API_URL}/actuator/health ..."

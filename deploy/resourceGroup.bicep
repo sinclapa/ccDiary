@@ -4,22 +4,6 @@ param name string
 param environment string
 param externalDomainName string?
 param location string = resourceGroup().location
-param containerImageName string
-
-@description('Plain environment variables currently set on the deployed container app, preserved across redeployments. Empty on a first deployment.')
-@secure()
-param existingEnvVars object = {}
-
-@description('Environment variables backed by a container app secret, as a map of variable name to secret name.')
-// Holds secret names, not secret values: the linter matches on the parameter name alone.
-// Left non-secure deliberately so what-if can still evaluate the resulting env array.
-#disable-next-line secure-secrets-in-params
-param existingSecretRefs object = {}
-
-@description('Container app secrets currently configured, preserved across redeployments.')
-@secure()
-param existingSecrets object = {}
-
 @description('Non-secret application settings for the function app, as a name/value map.')
 param functionAppSettings object = {}
 
@@ -37,38 +21,10 @@ var deploymentContainerName string = 'app-package'
 var storageAccountName string = take(toLower(replace('st${name}${environment}${uniqueString(resourceGroup().id)}', '-', '')), 24)
 
 
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: 'logs-${appName}'
-  location: location
-  properties: {
-    retentionInDays: 30
-    workspaceCapping: {
-      dailyQuotaGb: -1
-    }
-  }
-}
-
-resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: 'cae-${appName}'
-  location: location
-  properties: {
-    zoneRedundant: false
-    appLogsConfiguration: {
-      destination: 'azure-monitor'
-    }    
-    workloadProfiles: [
-      {
-        workloadProfileType: 'Consumption'
-        name: 'Consumption'
-      }
-    ]
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Storage: Table + Blob, the application's data store.
 //
-// Shared-key access is disabled outright — the Container App authenticates with its
+// Shared-key access is disabled outright — the function app authenticates with its
 // system-assigned identity, so there is no connection string to leak or rotate. That
 // does mean `az storage` commands against this account need `--auth-mode login`.
 // ---------------------------------------------------------------------------
@@ -79,7 +35,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
-  // The account is the resource being accessed, not a caller: the Container App's
+  // The account is the resource being accessed, not a caller: the function app's
   // identity authenticates *to* it. A storage account only needs an identity of its own
   // to reach a key vault for customer-managed keys, which this does not use.
   identity: {
@@ -231,18 +187,6 @@ resource tables 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-
   }
 ]
 
-module storageRoles 'storageRoleAssignments.bicep' = {
-  name: 'storage-roles-${appName}'
-  params: {
-    principalId: containerAppModule.outputs.containerAppPrincipalId
-    storageAccountName: storageAccount.name
-  }
-  dependsOn: [
-    tables
-    containers
-  ]
-}
-
 resource staticSite 'Microsoft.Web/staticSites@2023-01-01' = {
   name: 'stapp-${appName}'
   location: location
@@ -262,18 +206,6 @@ resource staticSiteCustomDomain 'Microsoft.Web/staticSites/customDomains@2024-11
   parent: staticSite
   name: externalDomainName!
   properties: {}
-}
-
-module containerAppModule 'containerApps.bicep' = {
-  name: 'containerApps'
-  params: {
-    appName: appName
-    containerAppsEnvironmentId: containerAppEnvironment.id
-    containerImageName: containerImageName
-    existingEnvVars: existingEnvVars
-    existingSecretRefs: existingSecretRefs
-    existingSecrets: existingSecrets
-  }
 }
 
 // The browser only ever reaches the API from the site itself, so the allowed origins are
@@ -337,9 +269,6 @@ module functionAppKeyVaultRole 'keyVaultRoleAssignment.bicep' = {
   }
 }
 
-output containerAppId string = containerAppModule.outputs.containerAppId
-output containerAppName string = containerAppModule.outputs.containerAppName
-output containerAppUrl string = containerAppModule.outputs.containerAppUrl
 output functionAppName string = functionAppModule.outputs.functionAppName
 output functionAppUrl string = functionAppModule.outputs.functionAppUrl
 output functionAppPrincipalId string = functionAppModule.outputs.functionAppPrincipalId
