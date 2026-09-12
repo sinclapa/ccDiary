@@ -1,7 +1,7 @@
 // Grants a principal the storage data-plane roles the application needs.
 //
 // This lives in its own module because a role assignment's name must be computable at
-// the start of the deployment, and the Container App's principal id is a module output.
+// the start of the deployment, and the function app's principal id is a module output.
 // Passing it in as a parameter resolves it before this nested deployment begins.
 //
 // Note these are *data-plane* roles. Control-plane roles such as Storage Account

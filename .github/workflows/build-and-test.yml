@@ -196,13 +196,6 @@ jobs:
           header: api-coverage
           path: /tmp/api-coverage.md
 
-      # Deliberately no -p:PublishReadyToRun: measured against this app it saved ~165ms of
-      # startup at 1 vCPU while adding ~13MB to every image pull, and the pull is on the
-      # critical path of a user's cold start. It also needs a runtime identifier, which
-      # forces a RID-specific restore and a second target in packages.lock.json.
-      - name: Publish api
-        run: dotnet publish ccDiaryApi/ccDiaryApi.csproj --no-build -c Release -o ./publish
-  
       # The Flex Consumption package: the same application, published self-contained because
       # the custom-handler worker is not guaranteed to carry a .NET runtime, and zipped here
       # on Linux so ccDiaryApi and run.sh keep their executable bit — a zip built on Windows
@@ -221,34 +214,6 @@ jobs:
           path: ${{ github.workspace }}/src/api/func-package.zip
           retention-days: 5
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set image tag
-        id: image_tag
-        shell: bash
-        run: |
-          IMAGE_TAG="ghcr.io/${{ github.repository }}-api:${{ needs.build-prep.outputs.app_version }}"
-          IMAGE_TAG="$(echo "$IMAGE_TAG" | tr '[:upper:]' '[:lower:]')"
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "value=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          context: ./src/api # <== This is the path to the 'api' subdirectory containing your application resources
-          file: ./src/api/Dockerfile # <== This specifies the 'Dockerfile' in the subdirectory
-          tags: |
-             ${{ steps.image_tag.outputs.value }}
-
-    outputs:
-      image_tag: ${{ steps.image_tag.outputs.value }}
-
   deploy-api:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
 
@@ -256,133 +221,16 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    outputs:
-      image_tag: ${{ steps.export_image_tag.outputs.value }}
-
-    env:
-      IMAGE_TAG: ${{ needs['build-api'].outputs.image_tag }}
-
     permissions:
       contents: read
 
     steps:
-      - name: Export image tag
-        id: export_image_tag
-        run: echo "value=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # The "wake SQL database" step that used to sit here is gone: storage is always
-      # on, so there is no paused resource to resume before deploying.
-
-      - name: Deploy GHCR image to Container App
-        run: |
-          ENV_VARS=(
-            "Storage__AccountName=${{ vars.STORAGE_ACCOUNT_NAME }}"
-            "OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_EXPORTER_OTLP_ENDPOINT }}"
-            "OTEL_SERVICE_NAME=ccDiaryApi"
-            "Graph__TenantId=${{ vars.TENANT_ID }}"
-            "Graph__ClientId=${{ vars.ENTRA_CLIENT_ID }}"
-            "Graph__InviteRedirectUrl=${{ vars.GRAPH_INVITE_REDIRECT_URL }}"
-            "Graph__AppDisplayName=Cooking Code Diary"
-            "BootstrapAdmin__ObjectId=${{ vars.BOOTSTRAP_ADMIN_OBJECT_ID }}"
-            "BootstrapAdmin__Email=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
-            "BootstrapAdmin__DisplayName=${{ vars.BOOTSTRAP_ADMIN_DISPLAY_NAME }}"
-            "Smtp__Host=${{ vars.SMTP_HOST }}"
-            "Smtp__Port=${{ vars.SMTP_PORT }}"
-            "Smtp__Username=${{ vars.SMTP_USERNAME }}"
-            "Smtp__From=${{ vars.SMTP_FROM }}"
-            "Smtp__FromName=${{ vars.SMTP_FROM_NAME }}"
-          )
-          # The app authenticates to storage with the Container App's managed identity,
-          # so only the account name is passed and no secret is involved. Any stale SQL
-          # connection string from a previous revision is removed so it cannot be picked
-          # up again on a rollback of the image alone.
-          #
-          # Graph__ClientSecret, Smtp__Password and OTEL_EXPORTER_OTLP_HEADERS are left out on
-          # purpose. scripts/buildInfrastructure.ps1 stores them as container app secrets and
-          # points these names at them with secretref:. Setting them here rewrote each as an
-          # inline value, which puts the credential in the container spec for anyone who can
-          # run `az containerapp show`. --set-env-vars only touches the names it is given, so
-          # omitting them leaves the references alone. Rotate them with the infrastructure
-          # script, which updates the secret and the GitHub copy together.
-          az containerapp update \
-            --name "${{ vars.CONTAINER_APP_NAME }}" \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --image "${{ env.IMAGE_TAG }}" \
-            --set-env-vars "${ENV_VARS[@]}" \
-            --remove-env-vars AZURE_SQL_CONNECTIONSTRING RUN_MIGRATIONS \
-            --no-wait \
-            --output none
-
-      - name: Wait for revision to be running
-        run: |
-          APP_FQDN=$(az containerapp show \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --query 'properties.configuration.ingress.fqdn' -o tsv)
-          echo "Waking app at https://${APP_FQDN}..."
-          curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
-          echo "Waiting for new revision to become active..."
-          for i in $(seq 1 30); do
-            STATUS=$(az containerapp revision list \
-              --name ${{ vars.CONTAINER_APP_NAME }} \
-              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-              --query "sort_by([], &properties.createdTime)[-1].properties.runningState" -o tsv 2>/dev/null || echo "unknown")
-            if [ "$STATUS" = "Running" ] || [ "$STATUS" = "RunningAtMaxScale" ]; then
-              echo "Revision is running ($STATUS)."
-              break
-            fi
-            if [ "$STATUS" = "ActivationFailed" ]; then
-              echo "Revision activation failed — app crashed on startup. Check Container App logs in the Azure Portal." >&2
-              exit 1
-            fi
-            if [ "$i" = "30" ]; then
-              echo "Timed out after 30 attempts waiting for revision to become active (last status: $STATUS)." >&2
-              exit 1
-            fi
-            echo "  Status: $STATUS (attempt $i/30)"
-            curl -s --max-time 15 -o /dev/null "https://${APP_FQDN}/actuator/health" || true
-            sleep 10
-          done
-
-      - name: Verify deployment health
-        run: |
-          APP_FQDN=$(az containerapp show \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --query 'properties.configuration.ingress.fqdn' -o tsv)
-          echo "Polling https://${APP_FQDN}/actuator/health ..."
-          for i in $(seq 1 20); do
-            HTTP_STATUS=$(curl -s --max-time 15 -o /tmp/health.json -w "%{http_code}" "https://${APP_FQDN}/actuator/health" || echo "000")
-            HEALTH_STATUS=$(jq -r '.status' /tmp/health.json 2>/dev/null || echo "unknown")
-            echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
-            if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
-              echo "Deployment is healthy."
-              break
-            fi
-            if [ "$i" = "20" ]; then
-              echo "Health check failed after 20 attempts." >&2
-              cat /tmp/health.json >&2
-              exit 1
-            fi
-            sleep 10
-          done
-
-      # The "disable migration for subsequent restarts" step that used to follow is gone.
-      # It existed so only one revision would migrate and a scale-out could not race;
-      # creating a table that already exists is idempotent, so every replica can safely
-      # run the bootstrapper on every boot. That also removes the race where this second
-      # update could collide with the deploy still in progress.
-
-      # Every Functions step below is skipped until buildInfrastructure.ps1 has created the
-      # function app for this environment and published FUNCTION_APP_NAME. That lets the
-      # code merge before the infrastructure run, in either order, without turning CI red.
       - name: Download Functions package
-        if: vars.FUNCTION_APP_NAME != ''
         uses: actions/download-artifact@v4
         with:
           name: api-func-package
@@ -397,7 +245,6 @@ jobs:
       # --auth-mode login because the account has shared-key access disabled; the deploying
       # service principal is granted Storage Blob Data Contributor by buildInfrastructure.ps1.
       - name: Deploy package to Function App
-        if: vars.FUNCTION_APP_NAME != ''
         run: |
           az storage blob upload \
             --account-name "${{ vars.STORAGE_ACCOUNT_NAME }}" \
@@ -417,7 +264,6 @@ jobs:
             --output none
 
       - name: Verify Function App health
-        if: vars.FUNCTION_APP_NAME != ''
         run: |
           API_URL="${{ vars.FUNCTION_APP_URL }}"
           echo "Polling ${API_URL}/actuator/health ..."
@@ -437,16 +283,8 @@ jobs:
             sleep 10
           done
 
-      - name: Get app URLs
-        run: |
-          APP_URL=$(az containerapp show \
-            --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-            --name ${{ vars.CONTAINER_APP_NAME }} \
-            --query 'properties.configuration.ingress.fqdn' \
-            --output tsv)
-          echo "Deployed successfully!"
-          echo "Function App (serving the UI): ${{ vars.FUNCTION_APP_URL }}"
-          echo "Container App (kept during the migration, rollback target): https://${APP_URL}"
+      - name: Report API URL
+        run: echo "API deployed to ${{ vars.FUNCTION_APP_URL }}"
 
   build-ui:
     runs-on: ubuntu-latest
@@ -744,20 +582,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # The function app is what the UI calls, so it is what the end-to-end run exercises —
-      # falling back to the container app until this environment has one.
+      # The function app is what the UI calls, so it is what the end-to-end run exercises.
       - name: Get API URL
         id: api_url
-        run: |
-          if [ -n "${{ vars.FUNCTION_APP_URL }}" ]; then
-            echo "value=${{ vars.FUNCTION_APP_URL }}" >> $GITHUB_OUTPUT
-          else
-            APP_FQDN=$(az containerapp show \
-              --name ${{ vars.CONTAINER_APP_NAME }} \
-              --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \
-              --query 'properties.configuration.ingress.fqdn' -o tsv)
-            echo "value=https://${APP_FQDN}" >> $GITHUB_OUTPUT
-          fi
+        run: echo "value=${{ vars.FUNCTION_APP_URL }}" >> $GITHUB_OUTPUT
 
       - name: Get API bearer token
         id: api_token
@@ -862,10 +690,6 @@ jobs:
         run: |
           zip -r ui-dist.zip ui-dist
 
-      - name: Write API image tag asset
-        run: |
-          echo "${{ needs.deploy-api.outputs.image_tag }}" > api-image.txt
-
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
@@ -882,5 +706,4 @@ jobs:
           draft: true
           files: |
             ui-dist.zip
-            api-image.txt
             func-package/func-package.zip

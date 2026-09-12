@@ -21,13 +21,6 @@ param(
 )
 
 <# --------------------------------------------------------------------------------- #>
-<# Setup az extensions #>
-if ((az extension list --query "[?name=='containerapp']" ) -eq "[]") {
-    az extension add --name containerapp
-    Write-Host "Installed containerapp az extension" -ForegroundColor Gray
-}
-
-<# --------------------------------------------------------------------------------- #>
 <# Utility Functions #>
 # Convert a Hashtable to string data format (key=value)
 function ConvertTo-StringData {
@@ -127,14 +120,6 @@ else {
     $gitHubOwnerRepo = $params["GitHubOwnerRepo"]
     $gitHubRepo = "https://github.com/${gitHubOwnerRepo}"
 }
-if (-Not ($params.ContainsKey("DevApiContainerImage"))) {
-    $devApiContainerImage = Read-Host -Prompt "Enter the Dev API Container Image e.g. ghcr.io/OWNER/IMAGE"
-    $params.Add("DevApiContainerImage", $devApiContainerImage)
-}
-else {
-    $devApiContainerImage = $params["DevApiContainerImage"]
-}
-
 if (-Not ($params.ContainsKey("ExternalDomainName"))) {
     $externalDomainName = Read-Host -Prompt "Enter the external domain name for prod (leave empty to skip)"
     $params.Add("ExternalDomainName", $externalDomainName)
@@ -378,79 +363,6 @@ Write-Host "Starting infrastructure deployment..." -ForegroundColor Cyan
 Write-Host "  Configuring environment: ${name}_${environment}" -ForegroundColor Gray
 
 
-# The bicep template is authoritative for the container spec, so the image it is handed
-# replaces whatever is running. DevApiContainerImage is an untagged dev reference, so
-# passing it to an environment CI has already promoted rolls that environment back to
-# :latest — and unlike the environment variables further down, the script never sets the
-# image again afterwards, so the downgrade is permanent and silent. Re-running against a
-# live environment must keep the tag that is deployed.
-$existingContainerApp = "ca-${name}-${environment}".ToLower()
-$existingResourceGroup = "rg-${name}-${environment}"
-
-$deployedImage = az containerapp show `
-  --name $existingContainerApp `
-  --resource-group $existingResourceGroup `
-  --query "properties.template.containers[0].image" `
-  --output tsv 2>$null
-
-if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($deployedImage)) {
-    $containerImage = $deployedImage.Trim()
-    Write-Host "  Preserving the image already deployed: $containerImage" -ForegroundColor Gray
-}
-else {
-    $containerImage = $devApiContainerImage
-    Write-Host "  No container app deployed yet; bootstrapping with: $containerImage" -ForegroundColor Gray
-}
-
-# The application configuration is applied further down, because it depends on outputs this
-# deployment produces. Without feeding the current values back into the template, the
-# deployment erases them, the revision fails to start for want of Storage__AccountName, and
-# ingress has already sent all traffic to it. Passing them through closes that window.
-$existingEnvMap = @{}
-$existingSecretRefMap = @{}
-$existingSecretMap = @{}
-
-$existingEnvRaw = az containerapp show `
-  --name $existingContainerApp `
-  --resource-group $existingResourceGroup `
-  --query "properties.template.containers[0].env" `
-  --output json 2>$null
-
-if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingEnvRaw)) {
-    foreach ($entry in ($existingEnvRaw | ConvertFrom-Json)) {
-        if (-not $entry.name) { continue }
-
-        # A variable carries either an inline value or a reference to a container app
-        # secret. The two are preserved separately because the template has to re-declare
-        # them in different shapes.
-        if ($entry.PSObject.Properties.Name -contains 'secretRef' -and $entry.secretRef) {
-            $existingSecretRefMap[$entry.name] = $entry.secretRef
-        }
-        elseif ($null -ne $entry.value) {
-            $existingEnvMap[$entry.name] = $entry.value
-        }
-    }
-
-    # The secrets themselves must be re-declared too: a template that omits them deletes
-    # them, which would leave every secretRef above pointing at nothing.
-    $existingSecretsRaw = az containerapp secret list `
-      --name $existingContainerApp `
-      --resource-group $existingResourceGroup `
-      --show-values `
-      --output json 2>$null
-
-    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($existingSecretsRaw)) {
-        foreach ($secret in ($existingSecretsRaw | ConvertFrom-Json)) {
-            if ($secret.name -and $null -ne $secret.value) {
-                $existingSecretMap[$secret.name] = $secret.value
-            }
-        }
-    }
-}
-
-Write-Host ("  Preserving {0} plain variable(s), {1} secret-backed variable(s) and {2} secret(s)" -f `
-    $existingEnvMap.Count, $existingSecretRefMap.Count, $existingSecretMap.Count) -ForegroundColor Gray
-
 # Everything the template needs travels in a parameter file rather than on the command line.
 # Two separate failures forced this. PowerShell strips the double quotes out of a JSON literal
 # bound for a native command, so az saw `{Key:value}` and rejected it. And `az` on Windows is
@@ -459,15 +371,11 @@ Write-Host ("  Preserving {0} plain variable(s), {1} secret-backed variable(s) a
 # keeping the values out of the command line altogether is.
 function Invoke-MainDeployment {
     param(
-        [System.Collections.IDictionary]$EnvVars,
-        [System.Collections.IDictionary]$SecretRefs,
-        [System.Collections.IDictionary]$Secrets,
-        [string]$Image,
-        # The function app's settings are declared entirely by the template — ARM replaces the
-        # whole collection on every deployment — so the full set travels here rather than being
-        # applied afterwards the way the container app's environment is. On the first pass they
-        # are empty, because most of them depend on the Entra registration this deployment's own
-        # outputs produce; the second pass carries the real values.
+        # The settings are declared entirely by the template — ARM replaces the whole
+        # collection on every deployment — so the full set travels here rather than being
+        # applied after the fact. On the first pass they are empty, because most of them depend
+        # on the Entra registration this deployment's own outputs produce; the second pass
+        # carries the real values.
         [System.Collections.IDictionary]$FunctionAppSettings = @{},
         [System.Collections.IDictionary]$FunctionAppSecretUris = @{}
     )
@@ -477,9 +385,6 @@ function Invoke-MainDeployment {
         '$schema'      = 'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#'
         contentVersion = '1.0.0.0'
         parameters     = [ordered]@{
-            existingEnvVars       = [ordered]@{ value = $EnvVars }
-            existingSecretRefs    = [ordered]@{ value = $SecretRefs }
-            existingSecrets       = [ordered]@{ value = $Secrets }
             functionAppSettings   = [ordered]@{ value = $FunctionAppSettings }
             functionAppSecretUris = [ordered]@{ value = $FunctionAppSecretUris }
         }
@@ -497,7 +402,7 @@ function Invoke-MainDeployment {
           --location $location `
           --template-file "$PSScriptRoot\..\deploy\main.bicep" `
           --parameters "@$paramFile" `
-          --parameters name=$name environment="$environment" devApiContainerImage=$Image externalDomainName="$externalDomainName" `
+          --parameters name=$name environment="$environment" externalDomainName="$externalDomainName" `
           --output json | ConvertFrom-Json
     }
     finally {
@@ -505,11 +410,7 @@ function Invoke-MainDeployment {
     }
 }
 
-$deploymentResult = Invoke-MainDeployment `
-    -EnvVars $existingEnvMap `
-    -SecretRefs $existingSecretRefMap `
-    -Secrets $existingSecretMap `
-    -Image $containerImage
+$deploymentResult = Invoke-MainDeployment
 
 # Check if deployment succeeded
 if ($LASTEXITCODE -eq 0) {
@@ -521,9 +422,6 @@ if ($LASTEXITCODE -eq 0) {
 
 # Extract outputs (PowerShell style)
 $resourceGroupName = $deploymentResult.properties.outputs.environment.value.resourceGroupName.value
-$containerAppId = $deploymentResult.properties.outputs.environment.value.containerAppId.value
-$containerAppName = $deploymentResult.properties.outputs.environment.value.containerAppName.value
-$containerAppUrl = $deploymentResult.properties.outputs.environment.value.containerAppUrl.value
 $storageAccountName = $deploymentResult.properties.outputs.environment.value.storageAccountName.value
 $staticSiteName = $deploymentResult.properties.outputs.environment.value.staticSiteName.value
 $staticSiteUrl = $deploymentResult.properties.outputs.environment.value.staticSiteUrl.value
@@ -536,9 +434,6 @@ $deploymentContainerName = $deploymentResult.properties.outputs.environment.valu
 
 Write-Output "  resourceGroupName = $resourceGroupName"
 Write-Output "  resourceGroupId = $resourceGroupId"
-Write-Output "  containerAppId = $containerAppId"
-Write-Output "  containerAppName = $containerAppName"
-Write-Output "  containerAppUrl = $containerAppUrl"
 Write-Output "  staticSiteName = $staticSiteName"
 Write-Output "  staticSiteUrl = $staticSiteUrl"
 Write-Output "  appName = $appName"
@@ -551,7 +446,6 @@ Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
 # Build SPA URIs array - add custom domain if configured for prod
 $spaUris = @(
     "https://${staticSiteUrl}/",
-    "https://${containerAppUrl}/swagger/oauth2-redirect.html",
     # Swagger is served by the function app outside prod, and its OAuth flow redirects back
     # to the host it was loaded from.
     "https://${functionAppUrl}/swagger/oauth2-redirect.html"
@@ -564,7 +458,7 @@ if (-not [string]::IsNullOrWhiteSpace($externalDomainName)) {
 $entraOut = & "$PSScriptRoot\entraSetup.ps1" `
     -AppName $appName `
     -spaUris $spaUris `
-    -webUris @("https://${containerAppUrl}/") `
+    -webUris @("https://${functionAppUrl}/") `
     -resourceGroupId $resourceGroupId
 $entraClientId = $entraOut.EntraClientId
 $entraApplicationIdURI = $entraOut.EntraApplicationIdURI
@@ -616,22 +510,13 @@ if (-not $entraClientCredentialsPassword) {
     exit 1
 }
 
-Write-Host "Storing sensitive configuration as container app secrets..." -ForegroundColor Cyan
+Write-Host "Storing sensitive configuration..." -ForegroundColor Cyan
 
-# Credentials are held as container app secrets and referenced, rather than set inline.
-# Inline values are part of the container spec, so `az containerapp show`, a what-if diff and
-# any CLI error that echoes its arguments all print them in full — which is exactly how the
-# SMTP password and Graph client secret ended up in a terminal. A secretRef shows the name.
-#
-# They are written by a second deployment rather than `az containerapp secret set`, because
-# the values reach the template through the parameter file and never touch a command line.
-# The deployment has to run twice: the Entra client secret cannot exist until the first one
-# has produced the URLs the app registration is built from.
-#
-# An empty secret is rejected, and these settings are genuinely optional — SMTP falls back to
-# Entra invitation email and OTLP is disabled when unset — so only non-empty values become
-# secrets, and only those get a matching reference. A reference to a secret that does not
-# exist stops the revision from starting.
+# Only a non-empty value becomes a secret, and only then does the matching setting appear:
+# SMTP falls back to Entra invitation email and OTLP is disabled when unset, while a reference
+# to a secret that does not exist stops the app from starting. The deployment runs twice
+# because the Entra client secret cannot exist until the first pass has produced the URLs the
+# app registration is built from.
 $secretValues = [ordered]@{ 'graph-client-secret' = $entraClientCredentialsPassword }
 $secretRefs = [ordered]@{ 'Graph__ClientSecret' = 'graph-client-secret' }
 
@@ -730,10 +615,6 @@ if ($smtpHost) {
 }
 
 Invoke-MainDeployment `
-    -EnvVars $existingEnvMap `
-    -SecretRefs $secretRefs `
-    -Secrets $secretValues `
-    -Image $containerImage `
     -FunctionAppSettings $functionAppSettings `
     -FunctionAppSecretUris $functionAppSecretUris | Out-Null
 
@@ -744,57 +625,13 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "  Stored $($secretValues.Count) secret(s)" -ForegroundColor Gray
 
-Write-Host "Updating Container App Environment Variables..." -ForegroundColor Cyan
-
-# Prepare environment variables as an array so PowerShell passes each as a separate argument.
-# The three credentials are referenced by secret name rather than carried inline — see the
-# secret block above. `secretref:` is the container app syntax for that reference.
-$envVars = @(
-        "Entra__TenantId=$tenantId",
-        "Entra__ClientId=$entraClientId",
-        "Entra__ApplicationIdUri=$entraApplicationIdURI",
-        "ASPNETCORE_ENVIRONMENT=$environment",
-        "Storage__AccountName=$storageAccountName",
-        "OTEL_EXPORTER_OTLP_ENDPOINT=$grafanaOtlpEndpoint",
-        "OTEL_SERVICE_NAME=ccDiaryApi",
-        "Graph__TenantId=$tenantId",
-        "Graph__ClientId=$entraClientId",
-        "Graph__ClientSecret=secretref:graph-client-secret",
-        "Graph__InviteRedirectUrl=https://$staticSiteUrl/",
-        "Graph__AppDisplayName=Cooking Code Diary",
-        "BootstrapAdmin__ObjectId=$bootstrapAdminObjectId",
-        "BootstrapAdmin__Email=$bootstrapAdminEmail",
-        "BootstrapAdmin__DisplayName=$bootstrapAdminDisplayName",
-        "Smtp__Host=$smtpHost",
-        "Smtp__Port=$smtpPort",
-        "Smtp__Username=$smtpUsername",
-        "Smtp__From=$smtpFrom",
-        "Smtp__FromName=$smtpFromName"
-)
-
-# Only reference secrets that were actually created; an unset optional setting must not
-# become a reference to a secret that does not exist, which the revision would fail on.
-if (-not [string]::IsNullOrWhiteSpace($smtpPassword)) {
-    $envVars += "Smtp__Password=secretref:smtp-password"
-}
-if (-not [string]::IsNullOrWhiteSpace($grafanaOtlpAuthHeader)) {
-    $envVars += "OTEL_EXPORTER_OTLP_HEADERS=secretref:otlp-headers"
-}
-
-az containerapp update `
-    --name $containerAppName `
-    --resource-group $resourceGroupName `
-    --output none `
-    --set-env-vars $envVars
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to update Container App environment variables."
-    exit 1
-}
-
 Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
 
+# The credential keeps its original ca-prefixed name: renaming it would mint a second
+# service principal and leave the first one holding live role assignments.
+$ciCredentialName = "ca-${name}-${environment}-credentials".ToLower()
 $azureCredentials = az ad sp create-for-rbac `
-  --name "${containerAppName}-credentials" `
+  --name "$ciCredentialName" `
   --role contributor `
   --scopes /subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName} `
   --json-auth `
@@ -830,7 +667,8 @@ $staticSiteSecrets = az staticwebapp secrets list --name "$staticSiteName" --res
 $token = $staticSiteSecrets.properties.apiKey
 gh api --method PUT repos/${gitHubOwnerRepo}/environments/${environment}
 # Variables — non-sensitive configuration
-gh variable set "CONTAINER_APP_NAME" --body "$containerAppName" --repo $gitHubRepo --env "${environment}"
+# Deleted rather than set: a stale value would point a workflow at a removed resource.
+gh variable delete "CONTAINER_APP_NAME" --repo $gitHubRepo --env "${environment}" 2>$null
 gh variable set "RESOURCE_GROUP_NAME" --body "$resourceGroupName" --repo $gitHubRepo --env "${environment}"
 gh variable set "STORAGE_ACCOUNT_NAME" --body "$storageAccountName" --repo $gitHubRepo --env "${environment}"
 # The deploy workflows upload the package to this container and then tell the host to reload.
