@@ -177,8 +177,9 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     // and the infrastructure script writes the secrets from a developer's machine. Access is
     // governed by RBAC instead — the app's identity may read secret values and nothing else.
     // Restricting the network would need VNet integration and a private endpoint, which this
-    // architecture does not have.
-    publicNetworkAccess: 'Enabled' // NOSONAR (S6329) — see comment above
+    // architecture does not have. The rule is waived in sonar-project-infra.properties,
+    // because an in-file NOSONAR marker is not honoured for Bicep.
+    publicNetworkAccess: 'Enabled'
   }
 }
 

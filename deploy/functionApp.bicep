@@ -79,8 +79,9 @@ resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
 // with the role stored against the user in the database — the chain every authorization
 // policy depends on. Easy Auth would sit in front of that, terminating the token before the
 // app sees it, and its own sign-in redirects make no sense for an API called by an SPA that
-// already holds an access token.
-resource functionApp 'Microsoft.Web/sites@2024-04-01' = { // NOSONAR (S6380) — see comment above
+// already holds an access token. The rule is waived in sonar-project-infra.properties,
+// because an in-file NOSONAR marker is not honoured for Bicep.
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   name: 'func-${appName}'
   location: location
   kind: 'functionapp,linux'
