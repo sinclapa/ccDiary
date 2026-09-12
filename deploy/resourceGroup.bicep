@@ -172,7 +172,13 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    publicNetworkAccess: 'Enabled'
+    // Reachable over the public endpoint because nothing here sits in a virtual network: the
+    // Flex Consumption app resolves these references from the platform's own address space,
+    // and the infrastructure script writes the secrets from a developer's machine. Access is
+    // governed by RBAC instead — the app's identity may read secret values and nothing else.
+    // Restricting the network would need VNet integration and a private endpoint, which this
+    // architecture does not have.
+    publicNetworkAccess: 'Enabled' // NOSONAR (S6329) — see comment above
   }
 }
 

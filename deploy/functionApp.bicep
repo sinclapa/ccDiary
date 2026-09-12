@@ -34,24 +34,6 @@ param instanceMemoryMB int = 2048
 @description('Ceiling on on-demand instances. Billing is per active execution, so this caps a runaway, not a bill.')
 param maximumInstanceCount int = 4
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
-  name: storageAccountName
-}
-
-// FC1 is the only SKU in the plan, and Flex allows exactly one app per plan.
-resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
-  name: 'asp-${appName}'
-  location: location
-  kind: 'functionapp'
-  sku: {
-    name: 'FC1'
-    tier: 'FlexConsumption'
-  }
-  properties: {
-    reserved: true
-  }
-}
-
 // Identity-based host storage, so the account keeps shared-key access disabled. The three
 // data-plane roles this needs are granted in resourceGroup.bicep.
 var hostSettings = [
@@ -74,7 +56,31 @@ var keyVaultSettings = map(items(secretSettingUris), item => {
   value: '@Microsoft.KeyVault(SecretUri=${item.value})'
 })
 
-resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: storageAccountName
+}
+
+// FC1 is the only SKU in the plan, and Flex allows exactly one app per plan.
+resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
+  name: 'asp-${appName}'
+  location: location
+  sku: {
+    name: 'FC1'
+    tier: 'FlexConsumption'
+  }
+  kind: 'functionapp'
+  properties: {
+    reserved: true
+  }
+}
+
+// No `authsettingsV2`: the platform's built-in authentication is deliberately not used. This
+// API validates Entra JWTs itself (Microsoft.Identity.Web) and then enriches the principal
+// with the role stored against the user in the database — the chain every authorization
+// policy depends on. Easy Auth would sit in front of that, terminating the token before the
+// app sees it, and its own sign-in redirects make no sense for an API called by an SPA that
+// already holds an access token.
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = { // NOSONAR (S6380) — see comment above
   name: 'func-${appName}'
   location: location
   kind: 'functionapp,linux'
