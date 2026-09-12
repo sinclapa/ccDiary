@@ -278,6 +278,13 @@ module containerAppModule 'containerApps.bicep' = {
 
 // The browser only ever reaches the API from the site itself, so the allowed origins are
 // the static site's own hostnames. The custom domain is only bound in prod.
+// Dev is where pull-request previews land, and every preview gets its own hostname
+// (…-<pr>.westeurope.6.azurestaticapps.net). Azure's CORS list holds exact origins or '*'
+// and understands no patterns, so dev allows any origin — which is what the application's
+// own middleware did for every environment before the move to Functions. Staging and prod
+// keep the exact list, since they only ever serve their own hostname.
+var corsAllowedOrigins = environment == 'dev' ? ['*'] : staticSiteOrigins
+
 var staticSiteOrigins = union(
   ['https://${staticSite.properties.defaultHostname}'],
   empty(externalDomainName ?? '') ? [] : ['https://${externalDomainName}']
@@ -290,7 +297,7 @@ module functionAppModule 'functionApp.bicep' = {
     location: location
     storageAccountName: storageAccount.name
     deploymentContainerName: deploymentContainerName
-    allowedOrigins: staticSiteOrigins
+    allowedOrigins: corsAllowedOrigins
     appSettings: functionAppSettings
     secretSettingUris: functionAppSecretUris
   }
