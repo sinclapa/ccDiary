@@ -252,6 +252,19 @@ The **function app's settings work the opposite way** to the container app's. AR
 
 That is also why the deployment's **two passes** matter more than before: most settings depend on the Entra registration built from the first pass's outputs, so the first pass deploys the function app with only its host storage setting and the second pass carries the real configuration.
 
+#### Rolling an environment onto Flex Consumption
+
+Order matters, and it is not the same as the Container App's. Per environment:
+
+1. `buildInfrastructure.ps1 -EnvironmentParam <env>` — creates the function app, plan, Key Vault and deployment container, grants the data-plane roles (including Storage Blob Data Contributor to the CI principal, which the package upload needs), writes the secrets, and repoints that environment's `API_URL`.
+2. Deploy the package. Nothing serves until a zip is in the deployment container: upload it as `released-package.zip`, call `syncfunctiontriggers`, then restart.
+3. Let CI redeploy the UI. `API_URL` is baked into `dist/config.js` at deploy time, so the site keeps calling the Container App until that environment's `deploy-ui` runs — a PR build for dev, a push to main for staging, a published release for prod.
+
+Step 3 is what makes the switch, which is why there is no outage window: the function app can sit empty without anyone noticing. It also means the rollback is to redeploy the UI with `API_URL` pointing back at the Container App, which stays deployed for exactly that reason.
+
+For prod, run the infrastructure first and deploy the package before publishing the release. Publishing first skips every Functions step, because they are guarded on `FUNCTION_APP_NAME`, and would need a second release to finish the job.
+
+
 #### Credentials
 
 - Sensitive values are **container app secrets** referenced with `secretref:`, never inline environment variables. An inline value is part of the container spec, so `az containerapp show`, what-if diffs and any CLI error that echoes its arguments print it in full.

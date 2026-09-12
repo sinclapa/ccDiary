@@ -139,6 +139,10 @@ The API is an ordinary ASP.NET Core app; nothing in `Program.cs` knows it is hos
 Two consequences are invisible from the app's code. CORS must be configured on the platform (`siteConfig.cors.allowedOrigins`), because the Functions front end answers preflight `OPTIONS` itself and never forwards it, so `app.UseCors` never sees it and browsers block authenticated calls. And the package must be zipped on Linux, because `ccDiaryApi` and `run.sh` need their executable bit, which a Windows-built zip drops.
 
 Deploying is not `az functionapp deploy` — that endpoint rejects this package (415 for a trivial zip, 502 for the real one). The workflows upload it to the deployment container as `released-package.zip`, call `syncfunctiontriggers`, then restart the app.
+#### Rolling an environment onto Flex Consumption
+
+Per environment: run `buildInfrastructure.ps1 -EnvironmentParam <env>`, then deploy the package (upload `released-package.zip`, `syncfunctiontriggers`, restart), then let CI redeploy that environment's UI — `API_URL` is baked into `config.js` at deploy time, so the site keeps calling the Container App until then. That last step is the actual switch, and redeploying the UI against the Container App URL is the rollback. For prod, run the infrastructure and deploy the package *before* publishing the release: the Functions steps are guarded on `FUNCTION_APP_NAME`, so publishing first skips them.
+
 
 The reason for this hosting is cold start: ~23 s median on Container Apps, 13–22 s of it Azure scheduling a pod, pulling the image and building a sandbox, against ~3.6 s measured on Flex Consumption. The Container App stays deployed as the rollback target — flipping the UI's `API_URL` back is the rollback.
 
