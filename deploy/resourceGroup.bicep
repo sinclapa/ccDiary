@@ -83,7 +83,9 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   // identity authenticates *to* it. A storage account only needs an identity of its own
   // to reach a key vault for customer-managed keys, which this does not use.
   identity: {
-    type: 'None' // NOSONAR (S6378) — see above
+    // Accepted in SonarCloud as Won't fix (S6378) - see above. The NOSONAR marker is
+    // documentation only; it suppresses nothing for Bicep.
+    type: 'None'
   }
   properties: {
     accessTier: 'Hot'
@@ -177,8 +179,8 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     // and the infrastructure script writes the secrets from a developer's machine. Access is
     // governed by RBAC instead — the app's identity may read secret values and nothing else.
     // Restricting the network would need VNet integration and a private endpoint, which this
-    // architecture does not have. The rule is waived in sonar-project-infra.properties,
-    // because an in-file NOSONAR marker is not honoured for Bicep.
+    // architecture does not have. Accepted in SonarCloud as Won't fix (S6329) - an in-file
+    // NOSONAR marker does nothing for the Bicep analyser.
     publicNetworkAccess: 'Enabled'
   }
 }

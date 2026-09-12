@@ -424,6 +424,8 @@ Organization `cookingcode`. Quality gate failure blocks CI (`qualitygate.wait=tr
 
 Pick the project key matching the directory you are working in. After fixing issues, don't re-query `search_sonar_issues_in_projects` to verify — the server won't reflect the change yet.
 
+**An accepted finding is marked “Won’t fix” on the issue in SonarCloud — not suppressed in code.** An in-file `// NOSONAR` comment does nothing for the `azureresourcemanager` (Bicep) analyser: it was tried on S6329 and S6380, and both raised again on the very commit that added it. The marker beside `resourceGroup.bicep`'s `identity: 'None'` only looks like it works because that issue is separately resolved as Won't fix in SonarCloud — the comment is documentation, not a suppression. A rule waiver in `sonar-project-infra.properties` does work, but it disables the rule for a whole file and hides future occurrences, so prefer the per-issue transition and leave a comment in the template saying why the design is deliberate.
+
 ---
 
 **Last Updated**: 2026-09-12

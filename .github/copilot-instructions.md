@@ -231,6 +231,8 @@ Tracing excludes `/swagger`, `/actuator`, `/api/assembly-info`, and `/health` pa
 The project uses SonarCloud for static analysis across three separate projects. Quality gate failure blocks the CI pipeline (`qualitygate.wait=true`).
 Requires >85% overall code coverage and >85% on branch.
 
+An accepted finding is marked “Won’t fix” on the issue in SonarCloud, not suppressed in code: an in-file `// NOSONAR` comment does nothing for the Bicep analyser, and a waiver in `sonar-project-infra.properties` would disable the rule for a whole file and hide future occurrences. Leave a comment in the template explaining the decision.
+
 ### SonarCloud Projects
 
 SonarCloud organization (`cookingcode`)
