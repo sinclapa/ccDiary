@@ -12,8 +12,12 @@ on:
         required: false
         type: string
 
-# Two releases published close together must not deploy at once, or the older one can
-# finish last and win. Never cancel: a half-finished prod deploy is worse than a queued one.
+# Two releases published close together must not deploy at once, or the older one can finish
+# last and win. cancel-in-progress: false protects the run that is already deploying — a
+# half-finished prod deploy is worse than a queued one. It does not promise every run
+# executes: GitHub holds a single pending run per group, so a third one entering while one
+# deploys and one waits drops the waiting run. A rollback dispatch can be displaced that way,
+# so check that it actually ran rather than assuming it is queued.
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
@@ -38,14 +42,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_TAG: ${{ inputs.tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
           if [ -n "${INPUT_TAG}" ]; then
             TAG="${INPUT_TAG}"
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
+          elif [ "${EVENT_NAME}" = "release" ]; then
+            TAG="${RELEASE_TAG}"
           else
             TAG=$(gh release view --json tagName --jq .tagName)
+          fi
+          # The tag reaches later steps through the environment, never interpolated into a
+          # script, and must look like a release tag before it goes anywhere near a command.
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Refusing to deploy '$TAG': expected a tag of the form v1.2.3." >&2
+            exit 1
           fi
           echo "Deploying release ${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
@@ -54,9 +66,10 @@ jobs:
       - name: Download release artefacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release download "${{ steps.release.outputs.tag }}" \
+          gh release download "$TAG" \
             --pattern 'ui-dist.zip' --pattern 'func-package.zip' --clobber
           unzip -q ui-dist.zip
 
