@@ -1,12 +1,28 @@
+name: Release to prod
+
 on:
   release:
     types: [published]
+  # Rollback path: re-run this workflow against an earlier tag to put that release's
+  # already-tested artefacts back in prod, rather than hand-deploying a package.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to deploy (e.g. v1.4.2). Defaults to the latest release.
+        required: false
+        type: string
+
+# Two releases published close together must not deploy at once, or the older one can
+# finish last and win. Never cancel: a half-finished prod deploy is worse than a queued one.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
 
 jobs:
   release-prod:
     environment: prod
 
-    if: startsWith(github.ref_name, 'v')
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'v') }}
 
     runs-on: ubuntu-latest
 
@@ -14,45 +30,66 @@ jobs:
       contents: read
 
     steps:
-      - name: Get Artifact from Release
-        uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          version: ${{ github.event.release.id }}
-          file: ui-dist.zip
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      # The same Functions package staging ran, rather than a fresh build of the same commit.
-      - name: Get Functions package from Release
-        uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          version: ${{ github.event.release.id }}
-          file: func-package.zip
-
-      - name: Unzip Artifact
-        run: unzip ui-dist.zip
-
-      - name: "Configure UI (prod)"
+      - name: Resolve release tag
+        id: release
         env:
-          VITE_API: ${{ vars.API_URL }}
-          VITE_APPLICATION_ID_URI: ${{ vars.ENTRA_APPLICATION_ID_URI }}
-          VITE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
-          VITE_TENANT_ID: ${{ vars.TENANT_ID }}
-          VITE_FARO_URL: ${{ vars.GRAFANA_FARO_URL }}
-          VITE_ENVIRONMENT: prod
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          node << 'SCRIPT'
-          const fs = require('fs');
-          const file = './ui-dist/config.js';
-          let content = fs.readFileSync(file, 'utf8');
-          const keys = ['VITE_API', 'VITE_APPLICATION_ID_URI', 'VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_FARO_URL', 'VITE_ENVIRONMENT'];
-          for (const key of keys) {
-            const raw = process.env[key] || '';
-            const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-            content = content.replace(new RegExp(`(${key}:\\s*)['"][^'"]*['"]`), (_, prefix) => `${prefix}"${escaped}"`);
-          }
-          fs.writeFileSync(file, content);
-          SCRIPT
+          set -euo pipefail
+          if [ -n "${INPUT_TAG}" ]; then
+            TAG="${INPUT_TAG}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG=$(gh release view --json tagName --jq .tagName)
+          fi
+          echo "Deploying release ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy UI to Prod
+      # Both artefacts are the ones staging built and ran, not a rebuild of the same commit.
+      - name: Download release artefacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release download "${{ steps.release.outputs.tag }}" \
+            --pattern 'ui-dist.zip' --pattern 'func-package.zip' --clobber
+          unzip -q ui-dist.zip
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # The API goes first and must pass its health check before the site is switched over.
+      # The other order puts a new UI in front of an API that may never come up, with no way
+      # back but another deploy; this way a failed API leaves prod entirely on the old release.
+      - name: Deploy API to prod
+        uses: ./.github/actions/deploy-function-app
+        with:
+          package-path: func-package.zip
+          storage-account-name: ${{ vars.STORAGE_ACCOUNT_NAME }}
+          deployment-container-name: ${{ vars.DEPLOYMENT_CONTAINER_NAME }}
+          resource-group-name: ${{ vars.RESOURCE_GROUP_NAME }}
+          function-app-name: ${{ vars.FUNCTION_APP_NAME }}
+          health-url: ${{ vars.FUNCTION_APP_URL }}
+
+      - name: Configure UI (prod)
+        uses: ./.github/actions/configure-ui-runtime-config
+        with:
+          config-file: ./ui-dist/config.js
+          api-url: ${{ vars.API_URL }}
+          application-id-uri: ${{ vars.ENTRA_APPLICATION_ID_URI }}
+          client-id: ${{ vars.ENTRA_CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          faro-url: ${{ vars.GRAFANA_FARO_URL }}
+          environment: prod
+
+      - name: Deploy UI to prod
         id: builddeploy-prod
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -61,58 +98,6 @@ jobs:
           app_location: "ui-dist"
           skip_app_build: true
           skip_api_build: true
-
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Flex Consumption runs the app from a zip in a blob container. The one-deploy endpoint
-      # (az functionapp deploy) rejects this custom-handler package — 415 for a trivial zip and
-      # 502 for the real one — so the package goes straight to the container and the host is
-      # then told to pick it up. Without the trigger sync the platform keeps serving the old
-      # package's routes; without the restart, running instances keep the old code.
-      #
-      # --auth-mode login because the account has shared-key access disabled; the deploying
-      # service principal is granted Storage Blob Data Contributor by buildInfrastructure.ps1.
-      - name: Deploy package to Function App
-        run: |
-          az storage blob upload \
-            --account-name "${{ vars.STORAGE_ACCOUNT_NAME }}" \
-            --container-name "${{ vars.DEPLOYMENT_CONTAINER_NAME }}" \
-            --name released-package.zip \
-            --file func-package.zip \
-            --auth-mode login \
-            --overwrite \
-            --output none
-          SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          az rest --method post \
-            --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${{ vars.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ vars.FUNCTION_APP_NAME }}/syncfunctiontriggers?api-version=2023-12-01" \
-            --output none
-          az functionapp restart \
-            --name "${{ vars.FUNCTION_APP_NAME }}" \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --output none
-
-      - name: Verify Function App health
-        run: |
-          API_URL="${{ vars.FUNCTION_APP_URL }}"
-          echo "Polling ${API_URL}/actuator/health ..."
-          for i in $(seq 1 20); do
-            HTTP_STATUS=$(curl -s --max-time 30 -o /tmp/func-health.json -w "%{http_code}" "${API_URL}/actuator/health" || echo "000")
-            HEALTH_STATUS=$(jq -r '.status' /tmp/func-health.json 2>/dev/null || echo "unknown")
-            echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
-            if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
-              echo "Function app is healthy."
-              break
-            fi
-            if [ "$i" = "20" ]; then
-              echo "Function app health check failed after 20 attempts." >&2
-              cat /tmp/func-health.json >&2
-              exit 1
-            fi
-            sleep 10
-          done
 
       # The "disable migration" step is gone: creating a table that already exists is
       # idempotent, so every replica can safely bootstrap on every boot.

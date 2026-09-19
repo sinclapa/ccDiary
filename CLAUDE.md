@@ -347,6 +347,10 @@ Deploying the function app is **not** `az functionapp deploy`. That one-deploy e
 
 Prod works from the release assets rather than a rebuild: `create-release` attaches `func-package.zip` next to `ui-dist.zip`, and `release-prod.yml` fetches and deploys exactly what staging ran.
 
+In prod the **API goes first and must pass its health check before the UI is deployed**. The site is what points traffic at a version, so switching it last means a function app that never comes up leaves prod wholly on the old release instead of stranding a new UI in front of a broken API. `release-prod.yml` also accepts a `workflow_dispatch` with a `tag`, which redeploys that release's assets — the rollback path, and the reason not to hand-deploy a package.
+
+Both deploy paths share `.github/actions/deploy-function-app` (upload, sync, restart, health poll) and `.github/actions/configure-ui-runtime-config` (the `config.js` substitution). Change the composite action, not one workflow, or staging and prod drift apart. `deploy-api` and `e2e-tests` share a `deploy-api-<environment>` concurrency group, because every PR deploys to the one dev function app and overlapping runs would test each other's API.
+
 After pushing a CI/deploy fix, report the run URL rather than polling `gh run list/view`. When a deploy fails, read the actual logs before adding more logging.
 
 ## Local Configuration

@@ -1,0 +1,54 @@
+name: Configure UI runtime config
+description: >
+  Rewrites the placeholders in a built UI's config.js with one environment's values.
+  The UI is built once and configured at deploy time, so this runs against dist output
+  rather than at build time — see "UI runtime configuration" in CLAUDE.md.
+inputs:
+  config-file:
+    description: Path to the built config.js to rewrite.
+    required: true
+  api-url:
+    description: Base URL of the API the site should call.
+    required: true
+  application-id-uri:
+    description: Entra Application ID URI the SPA requests scopes for.
+    required: true
+  client-id:
+    description: Entra client id of the SPA app registration.
+    required: true
+  tenant-id:
+    description: Entra tenant id.
+    required: true
+  faro-url:
+    description: Grafana Faro collector URL. Left empty, Faro stays disabled.
+    required: false
+    default: ""
+  environment:
+    description: Environment name reported by the UI (dev, staging, prod).
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Substitute runtime config values
+      shell: bash
+      env:
+        CONFIG_FILE: ${{ inputs.config-file }}
+        VITE_API: ${{ inputs.api-url }}
+        VITE_APPLICATION_ID_URI: ${{ inputs.application-id-uri }}
+        VITE_CLIENT_ID: ${{ inputs.client-id }}
+        VITE_TENANT_ID: ${{ inputs.tenant-id }}
+        VITE_FARO_URL: ${{ inputs.faro-url }}
+        VITE_ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        node << 'SCRIPT'
+        const fs = require('fs');
+        const file = process.env.CONFIG_FILE;
+        let content = fs.readFileSync(file, 'utf8');
+        const keys = ['VITE_API', 'VITE_APPLICATION_ID_URI', 'VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_FARO_URL', 'VITE_ENVIRONMENT'];
+        for (const key of keys) {
+          const raw = process.env[key] || '';
+          const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          content = content.replace(new RegExp(`(${key}:\\s*)['"][^'"]*['"]`), (_, prefix) => `${prefix}"${escaped}"`);
+        }
+        fs.writeFileSync(file, content);
+        SCRIPT

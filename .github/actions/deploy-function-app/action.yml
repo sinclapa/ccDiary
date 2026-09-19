@@ -1,0 +1,85 @@
+name: Deploy Functions package
+description: >
+  Publishes a Functions custom-handler package to a Flex Consumption app and waits for it
+  to report healthy. Requires an already-authenticated az CLI (azure/login).
+inputs:
+  package-path:
+    description: Path to the func-package.zip to deploy.
+    required: true
+  storage-account-name:
+    description: Storage account holding the deployment container.
+    required: true
+  deployment-container-name:
+    description: Blob container the app runs its package from.
+    required: true
+  resource-group-name:
+    description: Resource group of the function app.
+    required: true
+  function-app-name:
+    description: Name of the function app.
+    required: true
+  health-url:
+    description: Base URL of the function app; /actuator/health is polled under it.
+    required: true
+  health-attempts:
+    description: How many times to poll the health endpoint before failing.
+    required: false
+    default: "20"
+runs:
+  using: composite
+  steps:
+    # Flex Consumption runs the app from a zip in a blob container. The one-deploy endpoint
+    # (az functionapp deploy) rejects this custom-handler package — 415 for a trivial zip and
+    # 502 for the real one — so the package goes straight to the container and the host is
+    # then told to pick it up. Without the trigger sync the platform keeps serving the old
+    # package's routes; without the restart, running instances keep the old code.
+    #
+    # --auth-mode login because the account has shared-key access disabled; the deploying
+    # service principal is granted Storage Blob Data Contributor by buildInfrastructure.ps1.
+    - name: Upload package and reload the host
+      shell: bash
+      env:
+        PACKAGE_PATH: ${{ inputs.package-path }}
+        STORAGE_ACCOUNT_NAME: ${{ inputs.storage-account-name }}
+        DEPLOYMENT_CONTAINER_NAME: ${{ inputs.deployment-container-name }}
+        RESOURCE_GROUP_NAME: ${{ inputs.resource-group-name }}
+        FUNCTION_APP_NAME: ${{ inputs.function-app-name }}
+      run: |
+        set -euo pipefail
+        az storage blob upload \
+          --account-name "$STORAGE_ACCOUNT_NAME" \
+          --container-name "$DEPLOYMENT_CONTAINER_NAME" \
+          --name released-package.zip \
+          --file "$PACKAGE_PATH" \
+          --auth-mode login \
+          --overwrite \
+          --output none
+        SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+        az rest --method post \
+          --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP_NAME}/providers/Microsoft.Web/sites/${FUNCTION_APP_NAME}/syncfunctiontriggers?api-version=2023-12-01" \
+          --output none
+        az functionapp restart \
+          --name "$FUNCTION_APP_NAME" \
+          --resource-group "$RESOURCE_GROUP_NAME" \
+          --output none
+
+    - name: Verify Function App health
+      shell: bash
+      env:
+        API_URL: ${{ inputs.health-url }}
+        ATTEMPTS: ${{ inputs.health-attempts }}
+      run: |
+        echo "Polling ${API_URL}/actuator/health ..."
+        for i in $(seq 1 "$ATTEMPTS"); do
+          HTTP_STATUS=$(curl -s --max-time 30 -o /tmp/func-health.json -w "%{http_code}" "${API_URL}/actuator/health" || echo "000")
+          HEALTH_STATUS=$(jq -r '.status' /tmp/func-health.json 2>/dev/null || echo "unknown")
+          echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/$ATTEMPTS)"
+          if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
+            echo "Function app is healthy."
+            exit 0
+          fi
+          sleep 10
+        done
+        echo "Function app health check failed after $ATTEMPTS attempts." >&2
+        cat /tmp/func-health.json >&2 || true
+        exit 1
