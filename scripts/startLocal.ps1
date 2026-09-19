@@ -65,6 +65,18 @@ function Ensure-Azurite {
     }
 
     Write-Host 'Azurite is not running. Starting it...' -ForegroundColor Yellow
+
+    # A container from before Azurite moved to compose still holds the name compose wants, so
+    # `up` fails with a name conflict on every run until it is gone. Only an unlabelled one is
+    # removed: a stopped compose-managed container is simply restarted by `up`. Its volume is
+    # kept, and its data is test data this script re-seeds anyway.
+    $existing = docker ps -a --filter 'name=^ccdiary-azurite$' --format '{{.Names}}'
+    $composeManaged = docker ps -a --filter 'name=^ccdiary-azurite$' --filter 'label=com.docker.compose.project' --format '{{.Names}}'
+    if ($existing -and -not $composeManaged) {
+        Write-Host 'Removing the pre-compose Azurite container so compose can manage it...' -ForegroundColor Yellow
+        docker rm -f ccdiary-azurite | Out-Null
+    }
+
     $composeFile = Join-Path $ApiPath 'docker-compose.yml'
     $azuriteProcess = Start-Process -FilePath 'docker' `
         -ArgumentList @('compose', '-p', 'ccdiary', '-f', $composeFile, 'up', '-d', 'azurite') `

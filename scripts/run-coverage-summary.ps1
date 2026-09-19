@@ -134,6 +134,14 @@ $azuriteListening = $null -ne (Get-NetTCPConnection -LocalPort 10002 -State List
 if (-not $azuriteListening) {
     Write-Host 'Azurite is not running; starting it for the API storage tests...' -ForegroundColor Yellow
     $apiComposeFile = Join-Path $repoRoot 'src/api/docker-compose.yml'
+
+    # A pre-compose container still holding the name makes `up` fail with a name conflict.
+    $existing = docker ps -a --filter 'name=^ccdiary-azurite$' --format '{{.Names}}'
+    $composeManaged = docker ps -a --filter 'name=^ccdiary-azurite$' --filter 'label=com.docker.compose.project' --format '{{.Names}}'
+    if ($existing -and -not $composeManaged) {
+        docker rm -f ccdiary-azurite | Out-Null
+    }
+
     docker compose -p ccdiary -f $apiComposeFile up -d azurite | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw 'Failed to start Azurite. The API storage tests cannot run without it.'
