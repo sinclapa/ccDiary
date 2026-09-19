@@ -60,6 +60,7 @@ describe('ApiStatusBanner', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('ingredients')
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
   })
 
   it('shows elapsed seconds counter when API is unavailable', async () => {
