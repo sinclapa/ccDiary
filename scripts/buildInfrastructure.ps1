@@ -510,6 +510,30 @@ if (-not $entraClientCredentialsPassword) {
     exit 1
 }
 
+# That secret is for the API alone — it reaches the app through Key Vault and is what
+# GraphService authenticates with. CI never receives a copy: the workflows that need a Graph
+# or API token (the preview redirect steps, and seeding before the end-to-end run) exchange
+# the run's own OIDC token against this federated credential instead. Every pull request runs
+# in the dev environment, so a stored client secret would be reachable from any branch.
+$entraFederatedName = "github-actions-${environment}"
+$entraAppObjectId = az ad app show --id $entraClientId --query id -o tsv
+$existingEntraFederated = az ad app federated-credential list --id $entraAppObjectId --query "[?name=='$entraFederatedName'].name" -o tsv
+if (-not $existingEntraFederated) {
+    Write-Host "  Registering federated credential $entraFederatedName on $entraClientId" -ForegroundColor Gray
+    $entraFederatedParams = [ordered]@{
+        name        = $entraFederatedName
+        issuer      = 'https://token.actions.githubusercontent.com'
+        subject     = "repo:${gitHubOwnerRepo}:environment:${environment}"
+        description = "GitHub Actions gets Graph and API tokens for the $environment environment"
+        audiences   = @('api://AzureADTokenExchange')
+    } | ConvertTo-Json -Depth 3
+
+    $entraFederatedFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-entra-federated-$environment.json"
+    [System.IO.File]::WriteAllText($entraFederatedFile, $entraFederatedParams, (New-Object System.Text.UTF8Encoding $false))
+    az ad app federated-credential create --id $entraAppObjectId --parameters $entraFederatedFile --output none
+    Remove-Item $entraFederatedFile -Force
+}
+
 Write-Host "Storing sensitive configuration..." -ForegroundColor Cyan
 
 # Only a non-empty value becomes a secret, and only then does the matching setting appear:
@@ -727,24 +751,30 @@ gh variable set "AZURE_CLIENT_ID" --body "$ciClientId" --repo $gitHubRepo --env 
 gh variable set "AZURE_SUBSCRIPTION_ID" --body "$subscriptionId" --repo $gitHubRepo --env "${environment}"
 gh variable set "OTEL_EXPORTER_OTLP_ENDPOINT" --body "$grafanaOtlpEndpoint" --repo $gitHubRepo --env "${environment}"
 gh variable set "GRAFANA_FARO_URL" --body "$grafanaFaroUrl" --repo $gitHubRepo --env "${environment}"
-# Secrets — credentials and tokens only
+# Secrets — credentials and tokens only, and only what a workflow actually reads.
+#
+# Deleted rather than set: every PR runs in the dev environment, so anything stored here is
+# reachable from any branch. AZURE_CREDENTIALS and ENTRA_CLIENT_SECRET are both replaced by
+# OIDC — the workflows exchange the run's own token. The other three were only ever written,
+# never read by a workflow: the application receives those values through Key Vault.
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN" --body "$token" --repo $gitHubRepo --env "${environment}"
-gh secret set "ENTRA_CLIENT_SECRET" --body "${entraClientCredentialsPassword}" --repo $gitHubRepo --env "${environment}"
-# Deleted rather than set: the workflows sign in with OIDC, so a lingering client secret
-# would be a live credential nothing uses and nobody rotates.
-gh secret delete "AZURE_CREDENTIALS" --repo $gitHubRepo --env "${environment}" 2>$null
-gh secret set "OTEL_EXPORTER_OTLP_HEADERS" --body "$grafanaOtlpAuthHeader" --repo $gitHubRepo --env "${environment}"
+foreach ($obsoleteSecret in @(
+    'AZURE_CREDENTIALS',
+    'ENTRA_CLIENT_SECRET',
+    'OTEL_EXPORTER_OTLP_HEADERS',
+    'BOOTSTRAP_ADMIN_EMAIL',
+    'SMTP_PASSWORD')) {
+    gh secret delete "$obsoleteSecret" --repo $gitHubRepo --env "${environment}" 2>$null
+}
 gh variable set "GRAPH_INVITE_REDIRECT_URL" --body "https://$staticSiteUrl/" --repo $gitHubRepo --env "${environment}"
 gh variable set "BOOTSTRAP_ADMIN_OBJECT_ID" --body "$bootstrapAdminObjectId" --repo $gitHubRepo --env "${environment}"
 gh variable set "BOOTSTRAP_ADMIN_DISPLAY_NAME" --body "$bootstrapAdminDisplayName" --repo $gitHubRepo --env "${environment}"
-gh secret set "BOOTSTRAP_ADMIN_EMAIL" --body "$bootstrapAdminEmail" --repo $gitHubRepo --env "${environment}"
 if ($smtpHost) {
     gh variable set "SMTP_HOST"      --body "$smtpHost"     --repo $gitHubRepo --env "${environment}"
     gh variable set "SMTP_PORT"      --body "$smtpPort"     --repo $gitHubRepo --env "${environment}"
     gh variable set "SMTP_USERNAME"  --body "$smtpUsername" --repo $gitHubRepo --env "${environment}"
     gh variable set "SMTP_FROM"      --body "$smtpFrom"     --repo $gitHubRepo --env "${environment}"
     gh variable set "SMTP_FROM_NAME" --body "$smtpFromName" --repo $gitHubRepo --env "${environment}"
-    gh secret set "SMTP_PASSWORD"    --body "$smtpPassword" --repo $gitHubRepo --env "${environment}"
 }
 
 Write-Host "Configure SonarCloud GitHub Variables and Secrets..." -ForegroundColor Cyan

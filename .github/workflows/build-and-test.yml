@@ -442,13 +442,20 @@ jobs:
           skip_api_build: true # Set to true to bypass API build step
           deployment_environment: ${{ github.event.pull_request.number }}
           ###### End of Repository/Build Configurations ######
+      - name: Get a Graph token
+        if: github.event_name == 'pull_request'
+        id: graph_token
+        uses: ./.github/actions/entra-token
+        with:
+          client-id: ${{ vars.ENTRA_CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          scope: https://graph.microsoft.com/.default
+
       - name: Add Entra SPA redirect URI for Preview
         if: github.event_name == 'pull_request'
         id: add-entra-redirect
         env:
-          AZURE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
+          GRAPH_TOKEN: ${{ steps.graph_token.outputs.token }}
           ENTRA_APP_OBJECT_ID: ${{ vars.ENTRA_APP_OBJECT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # A branch name is attacker-controlled text, so it reaches the script as data
@@ -466,14 +473,7 @@ jobs:
 
           echo "Using preview URL: $PREVIEW_URL"
 
-          # Acquire Microsoft Graph token using client credentials
-          TOKEN=$(curl -s -X POST \
-            -d "client_id=$AZURE_CLIENT_ID&scope=https://graph.microsoft.com/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
-            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" | jq -r .access_token)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Failed to acquire token" >&2
-            exit 1
-          fi
+          TOKEN="$GRAPH_TOKEN"
 
           # Read current spa.redirectUris for the app registration
           CURRENT=$(curl -s -H "Authorization: Bearer $TOKEN" "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID")
@@ -529,33 +529,26 @@ jobs:
         id: api_url
         run: echo "value=${{ vars.FUNCTION_APP_URL }}" >> $GITHUB_OUTPUT
 
+      # The seeding call below needs a token for the API's own audience, which the app
+      # registration issues to itself — federated, so CI holds no client secret for it.
       - name: Get API bearer token
         id: api_token
-        env:
-          AZURE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
-          ENTRA_APPLICATION_ID_URI: ${{ vars.ENTRA_APPLICATION_ID_URI }}
-        run: |
-          RESPONSE=$(curl -s -X POST \
-            -d "client_id=$AZURE_CLIENT_ID&scope=${ENTRA_APPLICATION_ID_URI}/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
-            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token")
-          TOKEN=$(echo "$RESPONSE" | jq -r .access_token 2>/dev/null)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Failed to acquire API token"
-            echo "Azure AD raw response: $RESPONSE"
-            exit 1
-          fi
-          echo "value=${TOKEN}" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/entra-token
+        with:
+          client-id: ${{ vars.ENTRA_CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          scope: ${{ vars.ENTRA_APPLICATION_ID_URI }}/.default
 
       # No wait for the API here: the deploy step above already polled it to healthy, and
       # nothing else can have deployed over it while this job holds the lock.
       - name: Seed test data
         working-directory: ./
+        env:
+          API_TOKEN: ${{ steps.api_token.outputs.token }}
         run: |
           HTTP_STATUS=$(curl -s -o /tmp/seed_response.json -w "%{http_code}" -X POST \
             "${{ steps.api_url.outputs.value }}/api/v1/DiaryArchive/Import" \
-            -H "Authorization: Bearer ${{ steps.api_token.outputs.value }}" \
+            -H "Authorization: Bearer ${API_TOKEN}" \
             -H "Content-Type: application/json" \
             -d @data/test_data.json)
           echo "HTTP Status: $HTTP_STATUS"

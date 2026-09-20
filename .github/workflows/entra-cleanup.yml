@@ -7,6 +7,9 @@ on:
 permissions:
   contents: read
   issues: read
+  # Lets the job exchange the run's OIDC token for a Graph token, so removing a preview
+  # redirect needs no stored client secret.
+  id-token: write
 
 jobs:
   cleanup-pr:
@@ -18,9 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-      
       - name: Find ENTRA preview redirect from PR comments
         id: find-comment
         env:
@@ -38,24 +38,23 @@ jobs:
           echo "Found preview URL: $PREVIEW_URL"
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
 
+      - name: Get a Graph token
+        if: steps.find-comment.outputs.preview_url != ''
+        id: graph_token
+        uses: ./.github/actions/entra-token
+        with:
+          client-id: ${{ vars.ENTRA_CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          scope: https://graph.microsoft.com/.default
+
       - name: Remove Entra SPA redirect URI
         if: steps.find-comment.outputs.preview_url != ''
         env:
-          AZURE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
+          TOKEN: ${{ steps.graph_token.outputs.token }}
           ENTRA_APP_OBJECT_ID: ${{ vars.ENTRA_APP_OBJECT_ID }}
+          PREVIEW_URL: ${{ steps.find-comment.outputs.preview_url }}
         run: |
-          PREVIEW_URL="${{ steps.find-comment.outputs.preview_url }}"
           echo "Removing preview URL: $PREVIEW_URL"
-
-          TOKEN=$(curl -s -X POST \
-            -d "client_id=$AZURE_CLIENT_ID&scope=https://graph.microsoft.com/.default&client_secret=$AZURE_CLIENT_SECRET&grant_type=client_credentials" \
-            "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" | jq -r .access_token)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Failed to acquire token" >&2
-            exit 1
-          fi
 
           # Get current redirect URIs
           CURRENT=$(curl -s -H "Authorization: Bearer $TOKEN" "https://graph.microsoft.com/v1.0/applications/$ENTRA_APP_OBJECT_ID")
