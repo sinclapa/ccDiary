@@ -214,78 +214,6 @@ jobs:
           path: ${{ github.workspace }}/src/api/func-package.zip
           retention-days: 5
 
-  deploy-api:
-    environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
-
-    needs: build-api
-
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-
-    steps:
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Download Functions package
-        uses: actions/download-artifact@v4
-        with:
-          name: api-func-package
-          path: ${{ github.workspace }}/func-package
-
-      # Flex Consumption runs the app from a zip in a blob container. The one-deploy endpoint
-      # (az functionapp deploy) rejects this custom-handler package — 415 for a trivial zip and
-      # 502 for the real one — so the package goes straight to the container and the host is
-      # then told to pick it up. Without the trigger sync the platform keeps serving the old
-      # package's routes; without the restart, running instances keep the old code.
-      #
-      # --auth-mode login because the account has shared-key access disabled; the deploying
-      # service principal is granted Storage Blob Data Contributor by buildInfrastructure.ps1.
-      - name: Deploy package to Function App
-        run: |
-          az storage blob upload \
-            --account-name "${{ vars.STORAGE_ACCOUNT_NAME }}" \
-            --container-name "${{ vars.DEPLOYMENT_CONTAINER_NAME }}" \
-            --name released-package.zip \
-            --file "${{ github.workspace }}/func-package/func-package.zip" \
-            --auth-mode login \
-            --overwrite \
-            --output none
-          SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          az rest --method post \
-            --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${{ vars.RESOURCE_GROUP_NAME }}/providers/Microsoft.Web/sites/${{ vars.FUNCTION_APP_NAME }}/syncfunctiontriggers?api-version=2023-12-01" \
-            --output none
-          az functionapp restart \
-            --name "${{ vars.FUNCTION_APP_NAME }}" \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --output none
-
-      - name: Verify Function App health
-        run: |
-          API_URL="${{ vars.FUNCTION_APP_URL }}"
-          echo "Polling ${API_URL}/actuator/health ..."
-          for i in $(seq 1 20); do
-            HTTP_STATUS=$(curl -s --max-time 30 -o /tmp/func-health.json -w "%{http_code}" "${API_URL}/actuator/health" || echo "000")
-            HEALTH_STATUS=$(jq -r '.status' /tmp/func-health.json 2>/dev/null || echo "unknown")
-            echo "  HTTP $HTTP_STATUS, status: $HEALTH_STATUS (attempt $i/20)"
-            if [ "$HTTP_STATUS" = "200" ] && [ "$HEALTH_STATUS" = "UP" ]; then
-              echo "Function app is healthy."
-              break
-            fi
-            if [ "$i" = "20" ]; then
-              echo "Function app health check failed after 20 attempts." >&2
-              cat /tmp/func-health.json >&2
-              exit 1
-            fi
-            sleep 10
-          done
-
-      - name: Report API URL
-        run: echo "API deployed to ${{ vars.FUNCTION_APP_URL }}"
-
   build-ui:
     runs-on: ubuntu-latest
 
@@ -434,6 +362,9 @@ jobs:
         working-directory: ./src/ui
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Download UI Artifact
         uses: actions/download-artifact@v4
         with:
@@ -441,26 +372,15 @@ jobs:
           path: "${{ github.workspace }}/src/ui/dist"
 
       - name: "Configure UI"
-        env:
-          VITE_API: ${{ vars.API_URL }}
-          VITE_APPLICATION_ID_URI: ${{ vars.ENTRA_APPLICATION_ID_URI }}
-          VITE_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
-          VITE_TENANT_ID: ${{ vars.TENANT_ID }}
-          VITE_FARO_URL: ${{ vars.GRAFANA_FARO_URL }}
-          VITE_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
-        run: |
-          node << 'SCRIPT'
-          const fs = require('fs');
-          const file = './dist/config.js';
-          let content = fs.readFileSync(file, 'utf8');
-          const keys = ['VITE_API', 'VITE_APPLICATION_ID_URI', 'VITE_CLIENT_ID', 'VITE_TENANT_ID', 'VITE_FARO_URL', 'VITE_ENVIRONMENT'];
-          for (const key of keys) {
-            const raw = process.env[key] || '';
-            const escaped = raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-            content = content.replace(new RegExp(`(${key}:\\s*)['"][^'"]*['"]`), (_, prefix) => `${prefix}"${escaped}"`);
-          }
-          fs.writeFileSync(file, content);
-          SCRIPT
+        uses: ./.github/actions/configure-ui-runtime-config
+        with:
+          config-file: ${{ github.workspace }}/src/ui/dist/config.js
+          api-url: ${{ vars.API_URL }}
+          application-id-uri: ${{ vars.ENTRA_APPLICATION_ID_URI }}
+          client-id: ${{ vars.ENTRA_CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          faro-url: ${{ vars.GRAFANA_FARO_URL }}
+          environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
 
       - name: Deploy UI
         id: deploy_ui_to_azure
@@ -477,10 +397,6 @@ jobs:
           skip_api_build: true # Set to true to bypass API build step
           deployment_environment: ${{ github.event.pull_request.number }}
           ###### End of Repository/Build Configurations ######
-      - name: Install jq
-        if: github.event_name == 'pull_request'
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Add Entra SPA redirect URI for Preview
         if: github.event_name == 'pull_request'
         id: add-entra-redirect
@@ -490,12 +406,17 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.TENANT_ID }}
           ENTRA_APP_OBJECT_ID: ${{ vars.ENTRA_APP_OBJECT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A branch name is attacker-controlled text, so it reaches the script as data
+          # rather than as something the shell expands.
+          HEAD_REF: ${{ github.head_ref }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          DEPLOY_PREVIEW_URL: ${{ steps.deploy_ui_to_azure.outputs.static_web_app_url || steps.deploy_ui_to_azure.outputs.static_site_url || '' }}
         run: |
           # Try common outputs from the static web apps deploy action
-          PREVIEW_URL="${{ steps.deploy_ui_to_azure.outputs.static_web_app_url || steps.deploy_ui_to_azure.outputs.static_site_url || '' }}"
+          PREVIEW_URL="$DEPLOY_PREVIEW_URL"
           if [ -z "$PREVIEW_URL" ]; then
             echo "Warning: preview URL was not available from action outputs. Trying to use the Static Web Apps default preview hostname pattern."
-            PREVIEW_URL="https://${{ github.head_ref }}-${{ github.repository_owner }}.azurestaticapps.net"
+            PREVIEW_URL="https://${HEAD_REF}-${REPOSITORY_OWNER}.azurestaticapps.net"
           fi
 
           echo "Using preview URL: $PREVIEW_URL"
@@ -533,10 +454,21 @@ jobs:
             echo "Added redirect URI and left PR comment."
           fi
 
-  e2e-tests:
+  # Deploying the API and end-to-end testing it are one job on purpose. Every pull request
+  # deploys to the single dev function app, so a second run must not deploy between this
+  # deploy and the tests that check it — which is exactly what a concurrency group spanning
+  # two jobs allows, since the lock is released and re-acquired in between. One job holds it
+  # for both halves. (GitHub still keeps only one run pending per group, so a third
+  # concurrent run is cancelled rather than queued behind the second.)
+  deploy-api-and-e2e:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
 
-    needs: [deploy-api, deploy-ui]
+    concurrency:
+      group: deploy-api-${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
+      cancel-in-progress: false
+
+    # deploy-ui is a dependency because the end-to-end run needs the deployed site's URL.
+    needs: [build-api, deploy-ui]
 
     runs-on: ubuntu-latest
 
@@ -551,6 +483,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Download Functions package
+        uses: actions/download-artifact@v4
+        with:
+          name: api-func-package
+          path: ${{ github.workspace }}/func-package
+
+      - name: Deploy package to Function App
+        uses: ./.github/actions/deploy-function-app
+        with:
+          package-path: ${{ github.workspace }}/func-package/func-package.zip
+          storage-account-name: ${{ vars.STORAGE_ACCOUNT_NAME }}
+          deployment-container-name: ${{ vars.DEPLOYMENT_CONTAINER_NAME }}
+          resource-group-name: ${{ vars.RESOURCE_GROUP_NAME }}
+          function-app-name: ${{ vars.FUNCTION_APP_NAME }}
+          health-url: ${{ vars.FUNCTION_APP_URL }}
+
+      - name: Report API URL
+        run: echo "API deployed to ${{ vars.FUNCTION_APP_URL }}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -577,11 +533,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       # The function app is what the UI calls, so it is what the end-to-end run exercises.
       - name: Get API URL
         id: api_url
@@ -606,20 +557,8 @@ jobs:
           fi
           echo "value=${TOKEN}" >> $GITHUB_OUTPUT
 
-      - name: Wait for API to be ready
-        run: |
-          API_URL="${{ steps.api_url.outputs.value }}"
-          echo "Waiting for API at ${API_URL}/actuator/health ..."
-          for i in $(seq 1 20); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/actuator/health" || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "API is ready (attempt $i)."
-              break
-            fi
-            echo "  HTTP $STATUS — retrying in 10s (attempt $i/20)..."
-            sleep 10
-          done
-
+      # No wait for the API here: the deploy step above already polled it to healthy, and
+      # nothing else can have deployed over it while this job holds the lock.
       - name: Seed test data
         working-directory: ./
         run: |
@@ -669,7 +608,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-prep, deploy-ui, deploy-api, e2e-tests]
+    needs: [build-prep, deploy-ui, deploy-api-and-e2e]
 
     steps:
       - name: Download Artifact
@@ -691,7 +630,7 @@ jobs:
           zip -r ui-dist.zip ui-dist
 
       - name: Create Draft Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.build-prep.outputs.app_version }}
           name: Release ${{ needs.build-prep.outputs.app_version }}
