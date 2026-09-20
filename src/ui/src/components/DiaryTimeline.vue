@@ -45,9 +45,15 @@
           </div>
           <v-img
             v-if="entry.imageData && entry.imageContentType"
-            class="mt-2 diary-entry-media"
+            :alt="`Photograph for the entry of ${dayjs(entry.date).format('D MMMM YYYY')} — select to view full size`"
+            class="mt-2 diary-entry-media diary-entry-media--zoomable"
             :max-height="400"
-            :src="`data:${entry.imageContentType};base64,${entry.imageData}`"
+            role="button"
+            :src="imageSrc(entry)"
+            tabindex="0"
+            @click="openImage(entry)"
+            @keydown.enter.prevent="openImage(entry)"
+            @keydown.space.prevent="openImage(entry)"
           />
         </div>
         <div
@@ -65,6 +71,37 @@
       </div>
     </v-timeline-item>
   </v-timeline>
+
+  <!-- The page photographs are the point of the entry, and the thumbnail caps at 400px, so the
+       handwriting is only readable full size. Scrim and Escape both close it. -->
+  <v-dialog
+    v-model="imageDialog"
+    aria-label="Diary page photograph"
+    :max-width="1200"
+    scrollable
+  >
+    <v-card class="image-viewer">
+      <v-card-title class="d-flex align-center pe-2">
+        <span class="text-subtitle-1 text-truncate">{{ zoomedCaption }}</span>
+        <v-spacer />
+        <v-btn
+          aria-label="Close photograph"
+          icon="$mdi-close"
+          size="small"
+          variant="text"
+          @click="imageDialog = false"
+        />
+      </v-card-title>
+      <v-card-text class="pa-2">
+        <img
+          v-if="zoomedSrc"
+          :alt="zoomedCaption"
+          class="image-viewer__img"
+          :src="zoomedSrc"
+        >
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -80,6 +117,21 @@
     edit: [entry: DiaryEntry]
     delete: [entry: DiaryEntry]
   }>()
+
+  const imageDialog = ref(false)
+  const zoomedSrc = ref<string>()
+  const zoomedCaption = ref('')
+
+  function imageSrc (entry: DiaryEntry) {
+    return `data:${entry.imageContentType};base64,${entry.imageData}`
+  }
+
+  function openImage (entry: DiaryEntry) {
+    if (!entry.imageData || !entry.imageContentType) return
+    zoomedSrc.value = imageSrc(entry)
+    zoomedCaption.value = `${entry.location} — ${dayjs(entry.date).format('D MMMM YYYY')}`
+    imageDialog.value = true
+  }
 
   // The map column is laid out by one condition and populated by two. Inlining all three
   // meant the wrapper's condition was a copy of the other two OR'd together, so adding a
@@ -115,6 +167,28 @@
     width: 100%;
     max-width: 100%;
     display: block;
+  }
+
+  :deep(.diary-entry-media--zoomable) {
+    cursor: zoom-in;
+    transition: opacity 0.15s ease;
+  }
+
+  :deep(.diary-entry-media--zoomable:hover) {
+    opacity: 0.9;
+  }
+
+  :deep(.diary-entry-media--zoomable:focus-visible) {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: 2px;
+  }
+
+  /* The photograph fills the dialog's width and grows as tall as it needs; the dialog itself
+     scrolls, so a tall stitched crop stays readable rather than being squeezed to fit. */
+  .image-viewer__img {
+    display: block;
+    width: 100%;
+    height: auto;
   }
 
   .entry-content {

@@ -29,9 +29,19 @@ function makeEntry (overrides: {
   fromLocation?: string
   toLocation?: string
   showJourney?: boolean
+  imageData?: string
+  imageContentType?: string
 } = {}): DiaryEntry {
   const { location = 'London', entry = 'A lovely day.', date = new Date('2024-06-15T10:30:00'), ...options } = overrides
   return new DiaryEntry('diary-1', date, location, entry, { diaryEntryId: 'entry-1', ...options })
+}
+
+// <script setup> bindings are reachable at runtime but not in the component's public type,
+// so the viewer's state is read through this shape rather than casting at every use.
+type TimelineInternals = { zoomedSrc?: string, zoomedCaption: string }
+
+function viewerState (wrapper: { vm: unknown }) {
+  return wrapper.vm as TimelineInternals
 }
 
 function mountTimeline (entries: DiaryEntry[], canEdit = false) {
@@ -188,5 +198,52 @@ describe('DiaryTimeline.vue', () => {
 
     await editBtns[1].trigger('click')
     expect((wrapper.emitted('edit')![0][0] as DiaryEntry).location).toBe('Kyoto')
+  })
+
+  it('does not render an image when the entry has none', () => {
+    const wrapper = mountTimeline([makeEntry()])
+    expect(wrapper.find('.diary-entry-media').exists()).toBe(false)
+  })
+
+  it('renders the entry image from its base64 data', () => {
+    const wrapper = mountTimeline([makeEntry({ imageData: 'QUJD', imageContentType: 'image/jpeg' })])
+    const img = wrapper.findComponent({ name: 'VImg' })
+    expect(img.exists()).toBe(true)
+    expect(img.props('src')).toBe('data:image/jpeg;base64,QUJD')
+  })
+
+  it('opens the full size viewer when the image is clicked', async () => {
+    const wrapper = mountTimeline([makeEntry({
+      location: 'Zanzibar',
+      date: new Date('1918-08-21T10:00:00'),
+      imageData: 'QUJD',
+      imageContentType: 'image/jpeg',
+    })])
+
+    expect(wrapper.findComponent({ name: 'VDialog' }).props('modelValue')).toBe(false)
+
+    await wrapper.find('.diary-entry-media--zoomable').trigger('click')
+
+    expect(wrapper.findComponent({ name: 'VDialog' }).props('modelValue')).toBe(true)
+    expect(viewerState(wrapper).zoomedCaption).toBe('Zanzibar — 21 August 1918')
+    expect(viewerState(wrapper).zoomedSrc).toBe('data:image/jpeg;base64,QUJD')
+  })
+
+  it('opens the viewer from the keyboard', async () => {
+    const wrapper = mountTimeline([makeEntry({ imageData: 'QUJD', imageContentType: 'image/jpeg' })])
+    await wrapper.find('.diary-entry-media--zoomable').trigger('keydown.enter')
+    expect(wrapper.findComponent({ name: 'VDialog' }).props('modelValue')).toBe(true)
+  })
+
+  it('shows the clicked entry image when several entries have one', async () => {
+    const wrapper = mountTimeline([
+      makeEntry({ diaryEntryId: 'e1', location: 'Lindi', imageData: 'QUFB', imageContentType: 'image/jpeg' }),
+      makeEntry({ diaryEntryId: 'e2', location: 'Kilwa', imageData: 'QkJC', imageContentType: 'image/jpeg' }),
+    ])
+
+    await wrapper.findAll('.diary-entry-media--zoomable')[1].trigger('click')
+
+    expect(viewerState(wrapper).zoomedSrc).toBe('data:image/jpeg;base64,QkJC')
+    expect(viewerState(wrapper).zoomedCaption).toContain('Kilwa')
   })
 })
