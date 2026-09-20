@@ -1,24 +1,22 @@
 <template>
-  <div v-if="!apiStatus.available" class="api-status-bar">
-    <v-icon icon="$mdi-server-network-off" size="small" />
-    <span class="spotlight-text ml-2">
-      <span
-        v-for="(char, i) in messageChars"
-        :key="i"
-        class="spotlight-char"
-        :style="{ animationDelay: `${i * 0.06}s` }"
-      >{{ char === ' ' ? ' ' : char }}</span>
-    </span>
-    <span class="ml-2 wait-counter">({{ elapsedSeconds }}s)</span>
-  </div>
+  <Transition name="api-status-fade">
+    <div
+      v-if="!apiStatus.available"
+      aria-live="polite"
+      class="api-status-bar"
+      role="status"
+    >
+      <span aria-hidden="true" class="api-status-dot" />
+      <span>Preparing the ingredients, please wait...</span>
+      <span class="wait-counter">({{ elapsedSeconds }}s)</span>
+    </div>
+  </Transition>
 </template>
 
 <script lang="ts" setup>
   import { useApiStatusStore } from '@/stores/apiStatus'
 
   const apiStatus = useApiStatusStore()
-  const message = 'Preparing the ingredients, please wait...'
-  const messageChars = message.split('')
 
   const elapsedSeconds = ref(0)
   let ticker: ReturnType<typeof setInterval> | null = null
@@ -54,39 +52,66 @@
 </script>
 
 <style scoped>
+  /* Fixed rather than in the page flow, so appearing or clearing never shifts the content
+     below it; pointer-events off so it never swallows a click on a control underneath. */
   .api-status-bar {
+    position: fixed;
+    top: calc(var(--cc-header-height) + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
     display: flex;
     align-items: center;
-    padding: 6px 16px;
-    background: rgba(var(--v-theme-warning), 0.15);
-    border-bottom: 1px solid rgba(var(--v-theme-warning), 0.4);
-    color: rgb(var(--v-theme-on-surface));
-    font-size: 0.875rem;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    max-width: 1100px;
-    width: 100%;
-    margin: 0 auto;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    background: rgb(var(--v-theme-surface));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+    font-size: 0.75rem;
+    white-space: nowrap;
+    pointer-events: none;
   }
 
-  .spotlight-text {
-    display: inline-flex;
-    flex-wrap: wrap;
+  .api-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgb(var(--v-theme-warning));
+    animation: api-status-pulse 1.6s ease-in-out infinite;
   }
 
-  .spotlight-char {
-    animation: spotlight 2.5s ease-in-out infinite;
-    opacity: 0.4;
-  }
-
-  @keyframes spotlight {
-    0%, 100% { opacity: 0.4; text-shadow: none; }
-    20%, 30% { opacity: 1; text-shadow: none; }
+  @keyframes api-status-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
   }
 
   .wait-counter {
     font-variant-numeric: tabular-nums;
-    opacity: 0.8;
+  }
+
+  .api-status-fade-enter-active,
+  .api-status-fade-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .api-status-fade-enter-from,
+  .api-status-fade-leave-to {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+
+  @media (max-width: 599px) {
+    .api-status-bar {
+      top: 112px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .api-status-dot {
+      animation: none;
+      opacity: 1;
+    }
   }
 </style>
