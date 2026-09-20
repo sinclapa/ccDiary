@@ -625,24 +625,60 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "  Stored $($secretValues.Count) secret(s)" -ForegroundColor Gray
 
-Write-Host "Create credentials for app container contributor role..." -ForegroundColor Cyan
+Write-Host "Configure the deploying identity (federated, no stored secret)..." -ForegroundColor Cyan
 
-# The credential keeps its original ca-prefixed name: renaming it would mint a second
-# service principal and leave the first one holding live role assignments.
+# The identity keeps its original ca-prefixed name: renaming it would mint a second service
+# principal and leave the first one holding live role assignments.
+#
+# It holds no password. GitHub Actions signs in with a token it mints for the run, which
+# Entra trades for an Azure one because of the federated credential registered below — so
+# nothing in GitHub stores an Azure credential, and there is none to rotate or leak. The
+# subject pins the exchange to this repository *and* this environment, which is why the
+# deployment branch policies on the environments matter: they decide which refs can claim it.
 $ciCredentialName = "ca-${name}-${environment}-credentials".ToLower()
-$azureCredentials = az ad sp create-for-rbac `
-  --name "$ciCredentialName" `
+$ciAppId = az ad app list --filter "displayName eq '$ciCredentialName'" --query "[0].appId" -o tsv
+if (-not $ciAppId) {
+    Write-Host "  Creating app registration $ciCredentialName" -ForegroundColor Gray
+    $ciAppId = az ad app create --display-name "$ciCredentialName" --query appId -o tsv
+}
+
+$ciAppObjectId = az ad app show --id $ciAppId --query id -o tsv
+$ciPrincipalId = az ad sp show --id $ciAppId --query id -o tsv 2>$null
+if (-not $ciPrincipalId) {
+    $ciPrincipalId = az ad sp create --id $ciAppId --query id -o tsv
+}
+
+$federatedName = "github-actions-${environment}"
+$existingFederated = az ad app federated-credential list --id $ciAppObjectId --query "[?name=='$federatedName'].name" -o tsv
+if (-not $existingFederated) {
+    Write-Host "  Registering federated credential $federatedName" -ForegroundColor Gray
+    $federatedParams = [ordered]@{
+        name        = $federatedName
+        issuer      = 'https://token.actions.githubusercontent.com'
+        subject     = "repo:${gitHubOwnerRepo}:environment:${environment}"
+        description = "GitHub Actions deploys to the $environment environment"
+        audiences   = @('api://AzureADTokenExchange')
+    } | ConvertTo-Json -Depth 3
+
+    # BOM-less, like the deployment parameter file: az rejects a file Set-Content has marked.
+    $federatedFile = Join-Path ([System.IO.Path]::GetTempPath()) "ccdiary-federated-$environment.json"
+    [System.IO.File]::WriteAllText($federatedFile, $federatedParams, (New-Object System.Text.UTF8Encoding $false))
+    az ad app federated-credential create --id $ciAppObjectId --parameters $federatedFile --output none
+    Remove-Item $federatedFile -Force
+}
+
+az role assignment create `
+  --assignee-object-id $ciPrincipalId `
+  --assignee-principal-type ServicePrincipal `
   --role contributor `
-  --scopes /subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName} `
-  --json-auth `
-  --output json
+  --scope /subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName} `
+  --output none 2>$null
 
 # Contributor is a control-plane role: it can manage the storage account but cannot write a
 # blob. The deploy workflows upload the function app's package to the deployment container,
 # and shared-key access is disabled on the account, so the credential needs a data-plane
 # role as well — without it the upload fails with 403 and the deploy never lands.
-$ciClientId = ($azureCredentials | ConvertFrom-Json).clientId
-$ciPrincipalId = az ad sp show --id $ciClientId --query id -o tsv
+$ciClientId = $ciAppId
 if ($ciPrincipalId) {
     az role assignment create `
       --assignee-object-id $ciPrincipalId `
@@ -685,12 +721,18 @@ gh variable set "ENTRA_CLIENT_ID" --body "$entraClientId" --repo $gitHubRepo --e
 gh variable set "ENTRA_APP_OBJECT_ID" --body "$entraObjectId" --repo $gitHubRepo --env "${environment}"
 gh variable set "ENTRA_APPLICATION_ID_URI" --body "$entraApplicationIdURI" --repo $gitHubRepo --env "${environment}"
 gh variable set "TENANT_ID" --body "$tenantId" --repo $gitHubRepo --env "${environment}"
+# How the workflows sign in to Azure. These are identifiers, not credentials: the proof is
+# the run's own OIDC token, exchanged against the federated credential registered above.
+gh variable set "AZURE_CLIENT_ID" --body "$ciClientId" --repo $gitHubRepo --env "${environment}"
+gh variable set "AZURE_SUBSCRIPTION_ID" --body "$subscriptionId" --repo $gitHubRepo --env "${environment}"
 gh variable set "OTEL_EXPORTER_OTLP_ENDPOINT" --body "$grafanaOtlpEndpoint" --repo $gitHubRepo --env "${environment}"
 gh variable set "GRAFANA_FARO_URL" --body "$grafanaFaroUrl" --repo $gitHubRepo --env "${environment}"
 # Secrets — credentials and tokens only
 gh secret set "AZURE_STATIC_WEB_APPS_API_TOKEN" --body "$token" --repo $gitHubRepo --env "${environment}"
 gh secret set "ENTRA_CLIENT_SECRET" --body "${entraClientCredentialsPassword}" --repo $gitHubRepo --env "${environment}"
-gh secret set "AZURE_CREDENTIALS" --body "$azureCredentials" --repo $gitHubRepo --env "${environment}"
+# Deleted rather than set: the workflows sign in with OIDC, so a lingering client secret
+# would be a live credential nothing uses and nobody rotates.
+gh secret delete "AZURE_CREDENTIALS" --repo $gitHubRepo --env "${environment}" 2>$null
 gh secret set "OTEL_EXPORTER_OTLP_HEADERS" --body "$grafanaOtlpAuthHeader" --repo $gitHubRepo --env "${environment}"
 gh variable set "GRAPH_INVITE_REDIRECT_URL" --body "https://$staticSiteUrl/" --repo $gitHubRepo --env "${environment}"
 gh variable set "BOOTSTRAP_ADMIN_OBJECT_ID" --body "$bootstrapAdminObjectId" --repo $gitHubRepo --env "${environment}"
