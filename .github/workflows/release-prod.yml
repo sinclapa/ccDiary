@@ -26,7 +26,15 @@ jobs:
   release-prod:
     environment: prod
 
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref_name, 'v') }}
+    # A release runs from its own tag; a manual rollback only from main. The job checks out
+    # the ref it runs for and executes composite actions from it, so dispatching from an
+    # arbitrary branch would run that branch's code beside the prod credentials. Which tag is
+    # deployed is the `tag` input, not the ref, so restricting this costs the rollback path
+    # nothing. (Deployment branch policies on the prod environment are the durable fix; this
+    # condition is what the workflow itself can enforce.)
+    if: >-
+      ${{ (github.event_name == 'release' && startsWith(github.ref_name, 'v'))
+        || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
 
     runs-on: ubuntu-latest
 
