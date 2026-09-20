@@ -343,27 +343,63 @@ jobs:
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.qualitygate.wait=true
 
-  deploy-ui:
+  # One job deploys this environment and verifies it, in that order: API, then UI, then the
+  # end-to-end run. The API goes first everywhere for the reason it goes first in prod — the
+  # site is what points traffic at a version, so switching it last means a failed API deploy
+  # leaves the environment on the previous one rather than stranding a new UI in front of it.
+  #
+  # They are one job rather than three because every pull request deploys to the single dev
+  # function app: a concurrency group spanning separate jobs releases the lock between them
+  # and lets the next run deploy in the gap, leaving the tests to exercise someone else's
+  # API. One job holds it throughout. (GitHub still keeps only one run pending per group, so
+  # a third concurrent run is cancelled rather than queued behind the second.)
+  deploy-and-verify:
     environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
 
-    needs: build-ui
+    concurrency:
+      group: deploy-${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
+      cancel-in-progress: false
+
+    needs: [build-api, build-ui]
 
     runs-on: ubuntu-latest
 
-    outputs:
-      static_web_app_url: ${{ steps.deploy_ui_to_azure.outputs.static_web_app_url }}
-
     permissions:
       contents: read
+      checks: write
       issues: write
+      pull-requests: write
 
     defaults:
       run:
         working-directory: ./src/ui
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Download Functions package
+        uses: actions/download-artifact@v4
+        with:
+          name: api-func-package
+          path: ${{ github.workspace }}/func-package
+
+      - name: Deploy package to Function App
+        uses: ./.github/actions/deploy-function-app
+        with:
+          package-path: ${{ github.workspace }}/func-package/func-package.zip
+          storage-account-name: ${{ vars.STORAGE_ACCOUNT_NAME }}
+          deployment-container-name: ${{ vars.DEPLOYMENT_CONTAINER_NAME }}
+          resource-group-name: ${{ vars.RESOURCE_GROUP_NAME }}
+          function-app-name: ${{ vars.FUNCTION_APP_NAME }}
+          health-url: ${{ vars.FUNCTION_APP_URL }}
+
+      - name: Report API URL
+        run: echo "API deployed to ${{ vars.FUNCTION_APP_URL }}"
 
       - name: Download UI Artifact
         uses: actions/download-artifact@v4
@@ -454,60 +490,6 @@ jobs:
             echo "Added redirect URI and left PR comment."
           fi
 
-  # Deploying the API and end-to-end testing it are one job on purpose. Every pull request
-  # deploys to the single dev function app, so a second run must not deploy between this
-  # deploy and the tests that check it — which is exactly what a concurrency group spanning
-  # two jobs allows, since the lock is released and re-acquired in between. One job holds it
-  # for both halves. (GitHub still keeps only one run pending per group, so a third
-  # concurrent run is cancelled rather than queued behind the second.)
-  deploy-api-and-e2e:
-    environment: ${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
-
-    concurrency:
-      group: deploy-api-${{ github.ref == 'refs/heads/main' && 'staging' || 'dev' }}
-      cancel-in-progress: false
-
-    # deploy-ui is a dependency because the end-to-end run needs the deployed site's URL.
-    needs: [build-api, deploy-ui]
-
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
-
-    defaults:
-      run:
-        working-directory: ./src/ui
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Download Functions package
-        uses: actions/download-artifact@v4
-        with:
-          name: api-func-package
-          path: ${{ github.workspace }}/func-package
-
-      - name: Deploy package to Function App
-        uses: ./.github/actions/deploy-function-app
-        with:
-          package-path: ${{ github.workspace }}/func-package/func-package.zip
-          storage-account-name: ${{ vars.STORAGE_ACCOUNT_NAME }}
-          deployment-container-name: ${{ vars.DEPLOYMENT_CONTAINER_NAME }}
-          resource-group-name: ${{ vars.RESOURCE_GROUP_NAME }}
-          function-app-name: ${{ vars.FUNCTION_APP_NAME }}
-          health-url: ${{ vars.FUNCTION_APP_URL }}
-
-      - name: Report API URL
-        run: echo "API deployed to ${{ vars.FUNCTION_APP_URL }}"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -578,7 +560,7 @@ jobs:
       - name: Run E2E Tests
         env:
           PLAYWRIGHT_API_URL: ${{ steps.api_url.outputs.value }}
-          PLAYWRIGHT_BASE_URL: ${{ needs.deploy-ui.outputs.static_web_app_url }}
+          PLAYWRIGHT_BASE_URL: ${{ steps.deploy_ui_to_azure.outputs.static_web_app_url }}
         run: npm run test:e2e
 
       - name: Upload Playwright Report
@@ -608,7 +590,7 @@ jobs:
     permissions:
       contents: write
 
-    needs: [build-prep, deploy-ui, deploy-api-and-e2e]
+    needs: [build-prep, deploy-and-verify]
 
     steps:
       - name: Download Artifact
