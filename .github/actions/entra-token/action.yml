@@ -1,0 +1,65 @@
+name: Get an Entra token
+description: >
+  Acquires an app-only access token for the environment's app registration without a client
+  secret: the run's own OIDC token is presented to Entra as a client assertion, against the
+  federated credential buildInfrastructure.ps1 registers for this repository and environment.
+  Requires `id-token: write` on the calling job.
+inputs:
+  client-id:
+    description: Entra application (client) id to authenticate as.
+    required: true
+  tenant-id:
+    description: Entra tenant id.
+    required: true
+  scope:
+    description: Scope to request, e.g. https://graph.microsoft.com/.default
+    required: true
+outputs:
+  token:
+    description: The access token. Masked in logs, but still a credential — do not echo it.
+    value: ${{ steps.exchange.outputs.token }}
+runs:
+  using: composite
+  steps:
+    - name: Exchange the run's OIDC token for an Entra token
+      id: exchange
+      shell: bash
+      env:
+        CLIENT_ID: ${{ inputs.client-id }}
+        TENANT_ID: ${{ inputs.tenant-id }}
+        SCOPE: ${{ inputs.scope }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+          echo "No OIDC token endpoint. The calling job needs 'id-token: write'." >&2
+          exit 1
+        fi
+
+        # GitHub mints this for the run; it names the repository and environment, and is the
+        # only thing proving identity here — no secret is stored anywhere.
+        ASSERTION=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" | jq -r '.value')
+        if [ -z "$ASSERTION" ] || [ "$ASSERTION" = "null" ]; then
+          echo "Could not obtain a GitHub OIDC token." >&2
+          exit 1
+        fi
+
+        RESPONSE=$(curl -sS -X POST \
+          -d "client_id=${CLIENT_ID}" \
+          -d "scope=${SCOPE}" \
+          -d "grant_type=client_credentials" \
+          -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+          --data-urlencode "client_assertion=${ASSERTION}" \
+          "https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token")
+
+        TOKEN=$(echo "$RESPONSE" | jq -r '.access_token // empty')
+        if [ -z "$TOKEN" ]; then
+          # The response carries no token, so the error text is safe to surface and is the
+          # only way to tell a missing federated credential from a wrong scope.
+          echo "Token exchange failed: $(echo "$RESPONSE" | jq -c '{error, error_description}')" >&2
+          exit 1
+        fi
+
+        echo "::add-mask::$TOKEN"
+        echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
