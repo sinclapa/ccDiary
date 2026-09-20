@@ -341,7 +341,7 @@ Consequently: secrets travel in the deployment **parameter file** (BOM-less UTF-
 
 ## CI/CD (`.github/workflows/build-and-test.yml`)
 
-Jobs: `build-prep` (semver bump + tag) → `build-api` (Sonar scan wraps build+test, then **packages the app as a Functions custom handler**: self-contained `linux-x64`, `chmod +x`, zipped on Linux) → `deploy-api` (upload the package, sync triggers, restart, health check) → `build-ui` (build, test, Sonar, deploy Static Web App with `config.js` substitution).
+Jobs: `build-prep` (semver bump + tag) → `build-api` (Sonar scan wraps build+test, then **packages the app as a Functions custom handler**: self-contained `linux-x64`, `chmod +x`, zipped on Linux) and `build-ui` (build, test, Sonar) in parallel → `deploy-and-verify` (API package, then Static Web App with `config.js` substitution, then the end-to-end run) → `create-release`.
 
 Deploying the function app is **not** `az functionapp deploy`. That one-deploy endpoint rejects this custom-handler package — 415 for a trivial zip, 502 for the real one — so the workflow uploads the package to the deployment container as `released-package.zip`, calls `syncfunctiontriggers`, and restarts the app. Skipping the sync leaves the old routes served; skipping the restart leaves running instances on the old code.
 
@@ -351,7 +351,12 @@ In prod the **API goes first and must pass its health check before the UI is dep
 
 Both deploy paths share `.github/actions/deploy-function-app` (upload, sync, restart, health poll) and `.github/actions/configure-ui-runtime-config` (the `config.js` substitution). Change the composite action, not one workflow, or staging and prod drift apart.
 
-Deploying the API and running the end-to-end tests are **one job** (`deploy-api-and-e2e`), holding a `deploy-api-<environment>` concurrency group. Every PR deploys to the single dev function app, so the tests must not be a separate job: a group spanning two jobs releases the lock between them and lets the next run deploy in the gap, leaving the tests to exercise someone else's API.
+**The API deploys before the UI in every environment**, not only in prod, and `deploy-and-verify` is one job for both plus the end-to-end run. Two reasons, and they are separate:
+
+- *Order*: the site is what points traffic at a version, so switching it last means a failed API deploy leaves that environment on the previous version instead of stranding a new UI in front of it.
+- *One job*: every PR deploys to the single dev function app. A concurrency group spanning separate jobs releases the lock between them, letting the next run deploy in the gap and leaving the tests to exercise someone else's API. The job holds a `deploy-<environment>` group throughout.
+
+Splitting this job back up reintroduces both problems. If you rename it, update the required status checks on `main` to match, or every PR blocks waiting for a check that can no longer report.
 
 After pushing a CI/deploy fix, report the run URL rather than polling `gh run list/view`. When a deploy fails, read the actual logs before adding more logging.
 
