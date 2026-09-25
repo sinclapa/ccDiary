@@ -8,7 +8,7 @@
     >
       <template #opposite>
         <div class="pt-1 headline font-weight-light text-primary" style="width: 80px;">
-          {{ dayjs(entry.date).format('ddd HH:mm') }}
+          {{ entryTime(entry.date).format('ddd HH:mm') }}
         </div>
       </template>
       <div
@@ -45,7 +45,7 @@
           </div>
           <v-img
             v-if="entry.imageData && entry.imageContentType"
-            :alt="`Photograph for the entry of ${dayjs(entry.date).format('D MMMM YYYY')} — select to view full size`"
+            :alt="`Photograph for the entry of ${entryTime(entry.date).format('D MMMM YYYY')} — select to view full size`"
             class="mt-2 diary-entry-media diary-entry-media--zoomable"
             :max-height="400"
             role="button"
@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-  import dayjs from 'dayjs'
+  import { entryTime } from '@/utils/entryTime'
   import type DiaryEntry from '@/services/models/diaryEntry'
 
   defineProps<{
@@ -129,7 +129,7 @@
   function openImage (entry: DiaryEntry) {
     if (!entry.imageData || !entry.imageContentType) return
     zoomedSrc.value = imageSrc(entry)
-    zoomedCaption.value = `${entry.location} — ${dayjs(entry.date).format('D MMMM YYYY')}`
+    zoomedCaption.value = `${entry.location} — ${entryTime(entry.date).format('D MMMM YYYY')}`
     imageDialog.value = true
   }
 

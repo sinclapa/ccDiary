@@ -1,7 +1,6 @@
 import DiaryEntry from '@/services/models/diaryEntry'
 import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import dayjs from 'dayjs'
 
 const baseUrl : string = 'http://localhost'
 
@@ -87,10 +86,10 @@ describe('DiaryEntry Service', () => {
     await diaryEntryAPI.searchDiaryEntry(diaryId, 2024, 9)
 
     // Assert
-    const utcOffsetMinutes = dayjs(new Date(2024, 8, 1)).utcOffset()
+    // a diary day runs on the diarist's clock, so the window is never shifted by the viewer
     expect(fetchSpy).toHaveBeenCalledWith(
       new URL(`v1/DiaryEntry/Search/${diaryId}/2024/9/`, baseUrl),
-      { headers: { 'x-utc-offset': `${utcOffsetMinutes}` } }
+      { headers: { 'x-utc-offset': '0' } }
     )
   })
 
@@ -107,11 +106,10 @@ describe('DiaryEntry Service', () => {
     await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
 
     // Assert
-    const utcOffsetMinutes : number = dayjs(new Date(2024, 9, 17)).utcOffset()
     expect(fetchSpy).toHaveBeenCalledWith(new URL(`v1/DiaryEntry/Search/${diaryId}/2024/9/17`, baseUrl),
       {
         headers: {
-          'x-utc-offset': `${utcOffsetMinutes}`,
+          'x-utc-offset': '0',
         },
       }
     )

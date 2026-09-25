@@ -68,8 +68,19 @@ describe('DiaryTimeline.vue', () => {
   })
 
   it('formats the time in the opposite slot', () => {
-    const wrapper = mountTimeline([makeEntry({ date: new Date('2024-06-15T14:45:00') })])
+    const wrapper = mountTimeline([makeEntry({ date: new Date('2024-06-15T14:45:00Z') })])
     expect(wrapper.text()).toContain('14:45')
+  })
+
+  it('shows the time the diarist wrote, whatever zone the viewer is in', () => {
+    // stored wall clock: an entry written at 08:20 reads 08:20 in Kent and in Kenya alike
+    const wrapper = mountTimeline([makeEntry({ date: new Date('1918-05-21T08:20:00Z') })])
+    expect(wrapper.text()).toContain('08:20')
+  })
+
+  it('keeps a late evening entry on its own day', () => {
+    const wrapper = mountTimeline([makeEntry({ date: new Date('1918-11-11T23:50:00Z') })])
+    expect(wrapper.text()).toContain('23:50')
   })
 
   it('does not show edit or delete buttons when canEdit is false', () => {
