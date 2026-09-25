@@ -222,6 +222,7 @@ describe('DiaryEntry Service', () => {
       toLocation: '',
       showJourney: false,
       journeyMode: 'crow-flies',
+      images: [],
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -259,6 +260,7 @@ describe('DiaryEntry Service', () => {
       toLocation: 'Southampton, UK',
       showJourney: true,
       journeyMode: 'crow-flies',
+      images: [],
     }
     await diaryEntryAPI.createDiaryEntry(diaryEntry)
 
@@ -290,6 +292,7 @@ describe('DiaryEntry Service', () => {
       toLocation: '',
       showJourney: false,
       journeyMode: 'crow-flies',
+      images: [],
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 
@@ -327,6 +330,7 @@ describe('DiaryEntry Service', () => {
       toLocation: 'Paris, France',
       showJourney: true,
       journeyMode: 'crow-flies',
+      images: [],
     }
     await diaryEntryAPI.updateDiaryEntry(diaryEntry)
 
@@ -368,36 +372,54 @@ describe('DiaryEntry Service', () => {
     expect(results[0].toLocation).toBe('Southampton, UK')
   })
 
-  it('searchDiaryEntryForDay maps imageData and imageContentType from API response', async () => {
-    // Arrange
+  function mockDayResponse (fields: Record<string, unknown>) {
     const diaryId = crypto.randomUUID()
-    const entryId = crypto.randomUUID()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       statusText: 'OK',
       json: async () => ([{
         diaryId,
-        diaryEntryId: entryId,
+        diaryEntryId: crypto.randomUUID(),
         date: new Date(2024, 8, 17).toISOString(),
         location: 'Home',
-        entry: 'A note with an image.',
+        entry: 'A note with pictures.',
         mapLocation: '',
         showMap: false,
         fromLocation: '',
         toLocation: '',
         showJourney: false,
-        imageData: 'abc123',
-        imageContentType: 'image/jpeg',
+        ...fields,
       }]),
     } as Response)
+    return diaryId
+  }
 
-    // Act
+  it('searchDiaryEntryForDay maps every image from the API response, in order', async () => {
+    const images = [
+      { data: 'abc123', contentType: 'image/jpeg' },
+      { data: 'def456', contentType: 'image/png' },
+    ]
+    const diaryId = mockDayResponse({ images, imageData: 'abc123', imageContentType: 'image/jpeg' })
+
     const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
 
-    // Assert
-    expect(results).toHaveLength(1)
-    expect(results[0].imageData).toBe('abc123')
-    expect(results[0].imageContentType).toBe('image/jpeg')
+    expect(results[0].images).toEqual(images)
+  })
+
+  it('searchDiaryEntryForDay reads a response with only the single-image fields as one image', async () => {
+    const diaryId = mockDayResponse({ imageData: 'abc123', imageContentType: 'image/jpeg' })
+
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    expect(results[0].images).toEqual([{ data: 'abc123', contentType: 'image/jpeg' }])
+  })
+
+  it('searchDiaryEntryForDay gives an entry with no images an empty list', async () => {
+    const diaryId = mockDayResponse({ images: null, imageData: null, imageContentType: null })
+
+    const results = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, 2024, 9, 17)
+
+    expect(results[0].images).toEqual([])
   })
 
   it('textSearchDiaryEntries builds correct URL with search, page and pageSize params', async () => {

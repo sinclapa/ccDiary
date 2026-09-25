@@ -139,11 +139,58 @@
             class="mb-2 mt-4"
             color="primary"
             hide-details
-            label="Add Image"
+            label="Add Images"
           />
 
           <template v-if="showImage">
+            <div
+              v-if="images.length > 0"
+              class="image-grid mt-2"
+            >
+              <div
+                v-for="(image, i) in images"
+                :key="i"
+                class="image-tile"
+              >
+                <v-img
+                  :alt="`Image ${i + 1} of ${images.length}`"
+                  aspect-ratio="1"
+                  cover
+                  :src="imageSrc(image)"
+                />
+                <div class="image-tile__actions">
+                  <v-btn
+                    :aria-label="`Move image ${i + 1} earlier`"
+                    density="comfortable"
+                    :disabled="i === 0"
+                    icon="$mdi-chevron-left"
+                    size="x-small"
+                    variant="flat"
+                    @click="moveImage(i, -1)"
+                  />
+                  <v-btn
+                    :aria-label="`Remove image ${i + 1}`"
+                    color="error"
+                    density="comfortable"
+                    icon="$mdi-delete"
+                    size="x-small"
+                    variant="flat"
+                    @click="removeImage(i)"
+                  />
+                  <v-btn
+                    :aria-label="`Move image ${i + 1} later`"
+                    density="comfortable"
+                    :disabled="i === images.length - 1"
+                    icon="$mdi-chevron-right"
+                    size="x-small"
+                    variant="flat"
+                    @click="moveImage(i, 1)"
+                  />
+                </div>
+              </div>
+            </div>
             <button
+              v-if="images.length < MAX_ENTRY_IMAGES"
               id="image-drop-zone"
               class="image-drop-zone mt-2"
               :class="{ 'drag-over': isDragging }"
@@ -154,15 +201,7 @@
               @drop.prevent="handleDrop"
               @keydown.enter="triggerFileInput"
             >
-              <v-img
-                v-if="imagePreview"
-                max-height="200"
-                :src="imagePreview"
-              />
-              <div
-                v-else
-                class="drop-zone-placeholder text-center pa-4"
-              >
+              <div class="drop-zone-placeholder text-center pa-4">
                 <v-icon
                   color="grey-lighten-1"
                   size="48"
@@ -170,19 +209,25 @@
                   $mdi-image-plus
                 </v-icon>
                 <div class="text-grey mt-2 text-body-2">
-                  Click, drag & drop, or paste an image
+                  Click, drag & drop, or paste images
                 </div>
               </div>
             </button>
+            <div
+              v-else
+              class="text-grey mt-2 text-body-2"
+            >
+              An entry holds up to {{ MAX_ENTRY_IMAGES }} images. Remove one to add another.
+            </div>
             <v-btn
-              v-if="imagePreview"
+              v-if="images.length > 0"
               class="mt-2"
               color="error"
               size="small"
               variant="text"
-              @click="clearImage"
+              @click="clearImages"
             >
-              Remove Image
+              Remove All Images
             </v-btn>
             <!--
               Hidden and opened programmatically by the button above, so it never
@@ -194,7 +239,8 @@
               id="diary-entry-image-input"
               ref="fileInputRef"
               accept="image/jpeg,image/png,image/gif,image/webp"
-              aria-label="Choose an image file for this diary entry"
+              aria-label="Choose image files for this diary entry"
+              multiple
               style="display: none"
               type="file"
               @change="handleFileSelect"
@@ -236,8 +282,8 @@
   import dayjs from 'dayjs'
   import { SubmitEventPromise } from 'vuetify'
   import { VDateInput } from 'vuetify/labs/VDateInput'
-  import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-  import type { JourneyMode } from '@/services/models/diaryEntry'
+  import { onMounted, onUnmounted, ref, watch } from 'vue'
+  import { type DiaryEntryImage, imageSrc, type JourneyMode, MAX_ENTRY_IMAGES } from '@/services/models/diaryEntry'
 
   const journeyModeItems: { label: string; value: JourneyMode; icon: string }[] = [
     { label: 'As the Crow Flies', value: 'crow-flies', icon: '$mdi-bird' },
@@ -247,7 +293,7 @@
     { label: 'Boat', value: 'boat', icon: '$mdi-ferry' },
   ]
 
-  const props = defineProps<{isEdit?: boolean, date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData?: string, imageContentType?: string}>()
+  const props = defineProps<{isEdit?: boolean, date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, images?: DiaryEntryImage[]}>()
   const date = ref<Date>(new Date(props.date))
   const time = ref<string>(dayjs(props.date).format('HH:mm'))
   const timeMenu = ref<boolean>(false)
@@ -259,21 +305,13 @@
   const toLocation = ref<string>(props.toLocation)
   const showJourney = ref<boolean>(props.showJourney)
   const journeyMode = ref<JourneyMode>(props.journeyMode)
-  const imageData = ref<string | undefined>(props.imageData)
-  const imageContentType = ref<string | undefined>(props.imageContentType)
-  const showImage = ref<boolean>(!!props.imageData)
+  const images = ref<DiaryEntryImage[]>([...(props.images ?? [])])
+  const showImage = ref<boolean>(images.value.length > 0)
   const isDragging = ref<boolean>(false)
   const fileInputRef = ref<HTMLInputElement | null>(null)
 
-  const imagePreview = computed(() => {
-    if (imageData.value && imageContentType.value) {
-      return `data:${imageContentType.value};base64,${imageData.value}`
-    }
-    return null
-  })
-
   const emit = defineEmits({
-    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, imageData: string | undefined, imageContentType: string | undefined }) {
+    submit (payload: { date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, images: DiaryEntryImage[] }) {
       return payload
     },
     close () {
@@ -300,61 +338,81 @@
         toLocation: toLocation.value,
         showJourney: showJourney.value,
         journeyMode: journeyMode.value,
-        imageData: imageData.value,
-        imageContentType: imageContentType.value,
+        images: [...images.value],
       })
     }
   }
 
-  function processFile (file: File) {
-    const reader = new FileReader()
-    reader.onload = e => {
-      const dataUrl = e.target?.result as string
-      const comma = dataUrl.indexOf(',')
-      imageData.value = dataUrl.slice(comma + 1)
-      imageContentType.value = file.type
-    }
-    reader.readAsDataURL(file)
+  function readFile (file: File) {
+    return new Promise<DiaryEntryImage>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = e => {
+        const dataUrl = e.target?.result as string
+        const comma = dataUrl.indexOf(',')
+        resolve({ data: dataUrl.slice(comma + 1), contentType: file.type })
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Files are read concurrently but kept in the order they were chosen, and never past the
+  // limit: anything beyond it is dropped here rather than rejected by the API on save. The
+  // handlers do not await this, so a file that cannot be read is skipped rather than thrown.
+  async function addFiles (files: File[]) {
+    const room = MAX_ENTRY_IMAGES - images.value.length
+    const accepted = files.filter(f => f.type.startsWith('image/')).slice(0, Math.max(0, room))
+    if (accepted.length === 0) return
+    showImage.value = true
+    const results = await Promise.allSettled(accepted.map(f => readFile(f)))
+    const read = results
+      .filter((r): r is PromiseFulfilledResult<DiaryEntryImage> => r.status === 'fulfilled')
+      .map(r => r.value)
+    images.value = [...images.value, ...read].slice(0, MAX_ENTRY_IMAGES)
   }
 
   function handleDrop (event: DragEvent) {
     isDragging.value = false
-    const file = event.dataTransfer?.files?.[0]
-    if (file && file.type.startsWith('image/')) {
-      processFile(file)
-    }
+    addFiles(Array.from(event.dataTransfer?.files ?? []))
   }
 
   function handleFileSelect (event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0]
-    if (file) {
-      processFile(file)
-    }
+    const input = event.target as HTMLInputElement
+    addFiles(Array.from(input.files ?? []))
+    // Choosing the same file again must still fire change.
+    input.value = ''
+  }
+
+  function moveImage (index: number, by: number) {
+    const target = index + by
+    if (target < 0 || target >= images.value.length) return
+    const next = [...images.value]
+    const moved = next.splice(index, 1)[0]
+    next.splice(target, 0, moved)
+    images.value = next
+  }
+
+  function removeImage (index: number) {
+    images.value = images.value.filter((_, i) => i !== index)
   }
 
   function triggerFileInput () {
     fileInputRef.value?.click()
   }
 
-  function clearImage () {
-    imageData.value = undefined
-    imageContentType.value = undefined
+  function clearImages () {
+    images.value = []
     showImage.value = false
   }
 
   function handleWindowPaste (event: ClipboardEvent) {
     const items = event.clipboardData?.items
     if (!items) return
-    for (const item of Array.from(items)) {
-      if (item.type.startsWith('image/')) {
-        const file = item.getAsFile()
-        if (file) {
-          showImage.value = true
-          processFile(file)
-          break
-        }
-      }
-    }
+    const files = Array.from(items)
+      .filter(item => item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter((file): file is File => file !== null)
+    addFiles(files)
   }
 
   onMounted(() => {
@@ -403,16 +461,12 @@
       fromLocation.value = location.value
     }
   })
-  watch(() => props.imageData, newVal => {
-    imageData.value = newVal
-  })
-  watch(() => props.imageContentType, newVal => {
-    imageContentType.value = newVal
+  watch(() => props.images, newVal => {
+    images.value = [...(newVal ?? [])]
   })
   watch(showImage, newVal => {
     if (!newVal) {
-      imageData.value = undefined
-      imageContentType.value = undefined
+      images.value = []
     }
   })
 </script>
@@ -442,5 +496,28 @@
   }
   .image-drop-zone.drag-over {
     border-color: rgb(var(--v-theme-primary));
+  }
+
+  .image-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+
+  .image-tile {
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .image-tile__actions {
+    background: rgba(0, 0, 0, 0.45);
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    left: 0;
+    padding: 2px;
+    position: absolute;
+    right: 0;
   }
 </style>

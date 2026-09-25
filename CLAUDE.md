@@ -160,7 +160,7 @@ Rolling back a bad deploy means uploading a previous release's `func-package.zip
 | Model | Table | Notes |
 |---|---|---|
 | `DiaryDTO` | Diary | DiaryId (Guid PK), Title (5–50), Author (≤50), Description, **OwnerId** |
-| `DiaryEntryDTO` | DiaryEntry | Date, Location, Entry, map fields, journey fields, `ImageData`/`ImageContentType` (base64 inline), DiaryId FK |
+| `DiaryEntryDTO` | DiaryEntry | Date, Location, Entry, map fields, journey fields, `Images` (up to 10, base64 inline; `ImageData`/`ImageContentType` repeat the first), DiaryId FK |
 | `AppUserDto` | AppUser | EntraObjectId (the `oid`), DisplayName, Email, `AppRole` |
 | `AccessRequestDto` | AccessRequest | Registration requests + `RequestStatus`, invite redeem URL |
 | `MapTileCacheDto` / `GeocodingCacheDto` / `RoutingCacheDto` | *Cache | Server-side caches for the map proxy |

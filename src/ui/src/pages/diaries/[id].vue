@@ -179,8 +179,7 @@
             :date="editedItem.date"
             :entry="editedItem.entry"
             :from-location="editedItem.fromLocation"
-            :image-content-type="editedItem.imageContentType"
-            :image-data="editedItem.imageData"
+            :images="editedItem.images"
             :is-edit="editedItem.diaryEntryId !== undefined"
             :journey-mode="editedItem.journeyMode"
             :location="editedItem.location"
@@ -261,7 +260,7 @@
   import { diaryAPI } from '@/services/modules/diaryService'
   import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
   import Diary from '@/services/models/diary'
-  import DiaryEntry from '@/services/models/diaryEntry'
+  import DiaryEntry, { type DiaryEntryImage } from '@/services/models/diaryEntry'
   import PagedResult from '@/services/models/pagedResult'
   import { useAuthStore } from '@/stores/auth'
   import dayjs from 'dayjs'
@@ -505,7 +504,7 @@
     dialog.value = true
   }
 
-  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: DiaryEntry['journeyMode'], imageData: string | undefined, imageContentType: string | undefined}) {
+  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: DiaryEntry['journeyMode'], images: DiaryEntryImage[]}) {
     editedItem.value.date = payload.date
     editedItem.value.location = payload.location
     editedItem.value.entry = payload.entry
@@ -515,8 +514,7 @@
     editedItem.value.toLocation = payload.toLocation
     editedItem.value.showJourney = payload.showJourney
     editedItem.value.journeyMode = payload.journeyMode
-    editedItem.value.imageData = payload.imageData
-    editedItem.value.imageContentType = payload.imageContentType
+    editedItem.value.images = payload.images
     if (editedItem.value.diaryEntryId === undefined) {
       await diaryEntryAPI.createDiaryEntry(editedItem.value)
     } else {

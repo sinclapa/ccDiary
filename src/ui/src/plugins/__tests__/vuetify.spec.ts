@@ -16,6 +16,8 @@ describe('vuetify plugin', () => {
       'mdi-car',
       'mdi-check-circle',
       'mdi-chevron-down',
+      'mdi-chevron-left',
+      'mdi-chevron-right',
       'mdi-chevron-up',
       'mdi-delete',
       'mdi-fast-forward',

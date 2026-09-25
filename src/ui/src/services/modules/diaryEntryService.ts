@@ -1,4 +1,4 @@
-import DiaryEntry from '@/services/models/diaryEntry'
+import DiaryEntry, { imagesFrom } from '@/services/models/diaryEntry'
 import PagedResult from '@/services/models/pagedResult'
 import { apiFetch, apiFetchJson, apiUrl } from '@/services/modules/apiClient'
 import dayjs from 'dayjs'
@@ -37,7 +37,7 @@ export default class DiaryEntryAPIService {
   async searchDiaryEntryForDay (diaryId: string, year: number, month: number, day: number) : Promise<DiaryEntry[]> {
     const utcOffsetMinutes : number = ENTRY_UTC_OFFSET_MINUTES
     const api = apiUrl(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}`)
-    const output = await apiFetchJson<DiaryEntry[]>(api, [], {
+    const output = await apiFetchJson<(DiaryEntry & { imageData?: string, imageContentType?: string })[]>(api, [], {
       headers: {
         'x-utc-offset': `${utcOffsetMinutes}`,
       },
@@ -50,8 +50,7 @@ export default class DiaryEntryAPIService {
       toLocation: x.toLocation ?? '',
       showJourney: x.showJourney ?? false,
       journeyMode: x.journeyMode ?? 'crow-flies',
-      imageData: x.imageData,
-      imageContentType: x.imageContentType,
+      images: imagesFrom(x),
     }))
   }
 

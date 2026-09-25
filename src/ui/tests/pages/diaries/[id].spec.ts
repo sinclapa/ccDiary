@@ -184,8 +184,7 @@ describe('[id].vue', () => {
       fromLocation: 'Sandwich, UK',
       toLocation: 'Southampton, UK',
       showJourney: true,
-      imageData: undefined,
-      imageContentType: undefined,
+      images: [],
     })
     expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
     expect((wrapper.vm as any).editedItem.mapLocation).toBe('London, UK')
@@ -195,7 +194,7 @@ describe('[id].vue', () => {
     expect((wrapper.vm as any).editedItem.showJourney).toBe(true)
   })
 
-  it('onSubmitDiaryEntry stores imageData and imageContentType on editedItem', async () => {
+  it('onSubmitDiaryEntry stores the images on editedItem', async () => {
     state.isAuthenticated = true
     await flushPromises()
     await (wrapper.vm as any).editItem()
@@ -208,15 +207,16 @@ describe('[id].vue', () => {
       fromLocation: '',
       toLocation: '',
       showJourney: false,
-      imageData: 'abc123',
-      imageContentType: 'image/jpeg',
+      images: [{ data: 'abc123', contentType: 'image/jpeg' }, { data: 'def456', contentType: 'image/png' }],
     })
-    expect((wrapper.vm as any).editedItem.imageData).toBe('abc123')
-    expect((wrapper.vm as any).editedItem.imageContentType).toBe('image/jpeg')
+    expect((wrapper.vm as any).editedItem.images).toEqual([
+      { data: 'abc123', contentType: 'image/jpeg' },
+      { data: 'def456', contentType: 'image/png' },
+    ])
   })
 
-  it('renders image in timeline when entry has imageData and imageContentType', async () => {
-    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', { diaryEntryId: 'img-entry-id', imageData: 'abc123', imageContentType: 'image/jpeg' })
+  it('renders image in timeline when entry has images', async () => {
+    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', { diaryEntryId: 'img-entry-id', images: [{ data: 'abc123', contentType: 'image/jpeg' }] })
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithImage])
     await flushPromises()
     await (wrapper.vm as any).selectDate(new Date())

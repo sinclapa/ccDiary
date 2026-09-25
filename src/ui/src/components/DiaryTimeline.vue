@@ -44,17 +44,36 @@
             {{ entry.entry }}
           </div>
           <v-img
-            v-if="entry.imageData && entry.imageContentType"
-            :alt="`Photograph for the entry of ${entryTime(entry.date).format('D MMMM YYYY')} — select to view full size`"
+            v-if="entry.images.length > 0"
+            :alt="imageAlt(entry, 0)"
             class="mt-2 diary-entry-media diary-entry-media--zoomable"
             :max-height="400"
             role="button"
-            :src="imageSrc(entry)"
+            :src="imageSrc(entry.images[0])"
             tabindex="0"
-            @click="openImage(entry)"
-            @keydown.enter.prevent="openImage(entry)"
-            @keydown.space.prevent="openImage(entry)"
+            @click="openImage(entry, 0)"
+            @keydown.enter.prevent="openImage(entry, 0)"
+            @keydown.space.prevent="openImage(entry, 0)"
           />
+          <div
+            v-if="entry.images.length > 1"
+            class="entry-thumbs mt-2"
+          >
+            <v-img
+              v-for="(image, n) in entry.images.slice(1)"
+              :key="n + 1"
+              :alt="imageAlt(entry, n + 1)"
+              aspect-ratio="1"
+              class="entry-thumb diary-entry-media--zoomable"
+              cover
+              role="button"
+              :src="imageSrc(image)"
+              tabindex="0"
+              @click="openImage(entry, n + 1)"
+              @keydown.enter.prevent="openImage(entry, n + 1)"
+              @keydown.space.prevent="openImage(entry, n + 1)"
+            />
+          </div>
         </div>
         <div
           v-if="hasMapColumn(entry)"
@@ -80,10 +99,36 @@
     :max-width="1200"
     scrollable
   >
-    <v-card class="image-viewer">
+    <v-card
+      class="image-viewer"
+      @keydown.left.prevent="stepImage(-1)"
+      @keydown.right.prevent="stepImage(1)"
+    >
       <v-card-title class="d-flex align-center pe-2">
         <span class="text-subtitle-1 text-truncate">{{ zoomedCaption }}</span>
         <v-spacer />
+        <template v-if="zoomedImages.length > 1">
+          <v-btn
+            aria-label="Previous photograph"
+            :disabled="zoomedIndex === 0"
+            icon="$mdi-chevron-left"
+            size="small"
+            variant="text"
+            @click="stepImage(-1)"
+          />
+          <span
+            aria-live="polite"
+            class="text-body-2 mx-1 image-viewer__count"
+          >{{ zoomedIndex + 1 }} of {{ zoomedImages.length }}</span>
+          <v-btn
+            aria-label="Next photograph"
+            :disabled="zoomedIndex === zoomedImages.length - 1"
+            icon="$mdi-chevron-right"
+            size="small"
+            variant="text"
+            @click="stepImage(1)"
+          />
+        </template>
         <v-btn
           aria-label="Close photograph"
           icon="$mdi-close"
@@ -107,6 +152,7 @@
 <script setup lang="ts">
   import { entryTime } from '@/utils/entryTime'
   import type DiaryEntry from '@/services/models/diaryEntry'
+  import { type DiaryEntryImage, imageSrc } from '@/services/models/diaryEntry'
 
   defineProps<{
     entries: DiaryEntry[]
@@ -119,18 +165,33 @@
   }>()
 
   const imageDialog = ref(false)
-  const zoomedSrc = ref<string>()
+  const zoomedImages = ref<DiaryEntryImage[]>([])
+  const zoomedIndex = ref(0)
   const zoomedCaption = ref('')
+  const zoomedSrc = computed(() => {
+    const image = zoomedImages.value[zoomedIndex.value]
+    return image ? imageSrc(image) : undefined
+  })
 
-  function imageSrc (entry: DiaryEntry) {
-    return `data:${entry.imageContentType};base64,${entry.imageData}`
+  function imageAlt (entry: DiaryEntry, index: number) {
+    const day = entryTime(entry.date).format('D MMMM YYYY')
+    const which = entry.images.length > 1 ? ` (${index + 1} of ${entry.images.length})` : ''
+    return `Photograph for the entry of ${day}${which} — select to view full size`
   }
 
-  function openImage (entry: DiaryEntry) {
-    if (!entry.imageData || !entry.imageContentType) return
-    zoomedSrc.value = imageSrc(entry)
+  function openImage (entry: DiaryEntry, index: number) {
+    if (!entry.images[index]) return
+    zoomedImages.value = entry.images
+    zoomedIndex.value = index
     zoomedCaption.value = `${entry.location} — ${entryTime(entry.date).format('D MMMM YYYY')}`
     imageDialog.value = true
+  }
+
+  function stepImage (by: number) {
+    const next = zoomedIndex.value + by
+    if (next >= 0 && next < zoomedImages.value.length) {
+      zoomedIndex.value = next
+    }
   }
 
   // The map column is laid out by one condition and populated by two. Inlining all three
@@ -189,6 +250,20 @@
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  .image-viewer__count {
+    white-space: nowrap;
+  }
+
+  .entry-thumbs {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+
+  .entry-thumb {
+    border-radius: 4px;
   }
 
   .entry-content {

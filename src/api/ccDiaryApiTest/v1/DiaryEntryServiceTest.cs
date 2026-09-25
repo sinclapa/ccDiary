@@ -5,8 +5,11 @@
 namespace ccDiaryApiTest.v1
 {
     using ccDiaryApi.Data.Model;
+    using ccDiaryApi.Data.Storage;
     using ccDiaryApi.Services;
     using ccDiaryApiTest.Storage;
+    using global::Azure;
+    using global::Azure.Data.Tables;
 
     [TestClass]
     public class DiaryEntryServiceTest
@@ -197,6 +200,163 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
+        public async Task RoundTripsSeveralImagesInOrder()
+        {
+            var diaryId = Guid.NewGuid();
+            var created = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/jpeg"), Image(3, "image/webp"));
+
+            var fetched = await _service.GetDiaryEntryAsync(created.DiaryEntryId!.Value);
+
+            Assert.IsNotNull(fetched);
+            CollectionAssert.AreEqual(
+                new[] { Base64(1), Base64(2), Base64(3) },
+                fetched.Images!.Select(i => i.Data).ToArray());
+            CollectionAssert.AreEqual(
+                new[] { "image/png", "image/jpeg", "image/webp" },
+                fetched.Images!.Select(i => i.ContentType).ToArray());
+        }
+
+        [TestMethod]
+        public async Task RepeatsTheFirstImageInTheSingleImageFields()
+        {
+            // Archives and older callers read ImageData; they must still see an entry's picture.
+            var created = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"), Image(2, "image/jpeg"));
+
+            var fetched = await _service.GetDiaryEntryAsync(created.DiaryEntryId!.Value);
+
+            Assert.AreEqual(Base64(1), fetched!.ImageData);
+            Assert.AreEqual("image/png", fetched.ImageContentType);
+        }
+
+        [TestMethod]
+        public async Task ASingleImageRequestIsAOneImageEntry()
+        {
+            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            {
+                DiaryId = Guid.NewGuid(),
+                Date = DateTime.UtcNow,
+                Location = "L",
+                Entry = "E",
+                ImageData = Base64(7),
+                ImageContentType = "image/png",
+            });
+
+            var fetched = await _service.GetDiaryEntryAsync(created.DiaryEntryId!.Value);
+
+            Assert.AreEqual(1, fetched!.Images!.Count);
+            Assert.AreEqual(Base64(7), fetched.Images[0].Data);
+        }
+
+        [TestMethod]
+        public async Task RemovingImagesDeletesTheirBlobs()
+        {
+            var diaryId = Guid.NewGuid();
+            var entry = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/png"), Image(3, "image/png"));
+
+            entry.Images = new List<DiaryEntryImageDTO> { Image(1, "image/png") };
+            await _service.UpdateDiaryEntryAsync(entry);
+
+            var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
+            Assert.AreEqual(1, fetched!.Images!.Count);
+            Assert.IsNotNull(await ImageBlobAsync(diaryId, entry, 0));
+            Assert.IsNull(await ImageBlobAsync(diaryId, entry, 1));
+            Assert.IsNull(await ImageBlobAsync(diaryId, entry, 2));
+        }
+
+        [TestMethod]
+        public async Task AnEmptyImageListRemovesEveryImage()
+        {
+            // An empty list is a request for no images; only an absent one defers to ImageData.
+            var diaryId = Guid.NewGuid();
+            var entry = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/png"));
+
+            entry.Images = new List<DiaryEntryImageDTO>();
+            entry.ImageData = Base64(1);
+            await _service.UpdateDiaryEntryAsync(entry);
+
+            var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
+            Assert.AreEqual(0, fetched!.Images!.Count);
+            Assert.IsNull(fetched.ImageData);
+            Assert.IsNull(await ImageBlobAsync(diaryId, entry, 0));
+            Assert.IsNull(await ImageBlobAsync(diaryId, entry, 1));
+        }
+
+        [TestMethod]
+        public async Task ReorderingImagesIsKept()
+        {
+            var entry = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"), Image(2, "image/jpeg"));
+
+            entry.Images = new List<DiaryEntryImageDTO> { Image(2, "image/jpeg"), Image(1, "image/png") };
+            await _service.UpdateDiaryEntryAsync(entry);
+
+            var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
+            CollectionAssert.AreEqual(new[] { Base64(2), Base64(1) }, fetched!.Images!.Select(i => i.Data).ToArray());
+            Assert.AreEqual("image/jpeg", fetched.ImageContentType);
+        }
+
+        [TestMethod]
+        public async Task MovingAnEntrysDateKeepsItsImages()
+        {
+            var entry = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"), Image(2, "image/png"));
+
+            entry.Date = entry.Date!.Value.AddDays(1);
+            await _service.UpdateDiaryEntryAsync(entry);
+
+            var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
+            Assert.AreEqual(2, fetched!.Images!.Count);
+        }
+
+        [TestMethod]
+        public async Task DeletingAnEntryRemovesAllItsImages()
+        {
+            var diaryId = Guid.NewGuid();
+            var entry = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/png"), Image(3, "image/png"));
+
+            await _service.DeleteDiaryEntryAsync(entry);
+
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.IsNull(await ImageBlobAsync(diaryId, entry, i), $"image {i} survived");
+            }
+        }
+
+        [TestMethod]
+        public async Task DeletingAnEntryLeavesAnotherEntrysImages()
+        {
+            // The delete is a prefix scan, so it must not reach a neighbour in the same diary.
+            var diaryId = Guid.NewGuid();
+            var doomed = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/png"));
+            var kept = await CreateWithImagesAsync(diaryId, Image(3, "image/png"), Image(4, "image/png"));
+
+            await _service.DeleteDiaryEntryAsync(doomed);
+
+            var fetched = await _service.GetDiaryEntryAsync(kept.DiaryEntryId!.Value);
+            Assert.AreEqual(2, fetched!.Images!.Count);
+        }
+
+        [TestMethod]
+        public async Task ARowWrittenBeforeImageCountsReadsAsOneImage()
+        {
+            // Rows from before an entry could hold several images carry HasImage and no count.
+            var diaryId = Guid.NewGuid();
+            var entry = await CreateWithImagesAsync(diaryId, Image(1, "image/png"));
+            var partition = diaryId.ToString("N");
+            TableEntity? row = null;
+            await foreach (var r in _fixture.Tables.DiaryEntries.QueryAsync<TableEntity>(e => e.PartitionKey == partition))
+            {
+                row = r;
+            }
+
+            row!.Remove("ImageCount");
+            await _fixture.Tables.DiaryEntries.UpdateEntityAsync(row, ETag.All, TableUpdateMode.Replace);
+
+            var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
+
+            Assert.AreEqual(1, fetched!.Images!.Count);
+            Assert.AreEqual(Base64(1), fetched.ImageData);
+        }
+
+        [TestMethod]
         public async Task SpillsOversizedEntryTextToABlobAndReadsItBack()
         {
             // A Table string property caps at 64 KB. Entries are normally far smaller,
@@ -261,6 +421,11 @@ namespace ccDiaryApiTest.v1
             Assert.AreEqual(last, await _service.MaxDiaryEntryDateAsync(diaryId));
         }
 
+        private static string Base64(byte marker) => Convert.ToBase64String(new byte[] { marker, marker, marker });
+
+        private static DiaryEntryImageDTO Image(byte marker, string contentType) =>
+            new DiaryEntryImageDTO { Data = Base64(marker), ContentType = contentType };
+
         private async Task<DiaryEntryDTO> CreateAsync(Guid diaryId, DateTime date, string entry, string location = "L")
         {
             return await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
@@ -271,5 +436,22 @@ namespace ccDiaryApiTest.v1
                 Entry = entry,
             });
         }
+
+        private async Task<DiaryEntryDTO> CreateWithImagesAsync(Guid diaryId, params DiaryEntryImageDTO[] images)
+        {
+            return await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            {
+                DiaryId = diaryId,
+                Date = DateTime.UtcNow,
+                Location = "L",
+                Entry = "E",
+                Images = images.ToList(),
+            });
+        }
+
+        private Task<StoredBlob?> ImageBlobAsync(Guid diaryId, DiaryEntryDTO entry, int index) =>
+            _fixture.Blobs.TryGetAsync(
+                _fixture.Options.ImagesContainer,
+                StorageKeys.ImageBlobKey(diaryId, entry.DiaryEntryId!.Value, index));
     }
 }

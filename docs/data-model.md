@@ -33,7 +33,7 @@ columns exist only so they can be filtered or sorted on.
 | Table | PartitionKey | RowKey | Broken-out columns |
 |---|---|---|---|
 | `diary` | `"diary"` (constant) | `DiaryId:N` | DiaryId, Title, Author, OwnerId |
-| `diaryentry` | `DiaryId:N` | `{yyyyMMddHHmmssfffffff}-{DiaryEntryId:N}` | DiaryEntryId, DiaryId, Date, HasImage, ImageContentType, JsonInBlob |
+| `diaryentry` | `DiaryId:N` | `{yyyyMMddHHmmssfffffff}-{DiaryEntryId:N}` | DiaryEntryId, DiaryId, Date, HasImage, ImageCount, ImageContentType, JsonInBlob |
 | `appuser` | `"user"` (constant) | `EntraObjectId` | UserId, Email, Role |
 | `accessrequest` | `"request"` (constant) | `AccessRequestId:N` | Status, Email, RequestedAt |
 | `appinfo` | `"appinfo"` | `"1"` | InformationalVersion, DatabaseLastUpdated |
@@ -78,7 +78,7 @@ string is still supported for Azurite locally.
 
 | Container | Key layout | Notes |
 |---|---|---|
-| `images` | `{diaryId:N}/{entryId:N}` | Content type stored on the blob *and* mirrored in the table row, so listing never needs a blob HEAD. The diary prefix makes cascade delete a prefix scan. |
+| `images` | `{diaryId:N}/{entryId:N}`, then `{diaryId:N}/{entryId:N}/{n}` for an entry's later images | The first image keeps the single-image key, so rows written before entries could hold several need no migration; a row with no `ImageCount` has one image if `HasImage` is set. The first image's content type is stored on the blob *and* mirrored in the row, so listing never needs a blob HEAD. The diary prefix makes cascade delete a prefix scan, and the entry key is a prefix of its own images, so deleting an entry is one too. |
 | `mapcache` | `tiles/{source}/{z}/{x}/{y}`, `routes/{profile}/{key}.json` | Lifecycle-managed, 90 days. |
 | `content` | `entries/{entryId:N}.json` | Spill for oversized entry JSON. |
 
@@ -89,7 +89,9 @@ images totalling 23.6 MB of base64, the largest a single 3.3 MB image. They cann
 in a row under any partitioning scheme.
 
 **The HTTP contract is unchanged.** The API still returns base64 in `imageData`; the blob
-is read and re-encoded server-side. Moving to an image URL is a separate change with its
+is read and re-encoded server-side. An entry holds up to ten images, returned in `images`
+in display order; `imageData` repeats the first for archives and callers that predate the
+list, and a request that sends only `imageData` is a one-image entry. Moving to an image URL is a separate change with its
 own UI, e2e and archive-format consequences.
 
 ### Why the tile and route caches are blobs, not tables
