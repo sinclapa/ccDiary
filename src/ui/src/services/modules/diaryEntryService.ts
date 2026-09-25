@@ -2,6 +2,7 @@ import DiaryEntry from '@/services/models/diaryEntry'
 import PagedResult from '@/services/models/pagedResult'
 import { apiFetch, apiFetchJson, apiUrl } from '@/services/modules/apiClient'
 import dayjs from 'dayjs'
+import { ENTRY_UTC_OFFSET_MINUTES } from '@/utils/entryTime'
 
 const jsonHeaders = {
   Accept: 'application/json',
@@ -27,14 +28,14 @@ export default class DiaryEntryAPIService {
     }
     let requestInit: RequestInit | undefined
     if (year !== undefined && month !== undefined) {
-      const utcOffsetMinutes = dayjs(new Date(year, month - 1, 1)).utcOffset()
+      const utcOffsetMinutes = ENTRY_UTC_OFFSET_MINUTES
       requestInit = { headers: { 'x-utc-offset': `${utcOffsetMinutes}` } }
     }
     return apiFetchJson<number[] | null>(api, null, requestInit)
   }
 
   async searchDiaryEntryForDay (diaryId: string, year: number, month: number, day: number) : Promise<DiaryEntry[]> {
-    const utcOffsetMinutes : number = dayjs(new Date(year, month, day)).utcOffset()
+    const utcOffsetMinutes : number = ENTRY_UTC_OFFSET_MINUTES
     const api = apiUrl(`v1/DiaryEntry/Search/${diaryId}/${year}/${month}/${day}`)
     const output = await apiFetchJson<DiaryEntry[]>(api, [], {
       headers: {

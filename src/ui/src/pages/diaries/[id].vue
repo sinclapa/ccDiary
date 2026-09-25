@@ -197,8 +197,8 @@
           confirm-label="Delete Entry"
           item-type="diary entry"
           :items="[
-            { label: 'Date', value: editedItem?.date ? dayjs(editedItem.date).format('ddd D MMM YYYY') : 'Unknown date' },
-            { label: 'Time', value: editedItem?.date ? dayjs(editedItem.date).format('HH:mm') : 'Unknown time' },
+            { label: 'Date', value: editedItem?.date ? entryTime(editedItem.date).format('ddd D MMM YYYY') : 'Unknown date' },
+            { label: 'Time', value: editedItem?.date ? entryTime(editedItem.date).format('HH:mm') : 'Unknown time' },
             { label: 'Location', value: editedItem?.location || 'Unknown location' },
           ]"
           title="Delete Diary Entry"
@@ -265,6 +265,7 @@
   import PagedResult from '@/services/models/pagedResult'
   import { useAuthStore } from '@/stores/auth'
   import dayjs from 'dayjs'
+  import { entryTime } from '@/utils/entryTime'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import { endFaroUserAction, startFaroUserAction } from '@/plugins/faro'
   import { useSearchDebounce } from '@/composables/useSearchDebounce'
