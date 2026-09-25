@@ -1,5 +1,10 @@
 <template>
-  <v-timeline :align="'start'" side="end" style="justify-content: start; height: fit-content;">
+  <v-timeline
+    :align="'start'"
+    class="diary-timeline"
+    side="end"
+    style="justify-content: start; height: fit-content;"
+  >
     <v-timeline-item
       v-for="(entry, i) in entries"
       :key="i"
@@ -79,13 +84,26 @@
           v-if="hasMapColumn(entry)"
           class="entry-map-col"
         >
-          <map-view v-if="showsMap(entry)" :location="entry.mapLocation!" />
-          <journey-view
-            v-if="showsJourney(entry)"
-            :from-location="entry.fromLocation!"
-            :journey-mode="entry.journeyMode"
-            :to-location="entry.toLocation!"
-          />
+          <!-- Static inline, so the page scrolls past it; the shield takes the click and opens
+               the same map full size, where it pans and zooms. -->
+          <div
+            :aria-label="`Open the map for ${entry.location} full size`"
+            class="entry-map"
+            role="button"
+            tabindex="0"
+            @click="openMap(entry)"
+            @keydown.enter.prevent="openMap(entry)"
+            @keydown.space.prevent="openMap(entry)"
+          >
+            <map-view v-if="showsMap(entry)" :location="entry.mapLocation!" />
+            <journey-view
+              v-if="showsJourney(entry)"
+              :from-location="entry.fromLocation!"
+              :journey-mode="entry.journeyMode"
+              :to-location="entry.toLocation!"
+            />
+            <div aria-hidden="true" class="entry-map__shield" />
+          </div>
         </div>
       </div>
     </v-timeline-item>
@@ -97,7 +115,6 @@
     v-model="imageDialog"
     aria-label="Diary page photograph"
     :max-width="1200"
-    scrollable
   >
     <v-card
       class="image-viewer"
@@ -147,6 +164,43 @@
       </v-card-text>
     </v-card>
   </v-dialog>
+
+  <v-dialog
+    v-model="mapDialog"
+    aria-label="Map"
+    :max-width="1200"
+    scrollable
+  >
+    <v-card class="map-viewer">
+      <v-card-title class="d-flex align-center pe-2">
+        <span class="text-subtitle-1 text-truncate">{{ zoomedMapCaption }}</span>
+        <v-spacer />
+        <v-btn
+          aria-label="Close map"
+          icon="$mdi-close"
+          size="small"
+          variant="text"
+          @click="mapDialog = false"
+        />
+      </v-card-title>
+      <v-card-text v-if="zoomedMapEntry" class="pa-2 map-viewer__maps">
+        <map-view
+          v-if="showsMap(zoomedMapEntry)"
+          height="70dvh"
+          interactive
+          :location="zoomedMapEntry.mapLocation!"
+        />
+        <journey-view
+          v-if="showsJourney(zoomedMapEntry)"
+          :from-location="zoomedMapEntry.fromLocation!"
+          height="70dvh"
+          interactive
+          :journey-mode="zoomedMapEntry.journeyMode"
+          :to-location="zoomedMapEntry.toLocation!"
+        />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -185,6 +239,17 @@
     zoomedIndex.value = index
     zoomedCaption.value = `${entry.location} — ${entryTime(entry.date).format('D MMMM YYYY')}`
     imageDialog.value = true
+  }
+
+  const mapDialog = ref(false)
+  const zoomedMapEntry = ref<DiaryEntry>()
+  const zoomedMapCaption = ref('')
+
+  function openMap (entry: DiaryEntry) {
+    if (!hasMapColumn(entry)) return
+    zoomedMapEntry.value = entry
+    zoomedMapCaption.value = `${entry.location} — ${entryTime(entry.date).format('D MMMM YYYY')}`
+    mapDialog.value = true
   }
 
   function stepImage (by: number) {
@@ -244,12 +309,17 @@
     outline-offset: 2px;
   }
 
-  /* The photograph fills the dialog's width and grows as tall as it needs; the dialog itself
-     scrolls, so a tall stitched crop stays readable rather than being squeezed to fit. */
+  /* The whole photograph is on screen at once, with no scrolling: it is as large as the dialog's
+     width allows until it would be taller than the viewport less the title bar, and then as tall
+     as that allows. dvh, so a phone's browser bar is not counted as space. */
   .image-viewer__img {
     display: block;
-    width: 100%;
+    margin: 0 auto;
+    max-width: 100%;
+    max-height: calc(90dvh - 72px);
+    width: auto;
     height: auto;
+    object-fit: contain;
   }
 
   .image-viewer__count {
@@ -266,6 +336,12 @@
     border-radius: 4px;
   }
 
+  /* Vuetify sizes the entry column to its content, so a day of short entries came out narrower
+     than a day of long ones. It takes all the width the time and dot columns leave instead. */
+  .diary-timeline {
+    grid-template-columns: min-content min-content minmax(0, 1fr) !important;
+  }
+
   .entry-content {
     display: flex;
     flex-direction: column;
@@ -278,32 +354,38 @@
     width: 100%;
   }
 
-  .entry-map-col {
-    flex: 0 0 300px;
-    min-width: 0;
-  }
-
+  /* The map or journey sits under the text and images at every width. Beside them it took a
+     fixed 300px from the column the images share, so a page photograph or a row of thumbnails
+     was squeezed; below them it gets the entry's full width. */
   .entry-content--with-map {
-    flex-direction: row;
-    align-items: flex-start;
     gap: 12px;
   }
 
-  .entry-content--with-map .entry-text-col {
-    flex: 1 1 auto;
+  .entry-map-col {
     min-width: 0;
+    width: 100%;
   }
 
-  @media (max-width: 599px) {
-    .entry-content--with-map {
-      flex-direction: column;
-    }
-    .entry-content--with-map .entry-text-col {
-      width: 100%;
-    }
-    .entry-map-col {
-      flex: 0 0 auto;
-      width: 100%;
-    }
+  .entry-map {
+    cursor: zoom-in;
+    position: relative;
+  }
+
+  .entry-map:focus-visible {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: 2px;
+  }
+
+  /* over the map's own stacking context (isolation: isolate), so no pointer reaches Leaflet */
+  .entry-map__shield {
+    inset: 0;
+    position: absolute;
+    z-index: 1;
+  }
+
+  .map-viewer__maps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 </style>

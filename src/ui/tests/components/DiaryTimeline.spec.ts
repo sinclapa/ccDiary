@@ -46,6 +46,9 @@ type TimelineInternals = {
   zoomedIndex: number
   stepImage: (by: number) => void
   openImage: (entry: DiaryEntry, index: number) => void
+  openMap: (entry: DiaryEntry) => void
+  mapDialog: boolean
+  zoomedMapCaption: string
 }
 
 const jpeg = (data: string): DiaryEntryImage => ({ data, contentType: 'image/jpeg' })
@@ -362,5 +365,39 @@ describe('DiaryTimeline.vue', () => {
     const wrapper = mountTimeline([entry])
     viewerState(wrapper).openImage(entry, 5)
     expect(wrapper.findComponent({ name: 'VDialog' }).props('modelValue')).toBe(false)
+  })
+
+  it('opens the map full size, and interactive, when it is clicked', async () => {
+    const wrapper = mountTimeline([makeEntry({ location: 'Lumbo', showMap: true, mapLocation: 'Lumbo, Mozambique', date: new Date('1918-08-02T13:00:00') })])
+    const inline = wrapper.findComponent({ name: 'MapView' })
+    expect(inline.props('interactive')).toBeFalsy()
+
+    await wrapper.find('.entry-map').trigger('click')
+
+    expect(viewerState(wrapper).mapDialog).toBe(true)
+    expect(viewerState(wrapper).zoomedMapCaption).toBe('Lumbo — 2 August 1918')
+    const views = wrapper.findAllComponents({ name: 'MapView' })
+    expect(views).toHaveLength(2)
+    expect(views[1].props()).toMatchObject({ interactive: true, height: '70dvh', location: 'Lumbo, Mozambique' })
+  })
+
+  it('opens a journey full size from the keyboard', async () => {
+    const wrapper = mountTimeline([makeEntry({ showJourney: true, fromLocation: 'Lindi', toLocation: 'Lumbo' })])
+    await wrapper.find('.entry-map').trigger('keydown.enter')
+    const views = wrapper.findAllComponents({ name: 'JourneyView' })
+    expect(views).toHaveLength(2)
+    expect(views[1].props()).toMatchObject({ interactive: true, fromLocation: 'Lindi', toLocation: 'Lumbo' })
+  })
+
+  it('names the map by its entry for assistive technology', () => {
+    const wrapper = mountTimeline([makeEntry({ location: 'Lumbo', showMap: true, mapLocation: 'Lumbo, Mozambique' })])
+    expect(wrapper.find('.entry-map').attributes('aria-label')).toBe('Open the map for Lumbo full size')
+  })
+
+  it('does not open the map panel for an entry without a map', () => {
+    const entry = makeEntry()
+    const wrapper = mountTimeline([entry])
+    viewerState(wrapper).openMap(entry)
+    expect(viewerState(wrapper).mapDialog).toBe(false)
   })
 })

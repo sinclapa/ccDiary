@@ -339,4 +339,65 @@ describe('JourneyView.vue', () => {
     await flushPromises()
     expect(L.map).toHaveBeenCalledTimes(2)
   })
+
+  describe('interaction and size', () => {
+    // every ResizeObserver created - Vuetify's spinner makes one too - so a resize can be replayed
+    const observers: { callback: () => void, target?: Element, disconnect: ReturnType<typeof vi.fn> }[] = []
+
+    beforeEach(() => {
+      observers.length = 0
+      vi.stubGlobal('ResizeObserver', vi.fn(function (this: any, callback: () => void) {
+        this.callback = callback
+        this.observe = vi.fn((target: Element) => { this.target = target })
+        this.unobserve = vi.fn()
+        this.disconnect = vi.fn()
+        observers.push(this)
+      }))
+      ;(mockMapInstance as any).invalidateSize = vi.fn()
+    })
+
+    async function mapOptions () {
+      const L = (await import('leaflet')).default
+      return (L.map as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1]
+    }
+
+    it('is static by default, so the page scrolls past it', async () => {
+      stubFetchSuccess()
+      mountJourneyView('London, UK', 'Paris, France')
+      await flushPromises()
+      expect(await mapOptions()).toMatchObject({ dragging: false, scrollWheelZoom: false, touchZoom: false, zoomControl: false })
+    })
+
+    it('pans and zooms when interactive', async () => {
+      stubFetchSuccess()
+      mount(JourneyView, { props: { fromLocation: 'London, UK', toLocation: 'Paris, France', interactive: true }, global: { plugins: [vuetify] } })
+      await flushPromises()
+      expect(await mapOptions()).toMatchObject({ dragging: true, scrollWheelZoom: true, touchZoom: true, zoomControl: true })
+    })
+
+    it('takes a height in place of the default', async () => {
+      stubFetchSuccess()
+      const wrapper = mount(JourneyView, { props: { fromLocation: 'London, UK', toLocation: 'Paris, France', height: '600px' }, global: { plugins: [vuetify] } })
+      expect((wrapper.find('.map-component-placeholder').element as HTMLElement).style.height).toBe('600px')
+      await flushPromises()
+      expect((wrapper.find('[class$="-container"]').element as HTMLElement).style.height).toBe('600px')
+    })
+
+    it('re-measures the map when its box changes size', async () => {
+      stubFetchSuccess()
+      mountJourneyView('London, UK', 'Paris, France')
+      await flushPromises()
+      const mapObserver = observers.find(o => o.target?.className.includes('-container'))
+      mapObserver!.callback()
+      expect((mockMapInstance as any).invalidateSize).toHaveBeenCalled()
+    })
+
+    it('stops watching when unmounted', async () => {
+      stubFetchSuccess()
+      const wrapper = mountJourneyView('London, UK', 'Paris, France')
+      await flushPromises()
+      wrapper.unmount()
+      expect(observers.some(o => o.disconnect.mock.calls.length > 0)).toBe(true)
+    })
+  })
 })
