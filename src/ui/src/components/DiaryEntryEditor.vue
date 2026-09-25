@@ -279,11 +279,11 @@
 </template>
 
 <script setup lang="ts">
-  import dayjs from 'dayjs'
   import { SubmitEventPromise } from 'vuetify'
   import { VDateInput } from 'vuetify/labs/VDateInput'
   import { onMounted, onUnmounted, ref, watch } from 'vue'
   import { type DiaryEntryImage, imageSrc, type JourneyMode, MAX_ENTRY_IMAGES } from '@/services/models/diaryEntry'
+  import { entryTime, fromEntryDate, toEntryDate } from '@/utils/entryTime'
 
   const journeyModeItems: { label: string; value: JourneyMode; icon: string }[] = [
     { label: 'As the Crow Flies', value: 'crow-flies', icon: '$mdi-bird' },
@@ -294,8 +294,11 @@
   ]
 
   const props = defineProps<{isEdit?: boolean, date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: JourneyMode, images?: DiaryEntryImage[]}>()
-  const date = ref<Date>(new Date(props.date))
-  const time = ref<string>(dayjs(props.date).format('HH:mm'))
+  // The entry's date is the diarist's wall clock, stored as UTC. The pickers work in the
+  // viewer's zone, so they are given a local Date showing that clock, and it is turned back into
+  // the wall clock on save; reading it as local time would move the entry by the viewer's offset.
+  const date = ref<Date>(fromEntryDate(props.date))
+  const time = ref<string>(entryTime(props.date).format('HH:mm'))
   const timeMenu = ref<boolean>(false)
   const location = ref<string>(props.location)
   const entry = ref<string>(props.entry)
@@ -327,7 +330,8 @@
     const { valid } = await submitEventPromise
     if (valid) {
       const [hours, minutes] = time.value.split(':')
-      const entryDate = new Date(date.value.setHours(Number(hours), Number(minutes), 0, 0))
+      const picked = date.value
+      const entryDate = toEntryDate(new Date(picked.getFullYear(), picked.getMonth(), picked.getDate(), Number(hours), Number(minutes)))
       emit('submit', {
         date: entryDate,
         location: location.value,
@@ -430,8 +434,8 @@
     entry.value = newVal
   })
   watch(() => props.date, newVal => {
-    date.value = new Date(newVal)
-    time.value = dayjs(newVal).format('HH:mm')
+    date.value = fromEntryDate(newVal)
+    time.value = entryTime(newVal).format('HH:mm')
   })
   watch(() => props.mapLocation, newVal => {
     mapLocation.value = newVal
@@ -461,8 +465,11 @@
       fromLocation.value = location.value
     }
   })
+  // The dialog reuses this editor from entry to entry, so the section's switch follows the
+  // entry's images rather than keeping the last entry's state.
   watch(() => props.images, newVal => {
     images.value = [...(newVal ?? [])]
+    showImage.value = images.value.length > 0
   })
   watch(showImage, newVal => {
     if (!newVal) {

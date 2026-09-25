@@ -16,6 +16,18 @@ import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
 
+// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC.
+function inZone<T> (tz: string, run: () => T): T {
+  const was = process.env.TZ
+  process.env.TZ = tz
+  try {
+    return run()
+  } finally {
+    if (was === undefined) delete process.env.TZ
+    else process.env.TZ = was
+  }
+}
+
 // Shared mocks accessible to tests (vi.hoisted ensures they're available before vi.mock runs)
 const mockRouterPush = vi.hoisted(() => vi.fn())
 const mockRouterReplace = vi.hoisted(() => vi.fn())
@@ -1049,5 +1061,29 @@ describe('[id].vue', () => {
     // happy-dom has innerWidth=0 so mobile=true → totalVisible=3
     const expectedVisible = (wrapper.vm as any).display.mobile.value ? 3 : 7
     expect(pagination.props('totalVisible')).toBe(expectedVisible)
+  })
+
+  describe('days on the diarist\'s clock', () => {
+    it('starts a new entry on the selected day, whatever the viewer\'s zone', async () => {
+      await inZone('Asia/Kolkata', async () => {
+        (wrapper.vm as any).diaryEntries = []
+        ;(wrapper.vm as any).selectedDate = new Date(1918, 5, 27)
+        await (wrapper.vm as any).editItem()
+        expect((wrapper.vm as any).editedItem.date.toISOString()).toBe('1918-06-27T00:00:00.000Z')
+      })
+    })
+
+    it('matches a late-evening entry to the selected day, and not the next', () => {
+      inZone('Asia/Kolkata', () => {
+        (wrapper.vm as any).selectedDate = new Date(1918, 5, 27)
+        expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-27T23:30:00Z'))).toBe(true)
+        expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-28T00:30:00Z'))).toBe(false)
+      })
+    })
+
+    it('matches no day when none is selected', () => {
+      (wrapper.vm as any).selectedDate = undefined
+      expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-27T12:00:00Z'))).toBe(false)
+    })
   })
 })

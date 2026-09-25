@@ -6,6 +6,18 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
+// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC.
+function inZone<T> (tz: string, run: () => T): T {
+  const was = process.env.TZ
+  process.env.TZ = tz
+  try {
+    return run()
+  } finally {
+    if (was === undefined) delete process.env.TZ
+    else process.env.TZ = was
+  }
+}
+
 const vuetify = createVuetify({ components, directives })
 
 describe('DiaryEntryEditor.vue', () => {
@@ -651,5 +663,50 @@ describe('DiaryEntryEditor.vue', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  describe('on the diarist\'s clock', () => {
+    const stored = new Date('1918-05-21T23:30:00Z')
+
+    it('shows the stored time and day in a zone ahead of UTC', () => {
+      inZone('Asia/Kolkata', () => {
+        const wrapper = mountEditor({ date: stored })
+        expect((wrapper.vm as any).time).toBe('23:30')
+        expect((wrapper.vm as any).date.getDate()).toBe(21)
+      })
+    })
+
+    it('saves an unchanged entry at the same stored time', async () => {
+      const payload = await inZone('Asia/Kolkata', () => submitted(mountEditor({ date: stored })))
+      expect((payload as any).date.toISOString()).toBe('1918-05-21T23:30:00.000Z')
+    })
+
+    it('saves a changed time as that clock time, not shifted by the viewer\'s offset', async () => {
+      const payload = await inZone('America/New_York', () => {
+        const wrapper = mountEditor({ date: stored })
+        ;(wrapper.vm as any).time = '08:20'
+        return submitted(wrapper)
+      })
+      expect((payload as any).date.toISOString()).toBe('1918-05-21T08:20:00.000Z')
+    })
+
+    it('follows a new entry\'s date when the dialog is reused', async () => {
+      await inZone('Asia/Kolkata', async () => {
+        const wrapper = mountEditor({ date: stored })
+        await wrapper.setProps({ date: new Date('1918-06-27T07:00:00Z') })
+        expect((wrapper.vm as any).time).toBe('07:00')
+        expect((wrapper.vm as any).date.getDate()).toBe(27)
+      })
+    })
+  })
+
+  it('shows or hides the image section with each entry the dialog is reused for', async () => {
+    const wrapper = mountEditor()
+    expect((wrapper.vm as any).showImage).toBe(false)
+    await wrapper.setProps({ images: [jpeg('a')] })
+    expect((wrapper.vm as any).showImage).toBe(true)
+    expect((wrapper.vm as any).images).toEqual([jpeg('a')])
+    await wrapper.setProps({ images: [] })
+    expect((wrapper.vm as any).showImage).toBe(false)
   })
 })

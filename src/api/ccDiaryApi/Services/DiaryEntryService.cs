@@ -367,11 +367,17 @@ namespace ccDiaryApi.Services
                     StorageKeys.ImageBlobKey(entry.DiaryId, entryId, i));
             }
 
-            // Images are never part of the serialised row.
-            var (imageData, imageList) = (entry.ImageData, entry.Images);
-            (entry.ImageData, entry.Images) = (null, null);
+            // Images are never part of the serialised row; a read takes them, and their types,
+            // from the blobs.
+            (entry.ImageData, entry.ImageContentType, entry.Images) = (null, null, null);
             var json = TableJson.Serialize(entry);
-            (entry.ImageData, entry.Images) = (imageData, imageList);
+
+            // The DTO goes back as the create/update response, so it carries what was stored, in
+            // the same shape a read returns: every image, and the first repeated in the legacy
+            // fields - whichever of the two the request used.
+            entry.Images = images;
+            entry.ImageData = images.FirstOrDefault()?.Data;
+            entry.ImageContentType = images.FirstOrDefault()?.ContentType;
 
             var spill = TableJson.ByteSize(json) > _options.JsonSpillThresholdBytes;
             if (spill)
@@ -455,11 +461,10 @@ namespace ccDiaryApi.Services
                 }
             }
 
-            if (entry.Images.Count > 0)
-            {
-                entry.ImageData = entry.Images[0].Data;
-                entry.ImageContentType = entry.Images[0].ContentType;
-            }
+            // The first image, repeated for older callers; none at all when the entry has none,
+            // whatever a row written before images left in its JSON.
+            entry.ImageData = entry.Images.FirstOrDefault()?.Data;
+            entry.ImageContentType = entry.Images.FirstOrDefault()?.ContentType;
 
             return entry;
         }

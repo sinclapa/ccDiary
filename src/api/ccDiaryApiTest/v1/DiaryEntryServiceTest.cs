@@ -282,6 +282,48 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
+        public async Task CreatingWithTheListReturnsTheFirstImageInTheSingleImageFields()
+        {
+            // The create response is the DTO itself, so it must carry the legacy fields too.
+            var created = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"), Image(2, "image/jpeg"));
+
+            Assert.AreEqual(Base64(1), created.ImageData);
+            Assert.AreEqual("image/png", created.ImageContentType);
+            Assert.AreEqual(2, created.Images!.Count);
+        }
+
+        [TestMethod]
+        public async Task CreatingWithTheSingleImageFieldsReturnsTheList()
+        {
+            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            {
+                DiaryId = Guid.NewGuid(),
+                Date = DateTime.UtcNow,
+                Location = "L",
+                Entry = "E",
+                ImageData = Base64(7),
+                ImageContentType = "image/png",
+            });
+
+            Assert.AreEqual(1, created.Images!.Count);
+            Assert.AreEqual(Base64(7), created.Images[0].Data);
+        }
+
+        [TestMethod]
+        public async Task UpdatingToNoImagesReturnsAndReadsNoContentType()
+        {
+            var entry = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"));
+
+            entry.Images = new List<DiaryEntryImageDTO>();
+            var updated = await _service.UpdateDiaryEntryAsync(entry);
+            var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
+
+            Assert.IsNull(updated.ImageData);
+            Assert.IsNull(updated.ImageContentType);
+            Assert.IsNull(fetched!.ImageContentType);
+        }
+
+        [TestMethod]
         public async Task ReorderingImagesIsKept()
         {
             var entry = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"), Image(2, "image/jpeg"));
