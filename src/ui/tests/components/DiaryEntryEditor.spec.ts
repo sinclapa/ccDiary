@@ -6,16 +6,28 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC.
+// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC. The zone
+// holds until the work is done - for async work, until its promise settles, or an await inside
+// it would carry on in the default zone.
 function inZone<T> (tz: string, run: () => T): T {
   const was = process.env.TZ
-  process.env.TZ = tz
-  try {
-    return run()
-  } finally {
+  const restore = () => {
     if (was === undefined) delete process.env.TZ
     else process.env.TZ = was
   }
+  process.env.TZ = tz
+  let result: T
+  try {
+    result = run()
+  } catch (error) {
+    restore()
+    throw error
+  }
+  if (result instanceof Promise) {
+    return result.finally(restore) as T
+  }
+  restore()
+  return result
 }
 
 const vuetify = createVuetify({ components, directives })
