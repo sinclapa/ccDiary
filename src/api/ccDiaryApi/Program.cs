@@ -147,14 +147,14 @@ builder.Services.AddHealthActuator();
 
 builder.Services.AddInfoActuator();
 
-// Swagger is off in production. It is not free at startup: AddSwaggerUI resolves
-// IApiVersionDescriptionProvider while the pipeline is being built, which forces the whole
-// action descriptor collection to materialise before the app can serve anything, on top of
-// loading and JIT-ing Swashbuckle and Microsoft.OpenApi. Turning it off also stops the
-// generated UI publishing the Entra client id and application id URI to anonymous callers.
-// Set Swagger:Enabled to override either way.
-var swaggerEnabled = builder.Configuration.GetValue<bool?>("Swagger:Enabled")
-    ?? !builder.Environment.IsEnvironment("prod");
+// Swagger is on in every environment, prod included, because the footer links to it for admins.
+// It is not free at startup: AddSwaggerUI resolves IApiVersionDescriptionProvider while the
+// pipeline is being built, which forces the whole action descriptor collection to materialise
+// before the app can serve anything, on top of loading and JIT-ing Swashbuckle and
+// Microsoft.OpenApi - part of a cold start. The generated UI also shows the Entra client id and
+// application id URI to anonymous callers; neither is a secret. Set Swagger:Enabled=false to
+// turn it off for an environment.
+var swaggerEnabled = builder.Configuration.GetValue<bool?>("Swagger:Enabled") ?? true;
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 if (swaggerEnabled)
