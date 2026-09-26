@@ -666,6 +666,56 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
+        public async Task CreateWithSeveralImages_RoundTripsThemInOrder()
+        {
+            var diary = await CreateDiary();
+            var images = new List<DiaryEntryImageDTO>
+            {
+                new DiaryEntryImageDTO { Data = Convert.ToBase64String(new byte[] { 0xFF, 0xD8, 0xFF }), ContentType = "image/jpeg" },
+                new DiaryEntryImageDTO { Data = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), ContentType = "image/png" },
+            };
+
+            var createResponse = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Test Location",
+                Entry = "Test entry with two images.",
+                Images = images,
+            });
+            Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+
+            var getResponse = await _httpClient.GetAsync($"/api/v1/DiaryEntry/Get/{created!.DiaryEntryId}");
+            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+
+            Assert.IsNotNull(fetched);
+            CollectionAssert.AreEqual(images.Select(i => i.Data).ToArray(), fetched.Images!.Select(i => i.Data).ToArray());
+            CollectionAssert.AreEqual(images.Select(i => i.ContentType).ToArray(), fetched.Images!.Select(i => i.ContentType).ToArray());
+            Assert.AreEqual(images[0].Data, fetched.ImageData);
+        }
+
+        [TestMethod]
+        public async Task CreateWithTooManyImages_ReturnsBadRequest()
+        {
+            var diary = await CreateDiary();
+            var images = Enumerable.Range(0, DiaryEntryDTO.MaxImages + 1)
+                .Select(i => new DiaryEntryImageDTO { Data = Convert.ToBase64String(new[] { (byte)i }), ContentType = "image/png" })
+                .ToList();
+
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", new DiaryEntryDTO
+            {
+                Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
+                DiaryId = diary.DiaryId!.Value,
+                Location = "Test Location",
+                Entry = "Too many images.",
+                Images = images,
+            });
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [TestMethod]
         public async Task CreateWithDefaultShowJourney_ShowJourneyIsFalse()
         {
             // Arrange

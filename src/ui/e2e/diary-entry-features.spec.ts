@@ -524,6 +524,8 @@ test.describe('DiaryEntry API — imageData and imageContentType fields', () => 
     const entry: Record<string, unknown> = await getResponse.json()
     expect(entry).toHaveProperty('imageData')
     expect(entry).toHaveProperty('imageContentType')
+    // Every image the entry holds, in order; imageData repeats the first for older callers.
+    expect(Array.isArray(entry.images)).toBe(true)
   })
 
   test('seeded June 2nd entry returns non-null imageData and imageContentType', async ({ request }) => {

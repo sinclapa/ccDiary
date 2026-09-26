@@ -139,6 +139,19 @@ namespace ccDiaryApi.Data.Storage
         /// <returns>The blob name.</returns>
         public static string ImageBlobKey(Guid diaryId, Guid entryId) => $"{diaryId:N}/{entryId:N}";
 
+        /// <summary>Builds the blob name for one of a diary entry's images.</summary>
+        /// <param name="diaryId">The owning diary.</param>
+        /// <param name="entryId">The diary entry.</param>
+        /// <param name="index">The image's position; the first is 0.</param>
+        /// <returns>The blob name.</returns>
+        /// <remarks>
+        /// The first image keeps the single-image key, so entries written before an entry could
+        /// hold several read back unchanged. Later images sit beneath it, inside the same diary
+        /// prefix, so deleting a diary still removes them.
+        /// </remarks>
+        public static string ImageBlobKey(Guid diaryId, Guid entryId, int index) =>
+            index == 0 ? ImageBlobKey(diaryId, entryId) : $"{ImageBlobKey(diaryId, entryId)}/{index}";
+
         /// <summary>Builds the blob name for a diary entry whose JSON exceeded the spill threshold.</summary>
         /// <param name="entryId">The diary entry.</param>
         /// <returns>The blob name.</returns>

@@ -1,13 +1,13 @@
 <template>
   <div class="journey-wrapper">
-    <div v-if="status === 'loading'" class="map-component-placeholder">
+    <div v-if="status === 'loading'" class="map-component-placeholder" :style="heightStyle">
       <v-progress-circular color="red" indeterminate />
     </div>
-    <div v-else-if="status === 'not-found'" class="map-component-placeholder journey-not-found">
+    <div v-else-if="status === 'not-found'" class="map-component-placeholder journey-not-found" :style="heightStyle">
       <v-icon color="grey">$mdi-map-marker-off</v-icon>
       <span class="text-caption text-grey">Location not found</span>
     </div>
-    <div v-else-if="status === 'error'" class="map-component-placeholder journey-error">
+    <div v-else-if="status === 'error'" class="map-component-placeholder journey-error" :style="heightStyle">
       <v-icon color="grey">$mdi-map-off</v-icon>
       <span class="text-caption text-grey">Map unavailable</span>
     </div>
@@ -15,6 +15,7 @@
       ref="mapContainer"
       class="journey-container"
       :class="{ 'journey-hidden': status !== 'ready' }"
+      :style="heightStyle"
     />
   </div>
 </template>
@@ -27,6 +28,7 @@
   import markerShadow from 'leaflet/dist/images/marker-shadow.png'
   import type { JourneyMode } from '@/services/models/diaryEntry'
   import { getAppConfigField } from '@/utils/appConfig'
+  import { mapInteraction } from '@/utils/mapInteraction'
 
   // Fix Vite asset URL resolution for Leaflet default marker icons
   delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -40,6 +42,10 @@
     fromLocation: string
     toLocation: string
     journeyMode?: JourneyMode
+    /** Pan and zoom with the pointer; off for maps inline with the page. */
+    interactive?: boolean
+    /** A CSS height for the map, instead of the app's --cc-map-height. */
+    height?: string
   }>()
 
   type MapStatus = 'loading' | 'ready' | 'not-found' | 'error'
@@ -47,6 +53,18 @@
   const mapContainer = ref<HTMLElement | null>(null)
   const status = ref<MapStatus>('loading')
   let leafletMap: L.Map | null = null
+  let resizeObserver: ResizeObserver | null = null
+
+  const heightStyle = computed(() => (props.height ? { height: props.height } : undefined))
+
+  // Leaflet measures its container once. In a dialog that is still opening, or after the layout
+  // around it changes, that size is stale and tiles draw into part of the box; re-measure.
+  function watchSize () {
+    resizeObserver?.disconnect()
+    if (!mapContainer.value) return
+    resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize?.())
+    resizeObserver.observe(mapContainer.value)
+  }
 
   const modeStyle: Record<NonNullable<JourneyMode>, { color: string; weight: number; dashArray?: string }> = {
     'crow-flies': { color: 'red', weight: 2, dashArray: '6 4' },
@@ -128,7 +146,8 @@
 
       const style = modeStyle[props.journeyMode ?? 'crow-flies']
       const bounds = L.latLngBounds(routeCoords)
-      leafletMap = L.map(mapContainer.value!).fitBounds(bounds, { padding: [40, 40] })
+      leafletMap = L.map(mapContainer.value!, mapInteraction(props.interactive)).fitBounds(bounds, { padding: [40, 40] })
+      watchSize()
       L.tileLayer(`${apiBase}v1/MapTile/Tile/osm/{z}/{x}/{y}`, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
@@ -151,6 +170,8 @@
   })
 
   onUnmounted(() => {
+    resizeObserver?.disconnect()
+    resizeObserver = null
     if (leafletMap) {
       leafletMap.remove()
       leafletMap = null

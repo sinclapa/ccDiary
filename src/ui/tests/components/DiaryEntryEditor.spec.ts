@@ -1,9 +1,34 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import DiaryEntryEditor from '@/components/DiaryEntryEditor.vue'
+import { MAX_ENTRY_IMAGES } from '@/services/models/diaryEntry'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+
+// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC. The zone
+// holds until the work is done - for async work, until its promise settles, or an await inside
+// it would carry on in the default zone.
+function inZone<T> (tz: string, run: () => T): T {
+  const was = process.env.TZ
+  const restore = () => {
+    if (was === undefined) delete process.env.TZ
+    else process.env.TZ = was
+  }
+  process.env.TZ = tz
+  let result: T
+  try {
+    result = run()
+  } catch (error) {
+    restore()
+    throw error
+  }
+  if (result instanceof Promise) {
+    return result.finally(restore) as T
+  }
+  restore()
+  return result
+}
 
 const vuetify = createVuetify({ components, directives })
 
@@ -280,101 +305,151 @@ describe('DiaryEntryEditor.vue', () => {
     expect((wrapper.vm as any).mapLocation).toBe('')
   })
 
-  it('does not show image drop zone when showImage is false', () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
+  // Reads each file as `data:<type>;base64,<file name>`, answering asynchronously like the real one.
+  function mockFileReader () {
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(() => {
+      const reader: any = {
+        readAsDataURL (file: File) {
+          queueMicrotask(() => reader.onload?.({ target: { result: `data:${file.type};base64,${file.name}` } }))
+        },
+      }
+      return reader
+    })
+  }
+
+  const jpeg = (data: string) => ({ data, contentType: 'image/jpeg' })
+
+  function mountEditor (props: Record<string, unknown> = {}) {
+    return mount(DiaryEntryEditor, {
+      props: { ...defaultProps, ...props },
       global: { plugins: [vuetify] },
     })
+  }
+
+  async function submitted (wrapper: ReturnType<typeof mountEditor>) {
+    const submitEventPromise = Promise.resolve({ valid: true })
+    await (wrapper.vm as any).submit(submitEventPromise)
+    const emitted = wrapper.emitted('submit')
+    expect(emitted).toBeTruthy()
+    return emitted![0][0] as { images: { data: string, contentType: string }[] }
+  }
+
+  it('does not show image drop zone when showImage is false', () => {
+    const wrapper = mountEditor()
     expect(wrapper.find('#image-drop-zone').exists()).toBe(false)
   })
 
   it('shows image drop zone when showImage is toggled on', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
+    const wrapper = mountEditor()
     ;(wrapper.vm as any).showImage = true
     await wrapper.vm.$nextTick()
     expect(wrapper.find('#image-drop-zone').exists()).toBe(true)
   })
 
-  it('shows image drop zone when imageData prop is provided', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
-      global: { plugins: [vuetify] },
-    })
+  it('shows the image section and a tile per image when images are provided', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
     await wrapper.vm.$nextTick()
     expect(wrapper.find('#image-drop-zone').exists()).toBe(true)
+    expect(wrapper.findAll('.image-tile')).toHaveLength(2)
   })
 
-  it('clears image data when showImage is toggled off', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
-      global: { plugins: [vuetify] },
-    })
+  it('lets the file input choose several files', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a')] })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#diary-entry-image-input').attributes('multiple')).toBeDefined()
+  })
+
+  it('clears images when showImage is toggled off', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
     ;(wrapper.vm as any).showImage = false
     await wrapper.vm.$nextTick()
-    expect((wrapper.vm as any).imageData).toBeUndefined()
-    expect((wrapper.vm as any).imageContentType).toBeUndefined()
+    expect((wrapper.vm as any).images).toEqual([])
   })
 
-  it('emits submit with imageData and imageContentType in payload', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
-      global: { plugins: [vuetify] },
-    })
-    const submitEventPromise = Promise.resolve({ valid: true })
-    await (wrapper.vm as any).submit(submitEventPromise)
-    await submitEventPromise
-    const emitted = wrapper.emitted('submit')
-    expect(emitted).toBeTruthy()
-    const payload = emitted![0][0] as { imageData: string | undefined; imageContentType: string | undefined }
-    expect(payload.imageData).toBe('abc123')
-    expect(payload.imageContentType).toBe('image/jpeg')
+  it('emits submit with its images in order', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
+    const payload = await submitted(wrapper)
+    expect(payload.images).toEqual([jpeg('a'), jpeg('b')])
   })
 
-  it('emits submit with undefined imageData and imageContentType by default', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
-    const submitEventPromise = Promise.resolve({ valid: true })
-    await (wrapper.vm as any).submit(submitEventPromise)
-    await submitEventPromise
-    const emitted = wrapper.emitted('submit')
-    expect(emitted).toBeTruthy()
-    const payload = emitted![0][0] as { imageData: string | undefined; imageContentType: string | undefined }
-    expect(payload.imageData).toBeUndefined()
-    expect(payload.imageContentType).toBeUndefined()
+  it('emits submit with no images by default', async () => {
+    const wrapper = mountEditor()
+    const payload = await submitted(wrapper)
+    expect(payload.images).toEqual([])
   })
 
-  it('updates imageData when prop changes', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
-      global: { plugins: [vuetify] },
-    })
-    await wrapper.setProps({ imageData: 'xyz789' })
+  it('emits a copy, so later edits do not reach the submitted payload', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a')] })
+    const payload = await submitted(wrapper)
+    ;(wrapper.vm as any).removeImage(0)
+    expect(payload.images).toEqual([jpeg('a')])
+  })
+
+  it('updates images when the prop changes', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a')] })
+    await wrapper.setProps({ images: [jpeg('x'), jpeg('y')] })
+    expect((wrapper.vm as any).images).toEqual([jpeg('x'), jpeg('y')])
+  })
+
+  it('treats a missing images prop as none', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a')] })
+    await wrapper.setProps({ images: undefined })
+    expect((wrapper.vm as any).images).toEqual([])
+  })
+
+  it('clearImages removes every image and hides the section', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
+    ;(wrapper.vm as any).clearImages()
     await wrapper.vm.$nextTick()
-    expect((wrapper.vm as any).imageData).toBe('xyz789')
-  })
-
-  it('clearImage clears image state and hides image section', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps, imageData: 'abc123', imageContentType: 'image/jpeg' },
-      global: { plugins: [vuetify] },
-    })
-    ;(wrapper.vm as any).clearImage()
-    await wrapper.vm.$nextTick()
-    expect((wrapper.vm as any).imageData).toBeUndefined()
-    expect((wrapper.vm as any).imageContentType).toBeUndefined()
+    expect((wrapper.vm as any).images).toEqual([])
     expect((wrapper.vm as any).showImage).toBe(false)
   })
 
+  it('removeImage removes only that image', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b'), jpeg('c')] })
+    ;(wrapper.vm as any).removeImage(1)
+    expect((wrapper.vm as any).images).toEqual([jpeg('a'), jpeg('c')])
+  })
+
+  it('the remove button on a tile removes that image', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[aria-label="Remove image 1"]').trigger('click')
+    expect((wrapper.vm as any).images).toEqual([jpeg('b')])
+  })
+
+  it('moveImage moves an image earlier or later', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b'), jpeg('c')] })
+    ;(wrapper.vm as any).moveImage(2, -1)
+    expect((wrapper.vm as any).images).toEqual([jpeg('a'), jpeg('c'), jpeg('b')])
+    ;(wrapper.vm as any).moveImage(0, 1)
+    expect((wrapper.vm as any).images).toEqual([jpeg('c'), jpeg('a'), jpeg('b')])
+  })
+
+  it('moveImage ignores a move past either end', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
+    ;(wrapper.vm as any).moveImage(0, -1)
+    ;(wrapper.vm as any).moveImage(1, 1)
+    expect((wrapper.vm as any).images).toEqual([jpeg('a'), jpeg('b')])
+  })
+
+  it('disables moving the first image earlier and the last later', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[aria-label="Move image 1 earlier"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[aria-label="Move image 2 later"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[aria-label="Move image 1 later"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('the move buttons on a tile reorder the images', async () => {
+    const wrapper = mountEditor({ images: [jpeg('a'), jpeg('b')] })
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[aria-label="Move image 1 later"]').trigger('click')
+    expect((wrapper.vm as any).images).toEqual([jpeg('b'), jpeg('a')])
+  })
+
   it('triggerFileInput clicks the file input element', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
+    const wrapper = mountEditor()
     ;(wrapper.vm as any).showImage = true
     await wrapper.vm.$nextTick()
     const clickSpy = vi.fn()
@@ -384,10 +459,7 @@ describe('DiaryEntryEditor.vue', () => {
   })
 
   it('Enter key on drop zone triggers file input', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
+    const wrapper = mountEditor()
     ;(wrapper.vm as any).showImage = true
     await wrapper.vm.$nextTick()
     const clickSpy = vi.fn()
@@ -396,110 +468,150 @@ describe('DiaryEntryEditor.vue', () => {
     expect(clickSpy).toHaveBeenCalled()
   })
 
-  it('processFile reads file and sets imageData and imageContentType', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
+  it('handleDrop adds every dropped image, in order, after the existing ones', async () => {
+    mockFileReader()
+    const wrapper = mountEditor({ images: [jpeg('a')] })
+    ;(wrapper.vm as any).handleDrop({
+      dataTransfer: {
+        files: [
+          new File(['1'], 'one', { type: 'image/png' }),
+          new File(['2'], 'two', { type: 'image/jpeg' }),
+        ],
+      },
     })
-    let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
-    vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
-
-    const file = new File(['dummy'], 'test.jpg', { type: 'image/jpeg' })
-    ;(wrapper.vm as any).processFile(file)
-    capturedOnload?.({ target: { result: 'data:image/jpeg;base64,abc123' } })
-    await wrapper.vm.$nextTick()
-
-    expect((wrapper.vm as any).imageData).toBe('abc123')
-    expect((wrapper.vm as any).imageContentType).toBe('image/jpeg')
-  })
-
-  it('handleDrop processes dropped image file', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
-    let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
-    vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
-
-    const file = new File(['dummy'], 'test.png', { type: 'image/png' })
-    ;(wrapper.vm as any).handleDrop({ dataTransfer: { files: [file] } })
-    capturedOnload?.({ target: { result: 'data:image/png;base64,xyz789' } })
-    await wrapper.vm.$nextTick()
-
-    expect((wrapper.vm as any).imageData).toBe('xyz789')
-    expect((wrapper.vm as any).imageContentType).toBe('image/png')
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([
+      jpeg('a'),
+      { data: 'one', contentType: 'image/png' },
+      { data: 'two', contentType: 'image/jpeg' },
+    ])
     expect((wrapper.vm as any).isDragging).toBe(false)
   })
 
   it('handleDrop ignores non-image files', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
-    const file = new File(['dummy'], 'test.txt', { type: 'text/plain' })
-    ;(wrapper.vm as any).handleDrop({ dataTransfer: { files: [file] } })
-    await wrapper.vm.$nextTick()
-    expect((wrapper.vm as any).imageData).toBeUndefined()
+    mockFileReader()
+    const wrapper = mountEditor()
+    ;(wrapper.vm as any).handleDrop({ dataTransfer: { files: [new File(['x'], 'notes', { type: 'text/plain' })] } })
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([])
+    expect((wrapper.vm as any).showImage).toBe(false)
   })
 
-  it('handleFileSelect processes selected image file', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
-    let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
-    vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
-
-    const file = new File(['dummy'], 'selected.jpg', { type: 'image/jpeg' })
-    ;(wrapper.vm as any).handleFileSelect({ target: { files: [file] } })
-    capturedOnload?.({ target: { result: 'data:image/jpeg;base64,selected123' } })
-    await wrapper.vm.$nextTick()
-
-    expect((wrapper.vm as any).imageData).toBe('selected123')
-    expect((wrapper.vm as any).imageContentType).toBe('image/jpeg')
+  it('handleDrop copes with a drop that carries no files', async () => {
+    const wrapper = mountEditor()
+    ;(wrapper.vm as any).handleDrop({ dataTransfer: null })
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([])
   })
 
-  it('handleWindowPaste processes pasted image and shows image section', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
-    let capturedOnload: ((e: any) => void) | undefined
-    const mockReader = { readAsDataURL: vi.fn(), get onload () { return capturedOnload! }, set onload (cb: (e: any) => void) { capturedOnload = cb } }
-    vi.spyOn(globalThis, 'FileReader').mockImplementation(() => mockReader as any)
-
-    const file = new File(['dummy'], 'pasted.jpg', { type: 'image/jpeg' })
-    const mockItems = [{ type: 'image/jpeg', getAsFile: () => file }]
-    ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
-    capturedOnload?.({ target: { result: 'data:image/jpeg;base64,pasteddata' } })
-    await wrapper.vm.$nextTick()
-
+  it('handleFileSelect adds the selected images and resets the input', async () => {
+    mockFileReader()
+    const wrapper = mountEditor()
+    const input = { files: [new File(['1'], 'chosen', { type: 'image/jpeg' })], value: 'C:\\fakepath\\chosen' }
+    ;(wrapper.vm as any).handleFileSelect({ target: input })
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([jpeg('chosen')])
     expect((wrapper.vm as any).showImage).toBe(true)
-    expect((wrapper.vm as any).imageData).toBe('pasteddata')
+    expect(input.value).toBe('')
+  })
+
+  it('handleFileSelect copes with an input that has no files', async () => {
+    const wrapper = mountEditor()
+    ;(wrapper.vm as any).handleFileSelect({ target: { files: null, value: '' } })
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([])
+  })
+
+  it('never adds more than the limit, keeping the earliest files', async () => {
+    mockFileReader()
+    const existing = Array.from({ length: MAX_ENTRY_IMAGES - 1 }, (_, i) => jpeg(`old${i}`))
+    const wrapper = mountEditor({ images: existing })
+    ;(wrapper.vm as any).handleDrop({
+      dataTransfer: {
+        files: [
+          new File(['1'], 'first', { type: 'image/jpeg' }),
+          new File(['2'], 'second', { type: 'image/jpeg' }),
+        ],
+      },
+    })
+    await flushPromises()
+    const images = (wrapper.vm as any).images
+    expect(images).toHaveLength(MAX_ENTRY_IMAGES)
+    expect(images.at(-1)).toEqual(jpeg('first'))
+  })
+
+  it('hides the drop zone and explains the limit once it is reached', async () => {
+    const full = Array.from({ length: MAX_ENTRY_IMAGES }, (_, i) => jpeg(`img${i}`))
+    const wrapper = mountEditor({ images: full })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('#image-drop-zone').exists()).toBe(false)
+    expect(wrapper.text()).toContain(`up to ${MAX_ENTRY_IMAGES} images`)
+  })
+
+  it('ignores files dropped when already full', async () => {
+    mockFileReader()
+    const full = Array.from({ length: MAX_ENTRY_IMAGES }, (_, i) => jpeg(`img${i}`))
+    const wrapper = mountEditor({ images: full })
+    ;(wrapper.vm as any).handleDrop({ dataTransfer: { files: [new File(['1'], 'extra', { type: 'image/jpeg' })] } })
+    await flushPromises()
+    expect((wrapper.vm as any).images).toHaveLength(MAX_ENTRY_IMAGES)
+  })
+
+  it('handleWindowPaste adds every pasted image and shows the image section', async () => {
+    mockFileReader()
+    const wrapper = mountEditor()
+    const mockItems = [
+      { type: 'image/jpeg', getAsFile: () => new File(['1'], 'pasted1', { type: 'image/jpeg' }) },
+      { type: 'text/plain', getAsFile: () => null },
+      { type: 'image/jpeg', getAsFile: () => new File(['2'], 'pasted2', { type: 'image/jpeg' }) },
+    ]
+    ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
+    await flushPromises()
+    expect((wrapper.vm as any).showImage).toBe(true)
+    expect((wrapper.vm as any).images).toEqual([jpeg('pasted1'), jpeg('pasted2')])
+  })
+
+  it('handleWindowPaste skips an image item that yields no file', async () => {
+    mockFileReader()
+    const wrapper = mountEditor()
+    ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: [{ type: 'image/png', getAsFile: () => null }] } })
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([])
   })
 
   it('handleWindowPaste ignores non-image clipboard items', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
+    const wrapper = mountEditor()
     const mockItems = [{ type: 'text/plain', getAsFile: () => null }]
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: { items: mockItems } })
-    await wrapper.vm.$nextTick()
-    expect((wrapper.vm as any).imageData).toBeUndefined()
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([])
   })
 
   it('handleWindowPaste does nothing when clipboardData is absent', async () => {
-    const wrapper = mount(DiaryEntryEditor, {
-      props: { ...defaultProps },
-      global: { plugins: [vuetify] },
-    })
+    const wrapper = mountEditor()
     ;(wrapper.vm as any).handleWindowPaste({ clipboardData: null })
-    await wrapper.vm.$nextTick()
-    expect((wrapper.vm as any).imageData).toBeUndefined()
+    await flushPromises()
+    expect((wrapper.vm as any).images).toEqual([])
+  })
+
+  it('skips a file that fails to read and keeps the rest', async () => {
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(() => {
+      const reader: any = {
+        error: new Error('unreadable'),
+        readAsDataURL (file: File) {
+          queueMicrotask(() => file.name === 'bad'
+            ? reader.onerror?.()
+            : reader.onload?.({ target: { result: `data:${file.type};base64,${file.name}` } }))
+        },
+      }
+      return reader
+    })
+    const wrapper = mountEditor()
+    await (wrapper.vm as any).addFiles([
+      new File(['1'], 'bad', { type: 'image/jpeg' }),
+      new File(['2'], 'good', { type: 'image/jpeg' }),
+    ])
+    expect((wrapper.vm as any).images).toEqual([jpeg('good')])
   })
 
   it('does not show journey-mode selector when showJourney is false', () => {
@@ -563,5 +675,50 @@ describe('DiaryEntryEditor.vue', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  describe('on the diarist\'s clock', () => {
+    const stored = new Date('1918-05-21T23:30:00Z')
+
+    it('shows the stored time and day in a zone ahead of UTC', () => {
+      inZone('Asia/Kolkata', () => {
+        const wrapper = mountEditor({ date: stored })
+        expect((wrapper.vm as any).time).toBe('23:30')
+        expect((wrapper.vm as any).date.getDate()).toBe(21)
+      })
+    })
+
+    it('saves an unchanged entry at the same stored time', async () => {
+      const payload = await inZone('Asia/Kolkata', () => submitted(mountEditor({ date: stored })))
+      expect((payload as any).date.toISOString()).toBe('1918-05-21T23:30:00.000Z')
+    })
+
+    it('saves a changed time as that clock time, not shifted by the viewer\'s offset', async () => {
+      const payload = await inZone('America/New_York', () => {
+        const wrapper = mountEditor({ date: stored })
+        ;(wrapper.vm as any).time = '08:20'
+        return submitted(wrapper)
+      })
+      expect((payload as any).date.toISOString()).toBe('1918-05-21T08:20:00.000Z')
+    })
+
+    it('follows a new entry\'s date when the dialog is reused', async () => {
+      await inZone('Asia/Kolkata', async () => {
+        const wrapper = mountEditor({ date: stored })
+        await wrapper.setProps({ date: new Date('1918-06-27T07:00:00Z') })
+        expect((wrapper.vm as any).time).toBe('07:00')
+        expect((wrapper.vm as any).date.getDate()).toBe(27)
+      })
+    })
+  })
+
+  it('shows or hides the image section with each entry the dialog is reused for', async () => {
+    const wrapper = mountEditor()
+    expect((wrapper.vm as any).showImage).toBe(false)
+    await wrapper.setProps({ images: [jpeg('a')] })
+    expect((wrapper.vm as any).showImage).toBe(true)
+    expect((wrapper.vm as any).images).toEqual([jpeg('a')])
+    await wrapper.setProps({ images: [] })
+    expect((wrapper.vm as any).showImage).toBe(false)
   })
 })

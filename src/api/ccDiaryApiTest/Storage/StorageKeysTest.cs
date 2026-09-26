@@ -185,6 +185,25 @@ namespace ccDiaryApiTest.Storage
         }
 
         [TestMethod]
+        public void ImageBlobKey_FirstImageKeepsTheSingleImageKey()
+        {
+            // Frozen: entries stored before an entry could hold several images live here.
+            var diaryId = Guid.NewGuid();
+            var entryId = Guid.NewGuid();
+
+            Assert.AreEqual(StorageKeys.ImageBlobKey(diaryId, entryId), StorageKeys.ImageBlobKey(diaryId, entryId, 0));
+        }
+
+        [TestMethod]
+        public void ImageBlobKey_LaterImagesSitBeneathTheFirst()
+        {
+            var diaryId = Guid.NewGuid();
+            var entryId = Guid.NewGuid();
+
+            Assert.AreEqual($"{diaryId:N}/{entryId:N}/2", StorageKeys.ImageBlobKey(diaryId, entryId, 2));
+        }
+
+        [TestMethod]
         public void EntryJsonBlobKey_IsScopedToTheEntriesFolder()
         {
             var entryId = Guid.NewGuid();

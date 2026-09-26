@@ -25,6 +25,11 @@ namespace ccDiaryApi.Services
     /// property at 64 KB, while real images reach several megabytes of base64. They are
     /// stored as blobs and re-encoded on read, so the HTTP contract is unchanged.
     /// </para>
+    /// <para>
+    /// An entry holds up to <see cref="DiaryEntryDTO.MaxImages"/> images, one blob each, and the
+    /// row records how many. Rows written when an entry held at most one have no count; their
+    /// <c>HasImage</c> flag stands for a count of one, so they need no migration.
+    /// </para>
     /// </remarks>
     public class DiaryEntryService : IDiaryEntryService
     {
@@ -32,10 +37,11 @@ namespace ccDiaryApi.Services
         private const string ColumnDate = "Date";
         private const string ColumnHasImage = "HasImage";
         private const string ColumnImageContentType = "ImageContentType";
+        private const string ColumnImageCount = "ImageCount";
         private const string ColumnJsonInBlob = "JsonInBlob";
 
         private static readonly string[] KeysAndDate = new[] { "RowKey", ColumnDate };
-        private static readonly string[] LocatorColumns = new[] { "PartitionKey", "RowKey", ColumnEntryId };
+        private static readonly string[] LocatorColumns = new[] { "PartitionKey", "RowKey", ColumnEntryId, ColumnHasImage, ColumnImageCount };
 
         private readonly ITableStore _tables;
         private readonly IBlobStore _blobs;
@@ -61,7 +67,7 @@ namespace ccDiaryApi.Services
             }
 
             diaryEntry.DiaryEntryId ??= Guid.NewGuid();
-            await WriteAsync(diaryEntry);
+            await WriteAsync(diaryEntry, previousImageCount: 0);
             return diaryEntry;
         }
 
@@ -83,7 +89,7 @@ namespace ccDiaryApi.Services
 
             if (existing != null && existing.Value.RowKey != newRowKey)
             {
-                var entity = await BuildEntityAsync(diaryEntry);
+                var entity = await BuildEntityAsync(diaryEntry, existing.Value.ImageCount);
                 await _tables.DiaryEntries.SubmitTransactionAsync(new[]
                 {
                     new TableTransactionAction(TableTransactionActionType.UpsertReplace, entity),
@@ -94,7 +100,7 @@ namespace ccDiaryApi.Services
                 return diaryEntry;
             }
 
-            await WriteAsync(diaryEntry);
+            await WriteAsync(diaryEntry, existing?.ImageCount ?? 0);
             return diaryEntry;
         }
 
@@ -112,7 +118,9 @@ namespace ccDiaryApi.Services
                 return;
             }
 
-            await _blobs.DeleteIfExistsAsync(
+            // Every image sits at or beneath the first image's key, and an entry id is fixed
+            // width, so the prefix matches this entry's images and nobody else's.
+            await _blobs.DeleteByPrefixAsync(
                 _options.ImagesContainer,
                 StorageKeys.ImageBlobKey(diaryEntry.DiaryId, entryId));
             await _blobs.DeleteIfExistsAsync(
@@ -284,6 +292,25 @@ namespace ccDiaryApi.Services
                 $"PartitionKey eq {Partition(diaryId)} and RowKey ge {lower} and RowKey lt {upper}");
         }
 
+        /// <summary>
+        /// The images a request carries: <see cref="DiaryEntryDTO.Images"/> when it is sent, else
+        /// the single legacy image. Items without data are dropped rather than stored empty.
+        /// </summary>
+        private static List<DiaryEntryImageDTO> ImagesOf(DiaryEntryDTO entry)
+        {
+            if (entry.Images != null)
+            {
+                return entry.Images.Where(i => !string.IsNullOrEmpty(i.Data)).ToList();
+            }
+
+            return string.IsNullOrEmpty(entry.ImageData)
+                ? new List<DiaryEntryImageDTO>()
+                : new List<DiaryEntryImageDTO> { new DiaryEntryImageDTO { Data = entry.ImageData, ContentType = entry.ImageContentType } };
+        }
+
+        private static int ImageCountOf(TableEntity row) =>
+            row.GetInt32(ColumnImageCount) ?? (row.GetBoolean(ColumnHasImage) == true ? 1 : 0);
+
         private async Task<List<DateTime>> DatesAsync(Guid diaryId)
         {
             // Rows arrive in row key order, which is date order, so first and last are
@@ -301,7 +328,7 @@ namespace ccDiaryApi.Services
                 .ToList();
         }
 
-        private async Task<(string PartitionKey, string RowKey)?> FindLocatorAsync(Guid entryId)
+        private async Task<(string PartitionKey, string RowKey, int ImageCount)?> FindLocatorAsync(Guid entryId)
         {
             var id = entryId.ToString("N");
             var rows = await TableJson.QueryAsync(
@@ -309,34 +336,48 @@ namespace ccDiaryApi.Services
                 TableClient.CreateQueryFilter($"DiaryEntryId eq {id}"),
                 LocatorColumns);
 
-            return rows.Count == 0 ? null : (rows[0].PartitionKey, rows[0].RowKey);
+            return rows.Count == 0 ? null : (rows[0].PartitionKey, rows[0].RowKey, ImageCountOf(rows[0]));
         }
 
-        private async Task WriteAsync(DiaryEntryDTO entry)
+        private async Task WriteAsync(DiaryEntryDTO entry, int previousImageCount)
         {
-            var entity = await BuildEntityAsync(entry);
+            var entity = await BuildEntityAsync(entry, previousImageCount);
             await _tables.DiaryEntries.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
 
-        private async Task<TableEntity> BuildEntityAsync(DiaryEntryDTO entry)
+        private async Task<TableEntity> BuildEntityAsync(DiaryEntryDTO entry, int previousImageCount)
         {
             var entryId = entry.DiaryEntryId!.Value;
-            var hasImage = !string.IsNullOrEmpty(entry.ImageData);
+            var images = ImagesOf(entry);
 
-            if (hasImage)
+            for (var i = 0; i < images.Count; i++)
             {
                 await _blobs.PutAsync(
                     _options.ImagesContainer,
-                    StorageKeys.ImageBlobKey(entry.DiaryId, entryId),
-                    BinaryData.FromBytes(Convert.FromBase64String(entry.ImageData!)),
-                    entry.ImageContentType);
+                    StorageKeys.ImageBlobKey(entry.DiaryId, entryId, i),
+                    BinaryData.FromBytes(Convert.FromBase64String(images[i].Data!)),
+                    images[i].ContentType);
             }
 
-            // The image is never part of the serialised row.
-            var imageData = entry.ImageData;
-            entry.ImageData = null;
+            // An entry that lost images would otherwise keep blobs nothing reads.
+            for (var i = images.Count; i < previousImageCount; i++)
+            {
+                await _blobs.DeleteIfExistsAsync(
+                    _options.ImagesContainer,
+                    StorageKeys.ImageBlobKey(entry.DiaryId, entryId, i));
+            }
+
+            // Images are never part of the serialised row; a read takes them, and their types,
+            // from the blobs.
+            (entry.ImageData, entry.ImageContentType, entry.Images) = (null, null, null);
             var json = TableJson.Serialize(entry);
-            entry.ImageData = imageData;
+
+            // The DTO goes back as the create/update response, so it carries what was stored, in
+            // the same shape a read returns: every image, and the first repeated in the legacy
+            // fields - whichever of the two the request used.
+            entry.Images = images;
+            entry.ImageData = images.FirstOrDefault()?.Data;
+            entry.ImageContentType = images.FirstOrDefault()?.ContentType;
 
             var spill = TableJson.ByteSize(json) > _options.JsonSpillThresholdBytes;
             if (spill)
@@ -354,7 +395,8 @@ namespace ccDiaryApi.Services
                 { TableJson.SchemaVersionColumn, TableJson.CurrentSchemaVersion },
                 { ColumnEntryId, entryId.ToString("N") },
                 { "DiaryId", entry.DiaryId.ToString("N") },
-                { ColumnHasImage, hasImage },
+                { ColumnHasImage, images.Count > 0 },
+                { ColumnImageCount, images.Count },
                 { ColumnJsonInBlob, spill },
             };
 
@@ -363,9 +405,9 @@ namespace ccDiaryApi.Services
                 entity[ColumnDate] = DateTime.SpecifyKind(entry.Date.Value, DateTimeKind.Utc);
             }
 
-            if (hasImage)
+            if (images.Count > 0)
             {
-                entity[ColumnImageContentType] = entry.ImageContentType;
+                entity[ColumnImageContentType] = images[0].ContentType;
             }
 
             return entity;
@@ -396,18 +438,33 @@ namespace ccDiaryApi.Services
                 return null;
             }
 
-            if (withImage && row.GetBoolean(ColumnHasImage) == true)
+            if (!withImage)
+            {
+                return entry;
+            }
+
+            entry.Images = new List<DiaryEntryImageDTO>();
+            var count = ImageCountOf(row);
+            for (var i = 0; i < count; i++)
             {
                 var stored = await _blobs.TryGetAsync(
                     _options.ImagesContainer,
-                    StorageKeys.ImageBlobKey(entry.DiaryId, entry.DiaryEntryId ?? Guid.Empty));
+                    StorageKeys.ImageBlobKey(entry.DiaryId, entry.DiaryEntryId ?? Guid.Empty, i));
 
                 if (stored != null)
                 {
-                    entry.ImageData = Convert.ToBase64String(stored.Content.ToArray());
-                    entry.ImageContentType = stored.ContentType ?? row.GetString(ColumnImageContentType);
+                    entry.Images.Add(new DiaryEntryImageDTO
+                    {
+                        Data = Convert.ToBase64String(stored.Content.ToArray()),
+                        ContentType = stored.ContentType ?? (i == 0 ? row.GetString(ColumnImageContentType) : null),
+                    });
                 }
             }
+
+            // The first image, repeated for older callers; none at all when the entry has none,
+            // whatever a row written before images left in its JSON.
+            entry.ImageData = entry.Images.FirstOrDefault()?.Data;
+            entry.ImageContentType = entry.Images.FirstOrDefault()?.ContentType;
 
             return entry;
         }

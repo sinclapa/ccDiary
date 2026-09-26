@@ -179,8 +179,7 @@
             :date="editedItem.date"
             :entry="editedItem.entry"
             :from-location="editedItem.fromLocation"
-            :image-content-type="editedItem.imageContentType"
-            :image-data="editedItem.imageData"
+            :images="editedItem.images"
             :is-edit="editedItem.diaryEntryId !== undefined"
             :journey-mode="editedItem.journeyMode"
             :location="editedItem.location"
@@ -261,11 +260,11 @@
   import { diaryAPI } from '@/services/modules/diaryService'
   import { diaryEntryAPI } from '@/services/modules/diaryEntryService'
   import Diary from '@/services/models/diary'
-  import DiaryEntry from '@/services/models/diaryEntry'
+  import DiaryEntry, { type DiaryEntryImage } from '@/services/models/diaryEntry'
   import PagedResult from '@/services/models/pagedResult'
   import { useAuthStore } from '@/stores/auth'
   import dayjs from 'dayjs'
-  import { entryTime } from '@/utils/entryTime'
+  import { entryTime, toEntryDate } from '@/utils/entryTime'
   import { useApiStatusStore } from '@/stores/apiStatus'
   import { endFaroUserAction, startFaroUserAction } from '@/plugins/faro'
   import { useSearchDebounce } from '@/composables/useSearchDebounce'
@@ -490,9 +489,17 @@
     })
   }
 
+  // The entry's day is on the diarist's clock and the calendar's on the viewer's, so compare the
+  // day each names rather than the instants, which differ by the viewer's offset.
+  function isOnSelectedDay (entryDate: Date) {
+    return selectedDate.value !== undefined &&
+      entryTime(entryDate).format('YYYY-MM-DD') === dayjs(selectedDate.value).format('YYYY-MM-DD')
+  }
+
   async function editItem (item?: DiaryEntry) {
     if (item === undefined) {
-      let date = selectedDate.value ?? new Date()
+      // the calendar and "now" are on the viewer's clock; an entry's date is the diarist's
+      let date = toEntryDate(selectedDate.value ?? new Date())
       let location = ''
       if (diaryEntries.value && diaryEntries.value.length > 0) {
         date = diaryEntries.value[diaryEntries.value.length - 1].date
@@ -505,7 +512,7 @@
     dialog.value = true
   }
 
-  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: DiaryEntry['journeyMode'], imageData: string | undefined, imageContentType: string | undefined}) {
+  async function onSubmitDiaryEntry (payload: {date: Date, location: string, entry: string, mapLocation: string, showMap: boolean, fromLocation: string, toLocation: string, showJourney: boolean, journeyMode: DiaryEntry['journeyMode'], images: DiaryEntryImage[]}) {
     editedItem.value.date = payload.date
     editedItem.value.location = payload.location
     editedItem.value.entry = payload.entry
@@ -515,8 +522,7 @@
     editedItem.value.toLocation = payload.toLocation
     editedItem.value.showJourney = payload.showJourney
     editedItem.value.journeyMode = payload.journeyMode
-    editedItem.value.imageData = payload.imageData
-    editedItem.value.imageContentType = payload.imageContentType
+    editedItem.value.images = payload.images
     if (editedItem.value.diaryEntryId === undefined) {
       await diaryEntryAPI.createDiaryEntry(editedItem.value)
     } else {
@@ -524,7 +530,7 @@
     }
     await loadCalendar(diaryId)
     await refreshMarkedDaysForVisibleMonth()
-    if (editedItem.value.date.toDateString() === selectedDate.value?.toDateString()) {
+    if (isOnSelectedDay(editedItem.value.date)) {
       selectDate(selectedDate.value)
     }
     close()
@@ -623,7 +629,7 @@
       await diaryEntryAPI.deleteDiaryEntry(editedItem.value.diaryEntryId)
       await loadCalendar(diaryId)
       await refreshMarkedDaysForVisibleMonth()
-      if (editedItem.value.date.toDateString() === selectedDate.value?.toDateString()) {
+      if (isOnSelectedDay(editedItem.value.date)) {
         selectDate(selectedDate.value)
       }
     }

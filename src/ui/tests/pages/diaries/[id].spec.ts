@@ -16,6 +16,30 @@ import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
 
+// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC. The zone
+// holds until the work is done - for async work, until its promise settles, or an await inside
+// it would carry on in the default zone.
+function inZone<T> (tz: string, run: () => T): T {
+  const was = process.env.TZ
+  const restore = () => {
+    if (was === undefined) delete process.env.TZ
+    else process.env.TZ = was
+  }
+  process.env.TZ = tz
+  let result: T
+  try {
+    result = run()
+  } catch (error) {
+    restore()
+    throw error
+  }
+  if (result instanceof Promise) {
+    return result.finally(restore) as T
+  }
+  restore()
+  return result
+}
+
 // Shared mocks accessible to tests (vi.hoisted ensures they're available before vi.mock runs)
 const mockRouterPush = vi.hoisted(() => vi.fn())
 const mockRouterReplace = vi.hoisted(() => vi.fn())
@@ -184,8 +208,7 @@ describe('[id].vue', () => {
       fromLocation: 'Sandwich, UK',
       toLocation: 'Southampton, UK',
       showJourney: true,
-      imageData: undefined,
-      imageContentType: undefined,
+      images: [],
     })
     expect(diaryEntryAPI.createDiaryEntry).toHaveBeenCalled()
     expect((wrapper.vm as any).editedItem.mapLocation).toBe('London, UK')
@@ -195,7 +218,7 @@ describe('[id].vue', () => {
     expect((wrapper.vm as any).editedItem.showJourney).toBe(true)
   })
 
-  it('onSubmitDiaryEntry stores imageData and imageContentType on editedItem', async () => {
+  it('onSubmitDiaryEntry stores the images on editedItem', async () => {
     state.isAuthenticated = true
     await flushPromises()
     await (wrapper.vm as any).editItem()
@@ -208,15 +231,16 @@ describe('[id].vue', () => {
       fromLocation: '',
       toLocation: '',
       showJourney: false,
-      imageData: 'abc123',
-      imageContentType: 'image/jpeg',
+      images: [{ data: 'abc123', contentType: 'image/jpeg' }, { data: 'def456', contentType: 'image/png' }],
     })
-    expect((wrapper.vm as any).editedItem.imageData).toBe('abc123')
-    expect((wrapper.vm as any).editedItem.imageContentType).toBe('image/jpeg')
+    expect((wrapper.vm as any).editedItem.images).toEqual([
+      { data: 'abc123', contentType: 'image/jpeg' },
+      { data: 'def456', contentType: 'image/png' },
+    ])
   })
 
-  it('renders image in timeline when entry has imageData and imageContentType', async () => {
-    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', { diaryEntryId: 'img-entry-id', imageData: 'abc123', imageContentType: 'image/jpeg' })
+  it('renders image in timeline when entry has images', async () => {
+    const entryWithImage = new DiaryEntry(diaryId, new Date(), 'Location', 'Entry', { diaryEntryId: 'img-entry-id', images: [{ data: 'abc123', contentType: 'image/jpeg' }] })
     vi.spyOn(diaryEntryAPI, 'searchDiaryEntryForDay').mockResolvedValue([entryWithImage])
     await flushPromises()
     await (wrapper.vm as any).selectDate(new Date())
@@ -1049,5 +1073,29 @@ describe('[id].vue', () => {
     // happy-dom has innerWidth=0 so mobile=true → totalVisible=3
     const expectedVisible = (wrapper.vm as any).display.mobile.value ? 3 : 7
     expect(pagination.props('totalVisible')).toBe(expectedVisible)
+  })
+
+  describe('days on the diarist\'s clock', () => {
+    it('starts a new entry on the selected day, whatever the viewer\'s zone', async () => {
+      await inZone('Asia/Kolkata', async () => {
+        (wrapper.vm as any).diaryEntries = []
+        ;(wrapper.vm as any).selectedDate = new Date(1918, 5, 27)
+        await (wrapper.vm as any).editItem()
+        expect((wrapper.vm as any).editedItem.date.toISOString()).toBe('1918-06-27T00:00:00.000Z')
+      })
+    })
+
+    it('matches a late-evening entry to the selected day, and not the next', () => {
+      inZone('Asia/Kolkata', () => {
+        (wrapper.vm as any).selectedDate = new Date(1918, 5, 27)
+        expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-27T23:30:00Z'))).toBe(true)
+        expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-28T00:30:00Z'))).toBe(false)
+      })
+    })
+
+    it('matches no day when none is selected', () => {
+      (wrapper.vm as any).selectedDate = undefined
+      expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-27T12:00:00Z'))).toBe(false)
+    })
   })
 })

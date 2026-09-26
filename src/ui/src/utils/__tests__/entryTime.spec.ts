@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { ENTRY_UTC_OFFSET_MINUTES, entryTime } from '@/utils/entryTime'
+import { ENTRY_UTC_OFFSET_MINUTES, entryTime, fromEntryDate, toEntryDate } from '@/utils/entryTime'
+
+// Node honours a change to TZ at runtime, so a test can stand in a zone ahead of or behind UTC.
+function inZone (tz: string, run: () => void) {
+  const was = process.env.TZ
+  process.env.TZ = tz
+  try {
+    run()
+  } finally {
+    if (was === undefined) delete process.env.TZ
+    else process.env.TZ = was
+  }
+}
 
 describe('entryTime', () => {
   it('reads a stored time back unchanged', () => {
@@ -22,5 +34,29 @@ describe('entryTime', () => {
 
   it('asks the API for the diarist\'s day, not the viewer\'s', () => {
     expect(ENTRY_UTC_OFFSET_MINUTES).toBe(0)
+  })
+
+  describe("between the viewer's clock and the diarist's", () => {
+    for (const tz of ['Asia/Kolkata', 'America/New_York', 'Europe/London']) {
+      it(`keeps the wall clock in ${tz}`, () => {
+        inZone(tz, () => {
+          const stored = new Date('1918-05-21T23:30:00Z')
+          const shown = fromEntryDate(stored)
+          expect([shown.getFullYear(), shown.getMonth(), shown.getDate(), shown.getHours(), shown.getMinutes()])
+            .toEqual([1918, 4, 21, 23, 30])
+          expect(toEntryDate(shown).toISOString()).toBe(stored.toISOString())
+        })
+      })
+    }
+
+    it("stores a moment picked on the viewer's clock as that clock time", () => {
+      inZone('Africa/Nairobi', () => {
+        expect(toEntryDate(new Date(1918, 5, 27, 7, 0)).toISOString()).toBe('1918-06-27T07:00:00.000Z')
+      })
+    })
+
+    it('accepts a string', () => {
+      expect(fromEntryDate('1918-11-11T11:00:00Z').getHours()).toBe(11)
+    })
   })
 })
