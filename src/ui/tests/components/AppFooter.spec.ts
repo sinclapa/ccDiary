@@ -1,10 +1,12 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import AppFooter from '@/components/AppFooter.vue'
+import { useAuthStore } from '@/stores/auth'
 import { getAppConfigField } from '@/utils/appConfig'
 
 vi.mock('@/utils/appConfig', () => ({
@@ -24,7 +26,18 @@ globalThis.ResizeObserver = require('resize-observer-polyfill')
 
 beforeEach(() => {
   vi.clearAllMocks()
+  setActivePinia(createPinia())
 })
+
+function mountFooter () {
+  return mount({ template: '<v-layout><app-footer></app-footer></v-layout>' }, {
+    global: { components: { AppFooter }, plugins: [vuetify] },
+  })
+}
+
+function linkTitles (wrapper: ReturnType<typeof mountFooter>) {
+  return wrapper.findAll('a.social-link').map(a => a.attributes('title'))
+}
 
 test('Display AppFooter with centered layout and icon row', () => {
   vi.mocked(getAppConfigField).mockImplementation((_, opts) => opts?.defaultValue ?? 'NOT_SET')
@@ -160,4 +173,27 @@ test('brand link points to cookingcode.com with correct attributes', () => {
   expect(brandLink.attributes('href')).toBe('https://cookingcode.com')
   expect(brandLink.attributes('title')).toBe('CookingCode')
   expect(brandLink.attributes('target')).toBe('_blank')
+})
+
+test('hides the Swagger and API links from anyone who is not an admin', () => {
+  vi.mocked(getAppConfigField).mockReturnValue('https://api.example.test/')
+  const titles = linkTitles(mountFooter())
+  expect(titles).toContain('GitHub')
+  expect(titles).not.toContain('Swagger API')
+  expect(titles.some(t => t?.startsWith('API '))).toBe(false)
+})
+
+test('hides them from a contributor too', () => {
+  vi.mocked(getAppConfigField).mockReturnValue('https://api.example.test/')
+  useAuthStore().appUser = { role: 'diary-contributor' } as any
+  expect(linkTitles(mountFooter())).not.toContain('Swagger API')
+})
+
+test('shows the Swagger and API links to an admin', () => {
+  vi.mocked(getAppConfigField).mockReturnValue('https://api.example.test/')
+  useAuthStore().appUser = { role: 'diary-admin' } as any
+  const wrapper = mountFooter()
+  expect(linkTitles(wrapper)).toContain('Swagger API')
+  expect(wrapper.find('a.social-link[title="Swagger API"]').attributes('href')).toBe('https://api.example.test/swagger')
+  expect(wrapper.find('a.social-link[title="API https://api.example.test/"]').exists()).toBe(true)
 })

@@ -13,7 +13,7 @@
         </a>
 
         <a
-          v-for="item in items"
+          v-for="item in visibleItems"
           :key="item.title"
           class="d-inline-block mx-2 social-link"
           :href="item.href"
@@ -54,6 +54,7 @@
   import { getAppConfigField } from '@/utils/appConfig'
   import { useConsent } from '@/composables/useConsent'
   import LogoBrand from '@/components/LogoBrand.vue'
+  import { useAuthStore } from '@/stores/auth'
 
   const version = __APP_VERSION__
   const apiUrl = getAppConfigField('VITE_API', { defaultValue: '' })
@@ -67,13 +68,19 @@
       title: 'Swagger API',
       icon: '$swagger',
       href: apiUrl ? new URL('/swagger', apiUrl).href : '',
+      adminOnly: true,
     },
     {
       title: `API ${apiUrl}`,
       icon: '$mdi-api',
       href: apiUrl ? new URL('/', apiUrl).href : '',
+      adminOnly: true,
     },
   ]
+
+  // The API's own pages are for whoever looks after the diary, not its readers.
+  const authStore = useAuthStore()
+  const visibleItems = computed(() => items.filter(item => !item.adminOnly || authStore.isAdmin))
 
   const { openPreferences } = useConsent()
 </script>

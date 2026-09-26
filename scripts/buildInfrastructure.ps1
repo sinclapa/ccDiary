@@ -446,7 +446,7 @@ Write-Host "Configuring Entra App Registration..." -ForegroundColor Cyan
 # Build SPA URIs array - add custom domain if configured for prod
 $spaUris = @(
     "https://${staticSiteUrl}/",
-    # Swagger is served by the function app outside prod, and its OAuth flow redirects back
+    # Swagger is served by the function app in every environment, and its OAuth flow redirects back
     # to the host it was loaded from.
     "https://${functionAppUrl}/swagger/oauth2-redirect.html"
 )
