@@ -32,6 +32,9 @@ namespace ccDiaryApiTest
 
         public string DefaultUserId { get; set; } = "TestUser";
 
+        /// <summary>The client id the application runs as, for tests of its own app-only token.</summary>
+        public const string ApplicationClientId = "00000000-aaaa-bbbb-cccc-000000000001";
+
         /// <summary>
         /// Gets or sets the redeem URL returned by the mocked <see cref="IGraphService"/>.
         /// Set to <see cref="string.Empty"/> to simulate Graph not configured.
@@ -114,6 +117,7 @@ namespace ccDiaryApiTest
 
             builder.UseEnvironment("Development");
             builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
+            builder.UseSetting("Entra:ClientId", ApplicationClientId);
             builder.UseSetting("Storage:ConnectionString", StorageTestFixture.AzuriteConnectionString);
             builder.UseSetting("Storage:TableNamePrefix", _prefix);
             builder.UseSetting("Storage:ContainerPrefix", _prefix + "-");
