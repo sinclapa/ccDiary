@@ -7,7 +7,7 @@
 
       <span v-if="envBadge" :class="['env-badge', envBadge.class]">{{ envBadge.label }}</span>
 
-      <nav class="desktop-nav">
+      <nav aria-label="Main" class="desktop-nav">
         <v-btn to="/" variant="text">Home</v-btn>
         <v-btn to="/diaries" variant="text">Diaries</v-btn>
         <v-btn v-if="!state.isAuthenticated" to="/register" variant="text">Join</v-btn>
@@ -26,17 +26,23 @@
         <v-icon>{{ themeIcon }}</v-icon>
       </v-btn>
       <div v-if="state.isAuthenticated" class="tooltip-wrap">
-        <v-btn id="logout" icon @click="handleLogout">
+        <v-btn id="logout" aria-label="Log out" icon @click="handleLogout">
           <v-icon>$mdi-account-circle</v-icon>
         </v-btn>
         <span class="user-tooltip">Logout {{ state.user?.name }}</span>
       </div>
-      <v-btn v-else id="login" icon @click="handleLogin">
+      <v-btn
+        v-else
+        id="login"
+        aria-label="Log in"
+        icon
+        @click="handleLogin"
+      >
         <v-icon>$mdi-login</v-icon>
       </v-btn>
     </div>
 
-    <nav class="mobile-nav px-2 pb-1">
+    <nav aria-label="Main (mobile)" class="mobile-nav px-2 pb-1">
       <v-btn size="small" to="/" variant="text">Home</v-btn>
       <v-btn size="small" to="/diaries" variant="text">Diaries</v-btn>
       <v-btn v-if="!state.isAuthenticated" size="small" to="/register" variant="text">Join</v-btn>

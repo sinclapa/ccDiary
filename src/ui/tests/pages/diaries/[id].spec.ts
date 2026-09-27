@@ -452,7 +452,7 @@ describe('[id].vue', () => {
     // Find all timeline items
     const timelineItems = wrapper.findAllComponents({ name: 'VTimelineItem' })
     timelineItems.forEach(item => {
-      expect(item.findAll('button').length).toBe(0)
+      expect(item.findAll('button')).toHaveLength(0)
     })
   })
 
@@ -632,7 +632,7 @@ describe('[id].vue', () => {
     await flushPromises()
 
     // No additional selectDate calls (early return happened)
-    expect(searchSpy.mock.calls.length).toBe(callsBefore)
+    expect(searchSpy.mock.calls).toHaveLength(callsBefore)
   })
 
   it('reloads diary data when apiStatus.recoveryCount increases', async () => {
@@ -665,7 +665,7 @@ describe('[id].vue', () => {
     await flushPromises()
 
     // No additional searchDiaryEntry calls (early return happened)
-    expect(searchSpy.mock.calls.length).toBe(callsBefore)
+    expect(searchSpy.mock.calls).toHaveLength(callsBefore)
   })
 
   it('does not show MapView when showMap is false on diaryEntry', async () => {
@@ -675,7 +675,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).selectDate(new Date())
     await flushPromises()
     const mapViews = wrapper.findAllComponents({ name: 'MapView' })
-    expect(mapViews.length).toBe(0)
+    expect(mapViews).toHaveLength(0)
   })
 
   it('does not show MapView when showMap is true but mapLocation is empty', async () => {
@@ -685,7 +685,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).selectDate(new Date())
     await flushPromises()
     const mapViews = wrapper.findAllComponents({ name: 'MapView' })
-    expect(mapViews.length).toBe(0)
+    expect(mapViews).toHaveLength(0)
   })
 
   it('shows MapView when showMap is true and mapLocation is set', async () => {
@@ -698,7 +698,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).selectDate(new Date())
     await flushPromises()
     const mapViews = wrapper.findAllComponents({ name: 'MapView' })
-    expect(mapViews.length).toBe(1)
+    expect(mapViews).toHaveLength(1)
     expect(mapViews[0].props('location')).toBe('London, UK')
     vi.unstubAllGlobals()
   })
@@ -751,33 +751,17 @@ describe('[id].vue', () => {
     expect(mockRouterPush).not.toHaveBeenCalled()
   })
 
-  it('loadDiaryData uses date from URL query param as initial date', async () => {
-    mockQuery.date = '2020-06-15'
+  it.each([
+    ['uses a date in range as the initial date', '2020-06-15', '2020-06-15'],
+    ['clamps a date before the range to minDate', '2019-01-01', '2020-01-01'],
+    ['clamps a date after the range to maxDate', '2025-12-31', '2020-12-31'],
+  ])('loadDiaryData %s from the URL query param', async (_case, requested, expected) => {
+    mockQuery.date = requested
     vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(new Date(2020, 0, 1))
     vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(new Date(2020, 11, 31))
     const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
     await flushPromises()
-    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-06-15')
-    newWrapper.unmount()
-  })
-
-  it('loadDiaryData clamps URL date to minDate when before range', async () => {
-    mockQuery.date = '2019-01-01'
-    vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(new Date(2020, 0, 1))
-    vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(new Date(2020, 11, 31))
-    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
-    await flushPromises()
-    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-01-01')
-    newWrapper.unmount()
-  })
-
-  it('loadDiaryData clamps URL date to maxDate when after range', async () => {
-    mockQuery.date = '2025-12-31'
-    vi.spyOn(diaryEntryAPI, 'getMinDate').mockResolvedValue(new Date(2020, 0, 1))
-    vi.spyOn(diaryEntryAPI, 'getMaxDate').mockResolvedValue(new Date(2020, 11, 31))
-    const newWrapper = mount(Component, { global: { plugins: [vuetify] } })
-    await flushPromises()
-    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe('2020-12-31')
+    expect(dayjs((newWrapper.vm as any).selectedDate).format('YYYY-MM-DD')).toBe(expected)
     newWrapper.unmount()
   })
 
@@ -975,7 +959,7 @@ describe('[id].vue', () => {
     ;(wrapper.vm as any).visibleYear = undefined
     ;(wrapper.vm as any).visibleMonth = 5
     await (wrapper.vm as any).refreshMarkedDaysForVisibleMonth()
-    expect(searchSpy.mock.calls.length).toBe(callsBefore)
+    expect(searchSpy.mock.calls).toHaveLength(callsBefore)
   })
 
   it('shows JourneyView when showJourney is true with fromLocation and toLocation', async () => {
@@ -990,7 +974,7 @@ describe('[id].vue', () => {
     await (wrapper.vm as any).selectDate(new Date())
     await flushPromises()
     const journeyViews = wrapper.findAllComponents({ name: 'JourneyView' })
-    expect(journeyViews.length).toBe(1)
+    expect(journeyViews).toHaveLength(1)
     expect(journeyViews[0].props('fromLocation')).toBe('Sandwich, UK')
     expect(journeyViews[0].props('toLocation')).toBe('Southampton, UK')
   })

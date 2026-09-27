@@ -33,6 +33,10 @@ function inZone<T> (tz: string, run: () => T): T {
 const vuetify = createVuetify({ components, directives })
 
 describe('DiaryEntryEditor.vue', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   const defaultProps = {
     date: new Date(2024, 0, 1, 12, 30),
     location: 'Kitchen',
@@ -671,10 +675,6 @@ describe('DiaryEntryEditor.vue', () => {
     expect(items.find(i => i.value === 'car')?.icon).toBe('$mdi-car')
     expect(items.find(i => i.value === 'train')?.icon).toBe('$mdi-train')
     expect(items.find(i => i.value === 'boat')?.icon).toBe('$mdi-ferry')
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   describe('on the diarist\'s clock', () => {

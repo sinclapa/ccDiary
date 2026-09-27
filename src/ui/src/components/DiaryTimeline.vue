@@ -84,17 +84,9 @@
           v-if="hasMapColumn(entry)"
           class="entry-map-col"
         >
-          <!-- Static inline, so the page scrolls past it; the shield takes the click and opens
-               the same map full size, where it pans and zooms. -->
-          <div
-            :aria-label="`Open the map for ${entry.location} full size`"
-            class="entry-map"
-            role="button"
-            tabindex="0"
-            @click="openMap(entry)"
-            @keydown.enter.prevent="openMap(entry)"
-            @keydown.space.prevent="openMap(entry)"
-          >
+          <!-- Static inline, so the page scrolls past it; the button laid over it takes the click,
+               or Enter/Space, and opens the same map full size, where it pans and zooms. -->
+          <div class="entry-map">
             <map-view v-if="showsMap(entry)" :location="entry.mapLocation!" />
             <journey-view
               v-if="showsJourney(entry)"
@@ -102,7 +94,12 @@
               :journey-mode="entry.journeyMode"
               :to-location="entry.toLocation!"
             />
-            <div aria-hidden="true" class="entry-map__shield" />
+            <button
+              :aria-label="`Open the map for ${entry.location} full size`"
+              class="entry-map__shield"
+              type="button"
+              @click="openMap(entry)"
+            />
           </div>
         </div>
       </div>
@@ -367,20 +364,23 @@
   }
 
   .entry-map {
-    cursor: zoom-in;
     position: relative;
-  }
-
-  .entry-map:focus-visible {
-    outline: 2px solid rgb(var(--v-theme-primary));
-    outline-offset: 2px;
   }
 
   /* over the map's own stacking context (isolation: isolate), so no pointer reaches Leaflet */
   .entry-map__shield {
+    background: none;
+    border: 0;
+    cursor: zoom-in;
     inset: 0;
+    padding: 0;
     position: absolute;
     z-index: 1;
+  }
+
+  .entry-map__shield:focus-visible {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: 2px;
   }
 
   .map-viewer__maps {

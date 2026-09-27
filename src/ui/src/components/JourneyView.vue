@@ -23,20 +23,10 @@
 <script setup lang="ts">
   import 'leaflet/dist/leaflet.css'
   import L from 'leaflet'
-  import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-  import markerIcon from 'leaflet/dist/images/marker-icon.png'
-  import markerShadow from 'leaflet/dist/images/marker-shadow.png'
   import type { JourneyMode } from '@/services/models/diaryEntry'
   import { getAppConfigField } from '@/utils/appConfig'
   import { mapInteraction } from '@/utils/mapInteraction'
-
-  // Fix Vite asset URL resolution for Leaflet default marker icons
-  delete (L.Icon.Default.prototype as any)._getIconUrl
-  L.Icon.Default.mergeOptions({
-    iconUrl: markerIcon,
-    iconRetinaUrl: markerIcon2x,
-    shadowUrl: markerShadow,
-  })
+  import { useLeafletMap } from '@/composables/useLeafletMap'
 
   const props = defineProps<{
     fromLocation: string
@@ -48,23 +38,7 @@
     height?: string
   }>()
 
-  type MapStatus = 'loading' | 'ready' | 'not-found' | 'error'
-
-  const mapContainer = ref<HTMLElement | null>(null)
-  const status = ref<MapStatus>('loading')
-  let leafletMap: L.Map | null = null
-  let resizeObserver: ResizeObserver | null = null
-
-  const heightStyle = computed(() => (props.height ? { height: props.height } : undefined))
-
-  // Leaflet measures its container once. In a dialog that is still opening, or after the layout
-  // around it changes, that size is stale and tiles draw into part of the box; re-measure.
-  function watchSize () {
-    resizeObserver?.disconnect()
-    if (!mapContainer.value) return
-    resizeObserver = new ResizeObserver(() => leafletMap?.invalidateSize?.())
-    resizeObserver.observe(mapContainer.value)
-  }
+  const { mapContainer, status, heightStyle, clearMap, setMap } = useLeafletMap(props)
 
   const modeStyle: Record<NonNullable<JourneyMode>, { color: string; weight: number; dashArray?: string }> = {
     'crow-flies': { color: 'red', weight: 2, dashArray: '6 4' },
@@ -139,15 +113,11 @@
 
       await nextTick()
 
-      if (leafletMap) {
-        leafletMap.remove()
-        leafletMap = null
-      }
+      clearMap()
 
       const style = modeStyle[props.journeyMode ?? 'crow-flies']
       const bounds = L.latLngBounds(routeCoords)
-      leafletMap = L.map(mapContainer.value!, mapInteraction(props.interactive)).fitBounds(bounds, { padding: [40, 40] })
-      watchSize()
+      const leafletMap = setMap(L.map(mapContainer.value!, mapInteraction(props.interactive)).fitBounds(bounds, { padding: [40, 40] }))
       L.tileLayer(`${apiBase}v1/MapTile/Tile/osm/{z}/{x}/{y}`, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(leafletMap)
@@ -167,15 +137,6 @@
 
   onMounted(() => {
     initMap()
-  })
-
-  onUnmounted(() => {
-    resizeObserver?.disconnect()
-    resizeObserver = null
-    if (leafletMap) {
-      leafletMap.remove()
-      leafletMap = null
-    }
   })
 
   watch(() => props.fromLocation, () => {

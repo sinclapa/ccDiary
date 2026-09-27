@@ -1,6 +1,7 @@
 <template>
   <Teleport to="body">
-    <div v-if="bannerVisible" aria-label="Cookie consent" class="consent-banner" role="dialog">
+    <!-- non-modal: the page stays usable while the banner waits for a choice -->
+    <dialog v-if="bannerVisible" aria-label="Cookie consent" class="consent-banner" open>
       <p class="consent-text">
         We use <a href="https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/" rel="noopener noreferrer" target="_blank">Grafana Faro</a> to collect anonymous telemetry — errors, performance, and page loads — to improve this site. No advertising, no third-party sharing.
       </p>
@@ -19,7 +20,7 @@
           @click="accept"
         >Accept</button>
       </div>
-    </div>
+    </dialog>
   </Teleport>
 </template>
 
@@ -44,9 +45,16 @@
 <style scoped>
 .consent-banner {
   position: fixed;
+  top: auto;
   bottom: 0;
   left: 0;
   right: 0;
+  /* undo the user-agent dialog box: centred, bordered and sized to its content */
+  width: auto;
+  max-width: none;
+  height: auto;
+  margin: 0;
+  border: 0;
   z-index: 1000;
   display: flex;
   align-items: center;
