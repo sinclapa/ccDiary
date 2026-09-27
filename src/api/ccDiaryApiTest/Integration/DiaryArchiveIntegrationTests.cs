@@ -22,6 +22,19 @@ namespace ccDiaryApiTest.Integration
         {
             _httpClient = SharedTestFactory.Factory.CreateDefaultClient();
             await SharedTestFactory.Factory.ClearDatabaseAsync();
+
+            // Import is for admins outside the local environments, and the factory runs as Development.
+            await SharedTestFactory.Factory.CreateAppUserAsync(SharedTestFactory.Factory.DefaultUserId, AppRole.DiaryAdmin);
+        }
+
+        [TestMethod]
+        public async Task ImportAsAContributorIsForbidden()
+        {
+            await SharedTestFactory.Factory.CreateAppUserAsync(SharedTestFactory.Factory.DefaultUserId, AppRole.DiaryContributor);
+
+            var response = await _httpClient.PostAsJsonAsync($"api/v1/DiaryArchive/Import", CreateArchiveDiary());
+
+            Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [TestMethod]

@@ -48,18 +48,43 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(export);
         }
 
+        /// <summary>
+        /// Loads a whole diary and its entries, creating or replacing them by their own ids.
+        /// </summary>
+        /// <remarks>
+        /// An import can overwrite any diary whose id it names, so outside the local environments
+        /// it is for admins only: a caller who is not signed in gets 401, and one who is signed in
+        /// without the DiaryAdmin role gets 403. Locally it stays open, so a developer can load an
+        /// archive without a token.
+        /// </remarks>
+        /// <param name="env">The hosting environment, which decides whether the admin check applies.</param>
+        /// <param name="authorization">Evaluates the DiaryAdmin policy for the caller.</param>
+        /// <param name="diaryArchive">The diary and its entries.</param>
+        /// <returns>The imported diary; 401 or 403 when the caller may not import.</returns>
         [HttpPost]
         [AllowAnonymous]
         [RequestSizeLimit(RequestLimits.ArchiveImportBytes)]
-        public async Task<ActionResult<DiaryDTO>> Import([FromServices] IWebHostEnvironment env, DiaryArchiveDTO diaryArchive)
+        public async Task<ActionResult<DiaryDTO>> Import(
+            [FromServices] IWebHostEnvironment env,
+            [FromServices] IAuthorizationService authorization,
+            DiaryArchiveDTO diaryArchive)
         {
             bool isLocalEnvironment = env.IsEnvironment("local")
                 || env.IsEnvironment("LocalContainer")
                 || env.IsEnvironment("LocalCompose");
 
-            if (!isLocalEnvironment && !(User.Identity?.IsAuthenticated ?? false))
+            if (!isLocalEnvironment)
             {
-                return Unauthorized();
+                if (!(User.Identity?.IsAuthenticated ?? false))
+                {
+                    return Unauthorized();
+                }
+
+                var admin = await authorization.AuthorizeAsync(User, "DiaryAdmin");
+                if (!admin.Succeeded)
+                {
+                    return Forbid();
+                }
             }
 
             var diary = await _diaryArchiveService.ImportAsync(diaryArchive);
