@@ -175,7 +175,7 @@ Dates are stored and returned as UTC via `UtcDateTimeJsonConverter` on the stora
 - Route pattern: `api/v{version:apiVersion}/[controller]/[action]`, current version `1.0`
 - Controllers: Diary, DiaryEntry, DiaryArchive, Admin (`DiaryAdmin` policy), AccessRequest, User, MapTile, AppInfo
 - Read actions require authentication; writes require the `DiaryContributor` policy
-- `DiaryArchive/Import` requires the `DiaryAdmin` policy outside the local environments (it can overwrite any diary it names); locally it stays anonymous so an archive loads without a token
+- `DiaryArchive/Import` requires the `ArchiveImport` policy outside the local environments (it can overwrite any diary it names): an admin, or the application's own app-only token, which is how the deploy pipeline seeds each environment before its end-to-end run. Locally it stays anonymous so an archive loads without a token
 - Swagger at `/swagger`, Steeltoe actuators at `/actuator`, assembly info at `/api/assembly-info`
 
 ## Development Commands

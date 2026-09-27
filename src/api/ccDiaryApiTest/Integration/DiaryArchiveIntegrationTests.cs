@@ -28,6 +28,38 @@ namespace ccDiaryApiTest.Integration
         }
 
         [TestMethod]
+        public async Task TheApplicationItselfMayImport()
+        {
+            // the deploy pipeline seeds each environment this way: an app-only token for the
+            // application's own registration, with no AppUser row behind it
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/DiaryArchive/Import")
+            {
+                Content = JsonContent.Create(CreateArchiveDiary()),
+            };
+            request.Headers.Add(TestAuthHandler.UserId, "pipeline-service-principal");
+            request.Headers.Add(TestAuthHandler.AppClientId, CustomWebApplicationFactory<Program>.ApplicationClientId);
+
+            var response = await _httpClient.SendAsync(request);
+
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task AnotherApplicationMayNotImport()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/DiaryArchive/Import")
+            {
+                Content = JsonContent.Create(CreateArchiveDiary()),
+            };
+            request.Headers.Add(TestAuthHandler.UserId, "some-other-app");
+            request.Headers.Add(TestAuthHandler.AppClientId, "99999999-0000-0000-0000-000000000000");
+
+            var response = await _httpClient.SendAsync(request);
+
+            Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [TestMethod]
         public async Task ImportAsAContributorIsForbidden()
         {
             await SharedTestFactory.Factory.CreateAppUserAsync(SharedTestFactory.Factory.DefaultUserId, AppRole.DiaryContributor);

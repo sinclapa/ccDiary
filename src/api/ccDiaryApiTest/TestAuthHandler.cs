@@ -23,6 +23,9 @@ namespace ccDiaryApiTest
 
         public const string UserEmail = "X-Test-Email";
 
+        /// <summary>Makes the caller an app-only token issued to this client id (an "azp" claim, no scopes).</summary>
+        public const string AppClientId = "X-Test-App-Id";
+
         public const string NoAuth = "X-Test-No-Auth";
 
         private readonly string _defaultUserId;
@@ -59,6 +62,11 @@ namespace ccDiaryApiTest
 
             claims.Add(new Claim(ClaimTypes.NameIdentifier, oid));
             claims.Add(new Claim("oid", oid));
+
+            if (Context.Request.Headers.TryGetValue(AppClientId, out var appClientId) && !string.IsNullOrEmpty(appClientId[0]))
+            {
+                claims.Add(new Claim("azp", appClientId[0]!));
+            }
 
             // Extract email from the X-Test-Email header if present
             if (Context.Request.Headers.TryGetValue(UserEmail, out var emailHeader))

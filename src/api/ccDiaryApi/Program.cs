@@ -17,6 +17,7 @@ using ccDiaryApi.Health;
 using ccDiaryApi.Infrastructure;
 using ccDiaryApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Identity.Web;
@@ -105,7 +106,9 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("DiaryAdmin", p => p.RequireRole(AppRole.DiaryAdmin.ToString()))
     .AddPolicy("DiaryContributor", p => p.RequireRole(
         AppRole.DiaryAdmin.ToString(),
-        AppRole.DiaryContributor.ToString()));
+        AppRole.DiaryContributor.ToString()))
+    .AddPolicy(ArchiveImportRequirement.PolicyName, p => p.AddRequirements(new ArchiveImportRequirement()));
+builder.Services.AddSingleton<IAuthorizationHandler, ArchiveImportHandler>();
 
 // Add services to the container.
 builder.Services.AddScoped<IDiaryService, DiaryService>();

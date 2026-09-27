@@ -6,6 +6,7 @@ namespace ccDiaryApiTest.v1
 {
     using System;
     using System.Security.Claims;
+    using ccDiaryApi.Authorization;
     using ccDiaryApi.Controllers.v1;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Services;
@@ -141,13 +142,13 @@ namespace ccDiaryApiTest.v1
             var controller = CreateControllerWithSignedInUser();
             var authorization = new Mock<IAuthorizationService>();
             authorization
-                .Setup(a => a.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), "DiaryAdmin"))
+                .Setup(a => a.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), ArchiveImportRequirement.PolicyName))
                 .ReturnsAsync(AuthorizationResult.Success());
 
             var result = await controller.Import(MockEnvironment("Production"), authorization.Object, archive);
 
             Assert.IsInstanceOfType(result.Result, typeof(OkObjectResult));
-            authorization.Verify(a => a.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), "DiaryAdmin"), Times.Once);
+            authorization.Verify(a => a.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object?>(), ArchiveImportRequirement.PolicyName), Times.Once);
         }
 
         [TestMethod]
