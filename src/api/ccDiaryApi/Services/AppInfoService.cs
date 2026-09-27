@@ -20,14 +20,14 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<AppInfoDTO?> GetAppInfoAsync()
+        public async Task<AppInfoDto?> GetAppInfoAsync()
         {
             var row = await TableJson.GetIfExistsAsync(
                 _tables.AppInfo,
                 StorageKeys.AppInfoPartition,
                 StorageKeys.AppInfoRow);
 
-            return row == null ? null : TableJson.FromEntity<AppInfoDTO>(row);
+            return row == null ? null : TableJson.FromEntity<AppInfoDto>(row);
         }
     }
 }

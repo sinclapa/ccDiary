@@ -1,4 +1,4 @@
-// <copyright file="DiaryEntryImageDTO.cs" company="CookingCode">
+// <copyright file="DiaryEntryImageDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -7,7 +7,7 @@ namespace ccDiaryApi.Data.Model
     using System.ComponentModel.DataAnnotations;
 
     /// <summary>One image attached to a diary entry, carried inline as base64.</summary>
-    public class DiaryEntryImageDTO
+    public class DiaryEntryImageDto
     {
         /// <summary>Gets or sets the image bytes, base64 encoded.</summary>
         [Required]

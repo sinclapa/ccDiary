@@ -20,6 +20,9 @@ namespace ccDiaryApi.Services
     /// </remarks>
     public class UserService : IUserService
     {
+        /// <summary>The one column the admin-exists check reads.</summary>
+        private static readonly string[] RoleColumn = { "Role" };
+
         private readonly ITableStore _tables;
         private readonly IConfiguration _configuration;
 
@@ -31,6 +34,9 @@ namespace ccDiaryApi.Services
             _tables = tables;
             _configuration = configuration;
         }
+
+        /// <summary>Gets the stored form of <see cref="AppRole.DiaryAdmin"/>.</summary>
+        private static string AdminRoleValue => AppRole.DiaryAdmin.ToStoredValue();
 
         /// <inheritdoc/>
         public async Task<AppUserDto?> GetUserByOidAsync(string oid)
@@ -97,7 +103,7 @@ namespace ccDiaryApi.Services
             var rows = await TableJson.QueryAsync(
                 _tables.AppUsers,
                 TableClient.CreateQueryFilter($"PartitionKey eq {StorageKeys.UserPartition}"),
-                new[] { "Role" });
+                RoleColumn);
 
             var adminExists = rows.Any(r =>
                 string.Equals(r.GetString("Role"), AdminRoleValue, StringComparison.Ordinal));
@@ -120,9 +126,6 @@ namespace ccDiaryApi.Services
                 CreatedAt = DateTime.UtcNow,
             });
         }
-
-        /// <summary>Gets the stored form of <see cref="AppRole.DiaryAdmin"/>.</summary>
-        private static string AdminRoleValue => AppRole.DiaryAdmin.ToStoredValue();
 
         private async Task<AccessRequestDto?> FindApprovedRequestAsync(string email)
         {

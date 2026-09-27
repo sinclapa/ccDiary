@@ -446,6 +446,51 @@ namespace ccDiaryApiTest.v1
             Assert.AreNotEqual("[]", await StoredRouteAsync());
         }
 
+#pragma warning disable SA1011
+        private static Mock<IHttpClientFactory> MockHttpFactory(HttpStatusCode status, byte[]? body = null, string? contentType = null)
+#pragma warning restore SA1011
+        {
+            var handler = new Mock<HttpMessageHandler>();
+            var content = body != null
+                ? new ByteArrayContent(body)
+                : new ByteArrayContent(Array.Empty<byte>());
+            if (contentType != null)
+            {
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            }
+
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage(status) { Content = content });
+
+            var factory = new Mock<IHttpClientFactory>();
+            factory.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(new HttpClient(handler.Object) { BaseAddress = new Uri("https://example.com") });
+            return factory;
+        }
+
+        private static Mock<IHttpClientFactory> MockHttpFactory<T>(HttpStatusCode status, T jsonBody)
+        {
+            var json = JsonSerializer.Serialize(jsonBody);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+            var handler = new Mock<HttpMessageHandler>();
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage(status) { Content = content });
+
+            var factory = new Mock<IHttpClientFactory>();
+            factory.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(new HttpClient(handler.Object) { BaseAddress = new Uri("https://example.com") });
+            return factory;
+        }
+
         /// <summary>Builds the service, optionally with cache lifetimes overridden.</summary>
         /// <param name="factoryMock">The HTTP client factory to use.</param>
         /// <param name="cacheTtl">
@@ -499,50 +544,5 @@ namespace ccDiaryApiTest.v1
             await _fixture.Blobs.TryGetStringAsync(
                 _fixture.Options.MapCacheContainer,
                 StorageKeys.RouteBlobKey("driving", 51.5, -0.1, 48.8, 2.3));
-
-#pragma warning disable SA1011
-        private static Mock<IHttpClientFactory> MockHttpFactory(HttpStatusCode status, byte[]? body = null, string? contentType = null)
-#pragma warning restore SA1011
-        {
-            var handler = new Mock<HttpMessageHandler>();
-            var content = body != null
-                ? new ByteArrayContent(body)
-                : new ByteArrayContent(Array.Empty<byte>());
-            if (contentType != null)
-            {
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-            }
-
-            handler.Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage(status) { Content = content });
-
-            var factory = new Mock<IHttpClientFactory>();
-            factory.Setup(f => f.CreateClient(It.IsAny<string>()))
-                .Returns(new HttpClient(handler.Object) { BaseAddress = new Uri("https://example.com") });
-            return factory;
-        }
-
-        private static Mock<IHttpClientFactory> MockHttpFactory<T>(HttpStatusCode status, T jsonBody)
-        {
-            var json = JsonSerializer.Serialize(jsonBody);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-            var handler = new Mock<HttpMessageHandler>();
-            handler.Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage(status) { Content = content });
-
-            var factory = new Mock<IHttpClientFactory>();
-            factory.Setup(f => f.CreateClient(It.IsAny<string>()))
-                .Returns(new HttpClient(handler.Object) { BaseAddress = new Uri("https://example.com") });
-            return factory;
-        }
     }
 }

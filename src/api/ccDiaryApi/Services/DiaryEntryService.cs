@@ -26,7 +26,7 @@ namespace ccDiaryApi.Services
     /// stored as blobs and re-encoded on read, so the HTTP contract is unchanged.
     /// </para>
     /// <para>
-    /// An entry holds up to <see cref="DiaryEntryDTO.MaxImages"/> images, one blob each, and the
+    /// An entry holds up to <see cref="DiaryEntryDto.MaxImages"/> images, one blob each, and the
     /// row records how many. Rows written when an entry held at most one have no count; their
     /// <c>HasImage</c> flag stands for a count of one, so they need no migration.
     /// </para>
@@ -59,7 +59,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryEntryDTO> CreateDiaryEntryAsync(DiaryEntryDTO diaryEntry)
+        public async Task<DiaryEntryDto> CreateDiaryEntryAsync(DiaryEntryDto diaryEntry)
         {
             if (diaryEntry.Date == null || diaryEntry.Date == DateTime.MinValue)
             {
@@ -72,7 +72,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryEntryDTO> UpdateDiaryEntryAsync(DiaryEntryDTO diaryEntry)
+        public async Task<DiaryEntryDto> UpdateDiaryEntryAsync(DiaryEntryDto diaryEntry)
         {
             if (diaryEntry.Date == null || diaryEntry.Date == DateTime.MinValue)
             {
@@ -105,7 +105,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task DeleteDiaryEntryAsync(DiaryEntryDTO diaryEntry)
+        public async Task DeleteDiaryEntryAsync(DiaryEntryDto diaryEntry)
         {
             if (diaryEntry.DiaryEntryId is not Guid entryId)
             {
@@ -131,7 +131,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryEntryDTO?> GetDiaryEntryAsync(Guid id)
+        public async Task<DiaryEntryDto?> GetDiaryEntryAsync(Guid id)
         {
             // The route carries no diary id, so this is a cross-partition filter on the
             // broken-out column. One request at this volume.
@@ -151,7 +151,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId)
+        public async Task<List<DiaryEntryDto>> GetDiaryEntriesAsync(Guid diaryId)
         {
             var rows = await TableJson.QueryAsync(
                 _tables.DiaryEntries,
@@ -161,7 +161,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until)
+        public async Task<List<DiaryEntryDto>> GetDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until)
         {
             var rows = await TableJson.QueryAsync(_tables.DiaryEntries, RangeFilter(diaryId, from, until));
             return await HydrateAllAsync(rows, withImage: true);
@@ -201,7 +201,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<PagedResultDTO<DiaryEntryDTO>> TextSearchDiaryEntriesAsync(
+        public async Task<PagedResultDto<DiaryEntryDto>> TextSearchDiaryEntriesAsync(
             Guid diaryId,
             string search,
             int page = 1,
@@ -226,7 +226,7 @@ namespace ccDiaryApi.Services
 
             var pageRows = matches.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-            return new PagedResultDTO<DiaryEntryDTO>
+            return new PagedResultDto<DiaryEntryDto>
             {
                 Items = await HydrateAllAsync(pageRows, withImage: true),
                 TotalCount = matches.Count,
@@ -263,7 +263,7 @@ namespace ccDiaryApi.Services
 
         private static string Partition(Guid diaryId) => diaryId.ToString("N");
 
-        private static bool Matches(DiaryEntryDTO entry, string search)
+        private static bool Matches(DiaryEntryDto entry, string search)
         {
             return Contains(entry.Entry, search)
                 || Contains(entry.Location, search)
@@ -293,10 +293,10 @@ namespace ccDiaryApi.Services
         }
 
         /// <summary>
-        /// The images a request carries: <see cref="DiaryEntryDTO.Images"/> when it is sent, else
+        /// The images a request carries: <see cref="DiaryEntryDto.Images"/> when it is sent, else
         /// the single legacy image. Items without data are dropped rather than stored empty.
         /// </summary>
-        private static List<DiaryEntryImageDTO> ImagesOf(DiaryEntryDTO entry)
+        private static List<DiaryEntryImageDto> ImagesOf(DiaryEntryDto entry)
         {
             if (entry.Images != null)
             {
@@ -304,8 +304,8 @@ namespace ccDiaryApi.Services
             }
 
             return string.IsNullOrEmpty(entry.ImageData)
-                ? new List<DiaryEntryImageDTO>()
-                : new List<DiaryEntryImageDTO> { new DiaryEntryImageDTO { Data = entry.ImageData, ContentType = entry.ImageContentType } };
+                ? new List<DiaryEntryImageDto>()
+                : new List<DiaryEntryImageDto> { new DiaryEntryImageDto { Data = entry.ImageData, ContentType = entry.ImageContentType } };
         }
 
         private static int ImageCountOf(TableEntity row) =>
@@ -339,13 +339,13 @@ namespace ccDiaryApi.Services
             return rows.Count == 0 ? null : (rows[0].PartitionKey, rows[0].RowKey, ImageCountOf(rows[0]));
         }
 
-        private async Task WriteAsync(DiaryEntryDTO entry, int previousImageCount)
+        private async Task WriteAsync(DiaryEntryDto entry, int previousImageCount)
         {
             var entity = await BuildEntityAsync(entry, previousImageCount);
             await _tables.DiaryEntries.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
 
-        private async Task<TableEntity> BuildEntityAsync(DiaryEntryDTO entry, int previousImageCount)
+        private async Task<TableEntity> BuildEntityAsync(DiaryEntryDto entry, int previousImageCount)
         {
             var entryId = entry.DiaryEntryId!.Value;
             var images = ImagesOf(entry);
@@ -413,7 +413,7 @@ namespace ccDiaryApi.Services
             return entity;
         }
 
-        private async Task<DiaryEntryDTO?> ReadPayloadAsync(TableEntity row)
+        private async Task<DiaryEntryDto?> ReadPayloadAsync(TableEntity row)
         {
             if (row.GetBoolean(ColumnJsonInBlob) == true)
             {
@@ -423,14 +423,14 @@ namespace ccDiaryApi.Services
                     var json = await _blobs.TryGetStringAsync(
                         _options.ContentContainer,
                         StorageKeys.EntryJsonBlobKey(parsed));
-                    return TableJson.Deserialize<DiaryEntryDTO>(json);
+                    return TableJson.Deserialize<DiaryEntryDto>(json);
                 }
             }
 
-            return TableJson.FromEntity<DiaryEntryDTO>(row);
+            return TableJson.FromEntity<DiaryEntryDto>(row);
         }
 
-        private async Task<DiaryEntryDTO?> HydrateAsync(TableEntity row, bool withImage)
+        private async Task<DiaryEntryDto?> HydrateAsync(TableEntity row, bool withImage)
         {
             var entry = await ReadPayloadAsync(row);
             if (entry == null)
@@ -443,7 +443,7 @@ namespace ccDiaryApi.Services
                 return entry;
             }
 
-            entry.Images = new List<DiaryEntryImageDTO>();
+            entry.Images = new List<DiaryEntryImageDto>();
             var count = ImageCountOf(row);
             for (var i = 0; i < count; i++)
             {
@@ -453,7 +453,7 @@ namespace ccDiaryApi.Services
 
                 if (stored != null)
                 {
-                    entry.Images.Add(new DiaryEntryImageDTO
+                    entry.Images.Add(new DiaryEntryImageDto
                     {
                         Data = Convert.ToBase64String(stored.Content.ToArray()),
                         ContentType = stored.ContentType ?? (i == 0 ? row.GetString(ColumnImageContentType) : null),
@@ -469,9 +469,9 @@ namespace ccDiaryApi.Services
             return entry;
         }
 
-        private async Task<List<DiaryEntryDTO>> HydrateAllAsync(IEnumerable<TableEntity> rows, bool withImage)
+        private async Task<List<DiaryEntryDto>> HydrateAllAsync(IEnumerable<TableEntity> rows, bool withImage)
         {
-            var entries = new List<DiaryEntryDTO>();
+            var entries = new List<DiaryEntryDto>();
             foreach (var row in rows)
             {
                 var entry = await HydrateAsync(row, withImage);

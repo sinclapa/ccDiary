@@ -1,4 +1,4 @@
-﻿// <copyright file="DiaryEntryDTO.cs" company="CookingCode">
+﻿// <copyright file="DiaryEntryDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -9,7 +9,7 @@ namespace ccDiaryApi.Data.Model
     using System.Text.Json.Serialization;
 
     [Table("DiaryEntry")]
-    public class DiaryEntryDTO
+    public class DiaryEntryDto
     {
         /// <summary>The most images one entry may hold; every one is returned inline on read.</summary>
         public const int MaxImages = 10;
@@ -57,12 +57,12 @@ namespace ccDiaryApi.Data.Model
         /// <see cref="ImageData"/> decides.
         /// </summary>
         [MaxLength(MaxImages)]
-        public List<DiaryEntryImageDTO>? Images { get; set; }
+        public List<DiaryEntryImageDto>? Images { get; set; }
 
-        [ForeignKey(nameof(DiaryDTO))]
+        [ForeignKey(nameof(DiaryDto))]
         required public Guid DiaryId { get; set; }
 
         [JsonIgnore]
-        public DiaryDTO? Diary { get; set; }
+        public DiaryDto? Diary { get; set; }
     }
 }

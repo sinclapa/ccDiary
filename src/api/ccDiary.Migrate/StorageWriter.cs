@@ -51,7 +51,7 @@ internal sealed class StorageWriter
         }
     }
 
-    public async Task WriteDiaryAsync(DiaryDTO diary) => await _diaries.UpdateAsync(diary);
+    public async Task WriteDiaryAsync(DiaryDto diary) => await _diaries.UpdateAsync(diary);
 
     /// <summary>Writes an entry, including decoding and storing its image.</summary>
     /// <remarks>
@@ -59,7 +59,7 @@ internal sealed class StorageWriter
     /// create one, but a legacy row can still hold null, and dropping data silently
     /// during a migration is worse than carrying an oddity forward.
     /// </remarks>
-    public async Task WriteEntryAsync(DiaryEntryDTO entry)
+    public async Task WriteEntryAsync(DiaryEntryDto entry)
     {
         if (entry.Date == null || entry.Date == DateTime.MinValue)
         {

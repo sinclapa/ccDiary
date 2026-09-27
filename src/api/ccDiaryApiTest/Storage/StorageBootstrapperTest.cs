@@ -38,7 +38,8 @@ namespace ccDiaryApiTest.Storage
             foreach (var table in _fixture.Tables.All)
             {
                 var entity = new Azure.Data.Tables.TableEntity("p", Guid.NewGuid().ToString("N"));
-                await table.AddEntityAsync(entity);
+                var response = await table.AddEntityAsync(entity);
+                Assert.AreEqual(204, response.Status, table.Name);
             }
         }
 
@@ -110,7 +111,11 @@ namespace ccDiaryApiTest.Storage
                 NullLogger<StorageBootstrapper>.Instance,
                 new StartupReadiness());
 
-            await bootstrapper.StopAsync(CancellationToken.None);
+            var stopping = bootstrapper.StopAsync(CancellationToken.None);
+
+            // nothing to shut down, so it is done before anything is awaited
+            Assert.IsTrue(stopping.IsCompletedSuccessfully);
+            await stopping;
         }
 
         [TestMethod]

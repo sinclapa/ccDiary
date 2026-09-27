@@ -8,8 +8,8 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryArchiveService
     {
-        Task<DiaryArchiveDTO?> ExportAsync(Guid diaryId);
+        Task<DiaryArchiveDto?> ExportAsync(Guid diaryId);
 
-        Task<DiaryDTO> ImportAsync(DiaryArchiveDTO diaryArchive);
+        Task<DiaryDto> ImportAsync(DiaryArchiveDto diaryArchive);
     }
 }

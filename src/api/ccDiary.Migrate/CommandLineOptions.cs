@@ -30,18 +30,20 @@ internal sealed class CommandLineOptions
         var dryRun = false;
         var verify = false;
 
-        for (var i = 0; i < args.Length; i++)
+        var i = 0;
+        while (i < args.Length)
         {
-            switch (args[i])
+            var arg = args[i++];
+            switch (arg)
             {
-                case "--source" when i + 1 < args.Length:
-                    source = args[++i];
+                case "--source" when i < args.Length:
+                    source = args[i++];
                     break;
-                case "--dest" when i + 1 < args.Length:
-                    dest = args[++i];
+                case "--dest" when i < args.Length:
+                    dest = args[i++];
                     break;
-                case "--from-archive" when i + 1 < args.Length:
-                    archive = args[++i];
+                case "--from-archive" when i < args.Length:
+                    archive = args[i++];
                     break;
                 case "--dry-run":
                     dryRun = true;
@@ -50,7 +52,7 @@ internal sealed class CommandLineOptions
                     verify = true;
                     break;
                 default:
-                    Console.Error.WriteLine($"Unrecognised argument: {args[i]}");
+                    Console.Error.WriteLine($"Unrecognised argument: {arg}");
                     return null;
             }
         }

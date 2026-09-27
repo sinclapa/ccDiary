@@ -208,7 +208,7 @@ namespace ccDiaryApi.Services
                 }
 
                 var data = await response.Content.ReadFromJsonAsync<OsrmResponse>();
-                if (data?.Code != "Ok" || data.Routes == null || data.Routes.Length == 0)
+                if (data?.Code != "Ok" || data.Routes == null || data.Routes.Count == 0)
                 {
                     return null;
                 }
@@ -353,9 +353,7 @@ namespace ccDiaryApi.Services
         {
             public string Code { get; set; } = string.Empty;
 
-#pragma warning disable SA1011
-            public OsrmRoute[]? Routes { get; set; }
-#pragma warning restore SA1011
+            public List<OsrmRoute>? Routes { get; init; }
         }
 
         private sealed class OsrmRoute

@@ -205,6 +205,12 @@ namespace ccDiaryApiTest.v1
             // Arrange — no activity running (Activity.Current is null) and user has no identities
             var app = BuildApplicationBuilder();
             app.UseObservabilityUserContext();
+            var nextCalled = false;
+            app.Run(_ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            });
             var pipeline = app.Build();
 
             var context = new DefaultHttpContext
@@ -215,7 +221,8 @@ namespace ccDiaryApiTest.v1
             // Act — should not throw even when Activity.Current is null
             await pipeline(context);
 
-            // Assert — verified implicitly: no exception, next() was called
+            // Assert — the request carried on down the pipeline
+            Assert.IsTrue(nextCalled);
         }
 
         [TestMethod]
@@ -224,6 +231,12 @@ namespace ccDiaryApiTest.v1
             // Arrange — no activity running; Activity.Current?.SetTag(...) must handle null gracefully
             var app = BuildApplicationBuilder();
             app.UseObservabilityUserContext();
+            var nextCalled = false;
+            app.Run(_ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            });
             var pipeline = app.Build();
 
             var context = new DefaultHttpContext
@@ -236,6 +249,9 @@ namespace ccDiaryApiTest.v1
 
             // Act — no Activity.Current, but SetTag calls use ?. so they should no-op
             await pipeline(context);
+
+            // Assert — the request carried on down the pipeline
+            Assert.IsTrue(nextCalled);
         }
 
         private static ApplicationBuilder BuildApplicationBuilder()

@@ -1,10 +1,10 @@
-// <copyright file="PagedResultDTO.cs" company="CookingCode">
+// <copyright file="PagedResultDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
 namespace ccDiaryApi.Data.Model
 {
-    public class PagedResultDTO<T>
+    public class PagedResultDto<T>
     {
         public IEnumerable<T> Items { get; set; } = Array.Empty<T>();
 

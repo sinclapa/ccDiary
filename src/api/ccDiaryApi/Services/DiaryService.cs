@@ -37,7 +37,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryDTO> CreateAsync(DiaryDTO diary)
+        public async Task<DiaryDto> CreateAsync(DiaryDto diary)
         {
             diary.DiaryId ??= Guid.NewGuid();
             await UpsertAsync(diary);
@@ -45,12 +45,8 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryDTO> UpdateAsync(DiaryDTO diary)
-        {
-            diary.DiaryId ??= Guid.NewGuid();
-            await UpsertAsync(diary);
-            return diary;
-        }
+        /// <remarks>Storage writes are upserts, so an update is the same write as a create.</remarks>
+        public Task<DiaryDto> UpdateAsync(DiaryDto diary) => CreateAsync(diary);
 
         /// <summary>
         /// Deletes a diary, its entries and their blobs.
@@ -63,7 +59,7 @@ namespace ccDiaryApi.Services
         /// a diary that can simply be deleted again rather than an unreachable set of
         /// orphaned entries.
         /// </remarks>
-        public async Task DeleteAsync(DiaryDTO diary)
+        public async Task DeleteAsync(DiaryDto diary)
         {
             if (diary.DiaryId is not Guid diaryId)
             {
@@ -99,18 +95,18 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryDTO?> GetDiaryAsync(Guid diaryId)
+        public async Task<DiaryDto?> GetDiaryAsync(Guid diaryId)
         {
             var row = await TableJson.GetIfExistsAsync(
                 _tables.Diaries,
                 StorageKeys.DiaryPartition,
                 diaryId.ToString("N"));
 
-            return row == null ? null : TableJson.FromEntity<DiaryDTO>(row);
+            return row == null ? null : TableJson.FromEntity<DiaryDto>(row);
         }
 
         /// <inheritdoc/>
-        public async Task<PagedResultDTO<DiaryDTO>> GetDiariesAsync(int page, int pageSize, string? search = null)
+        public async Task<PagedResultDto<DiaryDto>> GetDiariesAsync(int page, int pageSize, string? search = null)
         {
             // The Table filter grammar has no substring operator, so the search and the
             // paging both happen here rather than server-side.
@@ -119,7 +115,7 @@ namespace ccDiaryApi.Services
                 TableClient.CreateQueryFilter($"PartitionKey eq {StorageKeys.DiaryPartition}"));
 
             var diaries = rows
-                .Select(TableJson.FromEntity<DiaryDTO>)
+                .Select(TableJson.FromEntity<DiaryDto>)
                 .Where(d => d != null)
                 .Select(d => d!)
                 .AsEnumerable();
@@ -140,7 +136,7 @@ namespace ccDiaryApi.Services
                 .Take(pageSize)
                 .ToList();
 
-            return new PagedResultDTO<DiaryDTO>
+            return new PagedResultDto<DiaryDto>
             {
                 Items = items,
                 TotalCount = matched.Count,
@@ -149,7 +145,7 @@ namespace ccDiaryApi.Services
             };
         }
 
-        private async Task UpsertAsync(DiaryDTO diary)
+        private async Task UpsertAsync(DiaryDto diary)
         {
             var entity = TableJson.ToEntity(
                 StorageKeys.DiaryPartition,
@@ -157,7 +153,7 @@ namespace ccDiaryApi.Services
                 diary,
                 e =>
                 {
-                    e["DiaryId"] = diary.DiaryId!.Value.ToString();
+                    e["DiaryId"] = diary.DiaryId.Value.ToString();
                     e["Title"] = diary.Title;
                     e["Author"] = diary.Author;
                     e["OwnerId"] = diary.OwnerId;

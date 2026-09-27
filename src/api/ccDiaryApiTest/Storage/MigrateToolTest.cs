@@ -20,6 +20,9 @@ namespace ccDiaryApiTest.Storage
     [TestClass]
     public class MigrateToolTest
     {
+        private static readonly string[] UsageOptions =
+            new[] { "--source", "--dest", "--from-archive", "--dry-run", "--verify" };
+
         private StorageTestFixture _fixture = null!;
         private StorageWriter _storage = null!;
 
@@ -66,7 +69,7 @@ namespace ccDiaryApiTest.Storage
             var (diary, entries) = await MigrateSampleAsync();
 
             // An entry the source has but storage never received.
-            entries.Add(new DiaryEntryDTO
+            entries.Add(new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = diary.DiaryId!.Value,
@@ -117,7 +120,7 @@ namespace ccDiaryApiTest.Storage
             var (diary, entries) = await MigrateSampleAsync();
 
             // Something wrote an entry the migration never put there.
-            await _storage.WriteEntryAsync(new DiaryEntryDTO
+            await _storage.WriteEntryAsync(new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = diary.DiaryId!.Value,
@@ -140,7 +143,7 @@ namespace ccDiaryApiTest.Storage
             // check is by identity rather than by number.
             var (diary, entries) = await MigrateSampleAsync();
 
-            await _storage.WriteEntryAsync(new DiaryEntryDTO
+            await _storage.WriteEntryAsync(new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = diary.DiaryId!.Value,
@@ -150,7 +153,7 @@ namespace ccDiaryApiTest.Storage
             });
 
             // Source expects one the migration never wrote, balancing the count exactly.
-            entries.Add(new DiaryEntryDTO
+            entries.Add(new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = diary.DiaryId!.Value,
@@ -185,7 +188,7 @@ namespace ccDiaryApiTest.Storage
             });
 
             var verifier = new Verifier(_storage);
-            await verifier.VerifyUsersAndRequestsAsync([],[]);
+            await verifier.VerifyUsersAndRequestsAsync(new List<AppUserDto>(), new List<AccessRequestDto>());
 
             Assert.IsTrue(verifier.Problems.Any(p =>
                 p.Contains("unexpected-admin", StringComparison.Ordinal)
@@ -205,7 +208,7 @@ namespace ccDiaryApiTest.Storage
             });
 
             var verifier = new Verifier(_storage);
-            await verifier.VerifyUsersAndRequestsAsync([],[]);
+            await verifier.VerifyUsersAndRequestsAsync(new List<AppUserDto>(), new List<AccessRequestDto>());
 
             Assert.IsTrue(verifier.Problems.Any(p => p.Contains("in storage but not in the source", StringComparison.Ordinal)));
         }
@@ -239,7 +242,7 @@ namespace ccDiaryApiTest.Storage
             };
 
             var verifier = new Verifier(_storage);
-            await verifier.VerifyUsersAndRequestsAsync(expected,[]);
+            await verifier.VerifyUsersAndRequestsAsync(expected, new List<AccessRequestDto>());
 
             Assert.IsTrue(verifier.Problems.Any(p => p.Contains("role", StringComparison.OrdinalIgnoreCase)));
         }
@@ -270,7 +273,7 @@ namespace ccDiaryApiTest.Storage
         {
             var verifier = new Verifier(_storage);
             var ok = await verifier.VerifyDiaryAsync(
-                new DiaryDTO { DiaryId = Guid.NewGuid(), Title = "Ghost", Author = "Nobody" },
+                new DiaryDto { DiaryId = Guid.NewGuid(), Title = "Ghost", Author = "Nobody" },
                 []);
 
             Assert.IsFalse(ok);
@@ -281,7 +284,7 @@ namespace ccDiaryApiTest.Storage
         {
             // The relational columns were nullable and the serializer omits nulls, so a
             // "" arriving back as null is expected and must not be reported as damage.
-            var diary = new DiaryDTO
+            var diary = new DiaryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Title = "Nullable",
@@ -292,7 +295,7 @@ namespace ccDiaryApiTest.Storage
 
             var verifier = new Verifier(_storage);
 
-            Assert.IsTrue(await verifier.VerifyDiaryAsync(diary,[]), string.Join("; ", verifier.Problems));
+            Assert.IsTrue(await verifier.VerifyDiaryAsync(diary, new List<DiaryEntryDto>()), string.Join("; ", verifier.Problems));
         }
 
         // ── Writer ────────────────────────────────────────────────────────────────
@@ -317,9 +320,9 @@ namespace ccDiaryApiTest.Storage
             // The API refuses to create one, but a legacy row can hold null and dropping
             // it silently during a migration would be worse than carrying it forward.
             var diaryId = Guid.NewGuid();
-            await _storage.WriteDiaryAsync(new DiaryDTO { DiaryId = diaryId, Title = "Dateless", Author = "A" });
+            await _storage.WriteDiaryAsync(new DiaryDto { DiaryId = diaryId, Title = "Dateless", Author = "A" });
 
-            await _storage.WriteEntryAsync(new DiaryEntryDTO
+            await _storage.WriteEntryAsync(new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = diaryId,
@@ -337,6 +340,9 @@ namespace ccDiaryApiTest.Storage
         {
             await _storage.EnsureCreatedAsync();
             await _storage.EnsureCreatedAsync();
+
+            // the second pass left the tables usable, not merely the call unthrown
+            Assert.AreEqual(0, (await _storage.Entries.GetDiaryEntriesAsync(Guid.NewGuid())).Count);
         }
 
         // ── Command line ──────────────────────────────────────────────────────────
@@ -409,16 +415,32 @@ namespace ccDiaryApiTest.Storage
         }
 
         [TestMethod]
-        public void CommandLine_PrintUsageDoesNotThrow()
+        public void CommandLine_PrintUsageNamesEveryOption()
         {
-            CommandLineOptions.PrintUsage();
+            var original = Console.Error;
+            using var captured = new StringWriter();
+            Console.SetError(captured);
+            try
+            {
+                CommandLineOptions.PrintUsage();
+            }
+            finally
+            {
+                Console.SetError(original);
+            }
+
+            var usage = captured.ToString();
+            foreach (var option in UsageOptions)
+            {
+                StringAssert.Contains(usage, option);
+            }
         }
 
         /// <summary>Writes a small diary through the tool and returns what was written.</summary>
-        private async Task<(DiaryDTO Diary, List<DiaryEntryDTO> Entries)> MigrateSampleAsync(bool withImage = false)
+        private async Task<(DiaryDto Diary, List<DiaryEntryDto> Entries)> MigrateSampleAsync(bool withImage = false)
         {
             var diaryId = Guid.NewGuid();
-            var diary = new DiaryDTO
+            var diary = new DiaryDto
             {
                 DiaryId = diaryId,
                 Title = "Migrated Diary",
@@ -427,7 +449,7 @@ namespace ccDiaryApiTest.Storage
                 OwnerId = "owner-oid",
             };
 
-            var entries = new List<DiaryEntryDTO>
+            var entries = new List<DiaryEntryDto>
             {
                 new ()
                 {

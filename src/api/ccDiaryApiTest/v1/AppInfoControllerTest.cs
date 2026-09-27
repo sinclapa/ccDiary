@@ -17,7 +17,7 @@ namespace ccDiaryApiTest.v1
         public async Task Get_ReturnsOk_WhenAppInfoExists()
         {
             // Arrange
-            var appInfo = new AppInfoDTO
+            var appInfo = new AppInfoDto
             {
                 Id = 1,
                 InformationalVersion = "1.2.3",
@@ -32,7 +32,7 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(OkObjectResult));
-            var result = (response.Result as OkObjectResult)?.Value as AppInfoDTO;
+            var result = (response.Result as OkObjectResult)?.Value as AppInfoDto;
             Assert.IsNotNull(result);
             Assert.AreEqual("1.2.3", result.InformationalVersion);
         }
@@ -42,7 +42,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var service = new Mock<IAppInfoService>();
-            service.Setup(x => x.GetAppInfoAsync()).ReturnsAsync((AppInfoDTO?)null);
+            service.Setup(x => x.GetAppInfoAsync()).ReturnsAsync((AppInfoDto?)null);
             var controller = new AppInfoController(service.Object);
 
             // Act

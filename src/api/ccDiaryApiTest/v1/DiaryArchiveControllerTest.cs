@@ -32,16 +32,16 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var archive = new DiaryArchiveDTO
+            var archive = new DiaryArchiveDto
             {
-                Diary = new DiaryDTO
+                Diary = new DiaryDto
                 {
                     DiaryId = diaryId,
                     Author = "TestAuthor",
                     Title = "TestDiary",
                     Description = "TestDescription",
                 },
-                DiaryEntries = new List<DiaryEntryDTO>
+                DiaryEntries = new List<DiaryEntryDto>
                 {
                     new () { Entry = "TestEntryA", Date = DateTime.UtcNow, Location = "TestLocationA", DiaryId = diaryId },
                     new () { Entry = "TestEntryB", Date = DateTime.UtcNow, Location = "TestLocationB", DiaryId = diaryId },
@@ -65,7 +65,7 @@ namespace ccDiaryApiTest.v1
         public async Task ExportDiaryNotFound()
         {
             // Arrange
-            _archiveService.Setup(x => x.ExportAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryArchiveDTO?)null);
+            _archiveService.Setup(x => x.ExportAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryArchiveDto?)null);
             var controller = new DiaryArchiveController(_archiveService.Object);
 
             // Act
@@ -87,7 +87,7 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsInstanceOfType(result.Result, typeof(UnauthorizedResult));
-            _archiveService.Verify(x => x.ImportAsync(It.IsAny<DiaryArchiveDTO>()), Times.Never);
+            _archiveService.Verify(x => x.ImportAsync(It.IsAny<DiaryArchiveDto>()), Times.Never);
         }
 
         [TestMethod]
@@ -131,7 +131,7 @@ namespace ccDiaryApiTest.v1
             var result = await controller.Import(MockEnvironment("Production"), Authorizer(false), NewArchive());
 
             Assert.IsInstanceOfType(result.Result, typeof(ForbidResult));
-            _archiveService.Verify(x => x.ImportAsync(It.IsAny<DiaryArchiveDTO>()), Times.Never);
+            _archiveService.Verify(x => x.ImportAsync(It.IsAny<DiaryArchiveDto>()), Times.Never);
         }
 
         [TestMethod]
@@ -179,10 +179,10 @@ namespace ccDiaryApiTest.v1
             return env.Object;
         }
 
-        private static DiaryArchiveDTO NewArchive() => new ()
+        private static DiaryArchiveDto NewArchive() => new ()
         {
-            Diary = new DiaryDTO { Author = "Author", Title = "Title", Description = "Desc" },
-            DiaryEntries = new List<DiaryEntryDTO>(),
+            Diary = new DiaryDto { Author = "Author", Title = "Title", Description = "Desc" },
+            DiaryEntries = new List<DiaryEntryDto>(),
         };
 
         private DiaryArchiveController CreateControllerWithSignedInUser()

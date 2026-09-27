@@ -1,4 +1,4 @@
-// <copyright file="AppInfoDTO.cs" company="CookingCode">
+// <copyright file="AppInfoDto.cs" company="CookingCode">
 // Copyright (c) CookingCode. All rights reserved.
 // </copyright>
 
@@ -8,7 +8,7 @@ namespace ccDiaryApi.Data.Model
     using System.ComponentModel.DataAnnotations.Schema;
 
     [Table("AppInfo")]
-    public class AppInfoDTO
+    public class AppInfoDto
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]

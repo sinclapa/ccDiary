@@ -31,7 +31,7 @@ namespace ccDiaryApiTest.Integration
         {
             // Act
             var response = await _httpClient.GetAsync("/api/v1/AppInfo/Get");
-            var result = await response.Content.ReadFromJsonAsync<AppInfoDTO>();
+            var result = await response.Content.ReadFromJsonAsync<AppInfoDto>();
 
             // Assert
             Assert.IsNotNull(result);

@@ -34,7 +34,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryArchiveDTO?> ExportAsync(Guid diaryId)
+        public async Task<DiaryArchiveDto?> ExportAsync(Guid diaryId)
         {
             var diary = await _diaryService.GetDiaryAsync(diaryId);
             if (diary == null)
@@ -43,11 +43,11 @@ namespace ccDiaryApi.Services
             }
 
             var entries = await _diaryEntryService.GetDiaryEntriesAsync(diaryId);
-            return new DiaryArchiveDTO { Diary = diary, DiaryEntries = entries };
+            return new DiaryArchiveDto { Diary = diary, DiaryEntries = entries };
         }
 
         /// <inheritdoc/>
-        public async Task<DiaryDTO> ImportAsync(DiaryArchiveDTO diaryArchive)
+        public async Task<DiaryDto> ImportAsync(DiaryArchiveDto diaryArchive)
         {
             diaryArchive.Diary.DiaryId ??= Guid.NewGuid();
             await _diaryService.UpdateAsync(diaryArchive.Diary);
@@ -57,7 +57,7 @@ namespace ccDiaryApi.Services
                 entry.DiaryEntryId ??= Guid.NewGuid();
                 if (entry.DiaryId == Guid.Empty)
                 {
-                    entry.DiaryId = diaryArchive.Diary.DiaryId!.Value;
+                    entry.DiaryId = diaryArchive.Diary.DiaryId.Value;
                 }
 
                 await _diaryEntryService.UpdateDiaryEntryAsync(entry);

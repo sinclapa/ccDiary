@@ -14,9 +14,9 @@ namespace ccDiaryApiTest.Integration
     {
         private HttpClient _httpClient = null!;
 
-        public static async Task<DiaryDTO> CreateDiary(HttpClient httpClient)
+        public static async Task<DiaryDto> CreateDiary(HttpClient httpClient)
         {
-            DiaryDTO diary = new ()
+            DiaryDto diary = new ()
             {
                 Author = $"Author{DateTime.UtcNow.Ticks}",
                 Title = $"Title{DateTime.UtcNow.Ticks}",
@@ -24,10 +24,10 @@ namespace ccDiaryApiTest.Integration
             return await CreateDiary(httpClient, diary);
         }
 
-        public static async Task<DiaryDTO> CreateDiary(HttpClient httpClient, DiaryDTO diary)
+        public static async Task<DiaryDto> CreateDiary(HttpClient httpClient, DiaryDto diary)
         {
             var diaryResponse = await httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
-            var diaryResult = await diaryResponse.Content.ReadFromJsonAsync<DiaryDTO>();
+            var diaryResult = await diaryResponse.Content.ReadFromJsonAsync<DiaryDto>();
             Assert.IsNotNull(diaryResult);
             return diaryResult;
         }
@@ -50,7 +50,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryDto>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.TotalCount);
             Assert.AreEqual(0, result.Items.Count());
@@ -69,7 +69,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryDto>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
             Assert.AreEqual(3, result.TotalCount);
             Assert.AreEqual(3, result.Items.Count());
@@ -89,7 +89,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryDto>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
             Assert.AreEqual(5, result.TotalCount);
             Assert.AreEqual(2, result.Items.Count());
@@ -108,7 +108,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryDTO>();
+            var result = await response.Content.ReadFromJsonAsync<DiaryDto>();
             Assert.IsNotNull(result);
             Assert.AreEqual(diary.Author, result.Author);
             Assert.AreEqual(diary.Title, result.Title);
@@ -128,7 +128,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryDTO>();
+            var result = await response.Content.ReadFromJsonAsync<DiaryDto>();
             Assert.IsNotNull(result);
             Assert.AreEqual(diary.Author, result.Author);
             Assert.AreEqual(diary.Title, result.Title);
@@ -150,7 +150,7 @@ namespace ccDiaryApiTest.Integration
         public async Task Create()
         {
             // Arrange
-            DiaryDTO diary = new ()
+            DiaryDto diary = new ()
             {
                 Author = "ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ",
                 Title = "12345678901234567890123456789012345678901234567890",
@@ -161,7 +161,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryDTO>();
+            var result = await response.Content.ReadFromJsonAsync<DiaryDto>();
             Assert.IsNotNull(result);
             Assert.AreEqual(diary.Author, result.Author);
             Assert.AreEqual(diary.Title, result.Title);
@@ -172,7 +172,7 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateNull()
         {
             // Act
-            var response = await _httpClient.PostAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Create", null);
+            var response = await _httpClient.PostAsJsonAsync<DiaryDto?>("/api/v1/Diary/Create", null);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -182,7 +182,7 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateTooShortTitle()
         {
             // Arrange
-            DiaryDTO diary = new ()
+            DiaryDto diary = new ()
             {
                 Author = "Paul",
                 Title = "1234",
@@ -199,7 +199,7 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateTooLongTitle()
         {
             // Arrange
-            DiaryDTO diary = new ()
+            DiaryDto diary = new ()
             {
                 Author = "Paul",
                 Title = "123456789012345678901234567890123456789012345678901",
@@ -216,7 +216,7 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateTooLomgAuthor()
         {
             // Arrange
-            DiaryDTO diary = new ()
+            DiaryDto diary = new ()
             {
                 Author = "123456789012345678901234567890123456789012345678901",
                 Title = "Title",
@@ -233,7 +233,7 @@ namespace ccDiaryApiTest.Integration
         public async Task UpdateNull()
         {
             // Act
-            var response = await _httpClient.PutAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Update", null);
+            var response = await _httpClient.PutAsJsonAsync<DiaryDto?>("/api/v1/Diary/Update", null);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -252,7 +252,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryDTO>();
+            var result = await response.Content.ReadFromJsonAsync<DiaryDto>();
             Assert.IsNotNull(result);
             Assert.AreEqual(diary.Title, result.Title);
             Assert.AreEqual(diary.Author, result.Author);
@@ -286,16 +286,16 @@ namespace ccDiaryApiTest.Integration
         public async Task Get_WithSearch_ReturnsFilteredDiaries()
         {
             // Arrange
-            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorA", Title = "World War One Diary", Description = "Accounts from the trenches" });
-            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorB", Title = "World War Two Diary", Description = "Pacific theatre" });
-            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorC", Title = "Cold War Memoir", Description = "Berlin in the fifties" });
+            await CreateDiary(_httpClient, new DiaryDto { Author = "AuthorA", Title = "World War One Diary", Description = "Accounts from the trenches" });
+            await CreateDiary(_httpClient, new DiaryDto { Author = "AuthorB", Title = "World War Two Diary", Description = "Pacific theatre" });
+            await CreateDiary(_httpClient, new DiaryDto { Author = "AuthorC", Title = "Cold War Memoir", Description = "Berlin in the fifties" });
 
             // Act
             var response = await _httpClient.GetAsync("/api/v1/Diary/Get?search=World+War");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryDto>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
             Assert.AreEqual(2, result.TotalCount);
             Assert.IsTrue(result.Items.All(d => d.Title.Contains("World War")));
@@ -305,15 +305,15 @@ namespace ccDiaryApiTest.Integration
         public async Task Get_WithSearch_MatchesDescription()
         {
             // Arrange
-            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorA", Title = "Diary One", Description = "Trench warfare in France" });
-            await CreateDiary(_httpClient, new DiaryDTO { Author = "AuthorB", Title = "Diary Two", Description = "Naval Pacific battles" });
+            await CreateDiary(_httpClient, new DiaryDto { Author = "AuthorA", Title = "Diary One", Description = "Trench warfare in France" });
+            await CreateDiary(_httpClient, new DiaryDto { Author = "AuthorB", Title = "Diary Two", Description = "Naval Pacific battles" });
 
             // Act
             var response = await _httpClient.GetAsync("/api/v1/Diary/Get?search=France");
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryDTO>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryDto>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.TotalCount);
             Assert.AreEqual("Diary One", result.Items.First().Title);

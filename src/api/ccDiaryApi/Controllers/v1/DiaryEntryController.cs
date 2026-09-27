@@ -69,7 +69,7 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}/{year:int}/{month:int}/{day:int}")]
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<List<DiaryEntryDTO>>> Search(Guid diaryId, int year, int month, int day, [FromHeader(Name = "x-utc-offset")][DefaultValue(0)] int utcOffsetMinutes)
+        public async Task<ActionResult<List<DiaryEntryDto>>> Search(Guid diaryId, int year, int month, int day, [FromHeader(Name = "x-utc-offset")][DefaultValue(0)] int utcOffsetMinutes)
         {
             var from = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc).AddMinutes(-1 * utcOffsetMinutes);
             var to = from.AddDays(1).Subtract(new TimeSpan(1));
@@ -80,7 +80,7 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryEntryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<DiaryEntryDTO>> Get(Guid diaryEntryId)
+        public async Task<ActionResult<DiaryEntryDto>> Get(Guid diaryEntryId)
         {
             var diaryEntry = await _diaryEntryService.GetDiaryEntryAsync(diaryEntryId);
             if (diaryEntry == null)
@@ -94,7 +94,7 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<DiaryEntryDTO>>> GetDiaryEntries(Guid diaryId)
+        public async Task<ActionResult<IEnumerable<DiaryEntryDto>>> GetDiaryEntries(Guid diaryId)
         {
             var diaryEntries = await _diaryEntryService.GetDiaryEntriesAsync(diaryId);
             return Ok(diaryEntries);
@@ -103,7 +103,7 @@ namespace ccDiaryApi.Controllers.v1
         [HttpPost]
         [Authorize(Policy = "DiaryContributor")]
         [RequestSizeLimit(RequestLimits.DiaryEntryBytes)]
-        public async Task<ActionResult<DiaryEntryDTO>> Create([FromBody] DiaryEntryDTO diaryEntry)
+        public async Task<ActionResult<DiaryEntryDto>> Create([FromBody] DiaryEntryDto diaryEntry)
         {
             if (User.IsInRole("DiaryAdmin"))
             {
@@ -136,7 +136,7 @@ namespace ccDiaryApi.Controllers.v1
         [HttpPut]
         [Authorize(Policy = "DiaryContributor")]
         [RequestSizeLimit(RequestLimits.DiaryEntryBytes)]
-        public async Task<ActionResult<DiaryEntryDTO>> Update([FromBody] DiaryEntryDTO diaryEntry)
+        public async Task<ActionResult<DiaryEntryDto>> Update([FromBody] DiaryEntryDto diaryEntry)
         {
             if (!User.IsInRole("DiaryAdmin"))
             {
@@ -185,7 +185,7 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<PagedResultDTO<DiaryEntryDTO>>> TextSearch(
+        public async Task<ActionResult<PagedResultDto<DiaryEntryDto>>> TextSearch(
             Guid diaryId,
             [FromQuery] string search,
             [FromQuery] int page = 1,
