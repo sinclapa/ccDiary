@@ -38,8 +38,8 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine($"FAILED: {ex.Message}");
+            await Console.Error.WriteLineAsync();
+            await Console.Error.WriteLineAsync($"FAILED: {ex.Message}");
             return 1;
         }
     }
@@ -84,8 +84,8 @@ internal static class Program
 
     private static async Task WriteAllAsync(
         StorageWriter storage,
-        List<DiaryDTO> diaries,
-        Dictionary<Guid, List<DiaryEntryDTO>> entriesByDiary,
+        List<DiaryDto> diaries,
+        Dictionary<Guid, List<DiaryEntryDto>> entriesByDiary,
         List<AppUserDto> users,
         List<AccessRequestDto> requests)
     {
@@ -129,8 +129,8 @@ internal static class Program
 
     private static async Task<int> VerifyAllAsync(
         StorageWriter storage,
-        List<DiaryDTO> diaries,
-        Dictionary<Guid, List<DiaryEntryDTO>> entriesByDiary,
+        List<DiaryDto> diaries,
+        Dictionary<Guid, List<DiaryEntryDto>> entriesByDiary,
         List<AppUserDto> users,
         List<AccessRequestDto> requests)
     {
@@ -152,31 +152,31 @@ internal static class Program
             return 0;
         }
 
-        Console.Error.WriteLine($"VERIFICATION FAILED with {verifier.Problems.Count} problem(s):");
+        await Console.Error.WriteLineAsync($"VERIFICATION FAILED with {verifier.Problems.Count} problem(s):");
         foreach (var problem in verifier.Problems.Take(50))
         {
-            Console.Error.WriteLine($"  - {problem}");
+            await Console.Error.WriteLineAsync($"  - {problem}");
         }
 
         if (verifier.Problems.Count > 50)
         {
-            Console.Error.WriteLine($"  ... and {verifier.Problems.Count - 50} more");
+            await Console.Error.WriteLineAsync($"  ... and {verifier.Problems.Count - 50} more");
         }
 
         return 1;
     }
 
-    private static async Task<(List<DiaryDTO>, Dictionary<Guid, List<DiaryEntryDTO>>, List<AppUserDto>, List<AccessRequestDto>)>
+    private static async Task<(List<DiaryDto>, Dictionary<Guid, List<DiaryEntryDto>>, List<AppUserDto>, List<AccessRequestDto>)>
         LoadFromSqlAsync(string connectionString)
     {
         Console.WriteLine("Reading from SQL...");
         var reader = new SqlReader(connectionString);
 
         var diaries = await reader.ReadDiariesAsync();
-        var entriesByDiary = new Dictionary<Guid, List<DiaryEntryDTO>>();
-        foreach (var diary in diaries)
+        var entriesByDiary = new Dictionary<Guid, List<DiaryEntryDto>>();
+        foreach (var diaryId in diaries.Select(diary => diary.DiaryId!.Value))
         {
-            entriesByDiary[diary.DiaryId!.Value] = await reader.ReadEntriesAsync(diary.DiaryId!.Value);
+            entriesByDiary[diaryId] = await reader.ReadEntriesAsync(diaryId);
         }
 
         return (diaries, entriesByDiary, await reader.ReadUsersAsync(), await reader.ReadAccessRequestsAsync());
@@ -190,13 +190,13 @@ internal static class Program
     /// repository already carries the real diary as an archive, so a storage account can
     /// be repopulated from a clean checkout alone.
     /// </remarks>
-    private static (List<DiaryDTO>, Dictionary<Guid, List<DiaryEntryDTO>>, List<AppUserDto>, List<AccessRequestDto>)
+    private static (List<DiaryDto>, Dictionary<Guid, List<DiaryEntryDto>>, List<AppUserDto>, List<AccessRequestDto>)
         LoadFromArchive(string path)
     {
         Console.WriteLine($"Reading archive {path}...");
 
         var json = File.ReadAllText(path);
-        var archive = JsonSerializer.Deserialize<DiaryArchiveDTO>(json, ArchiveJsonOptions)
+        var archive = JsonSerializer.Deserialize<DiaryArchiveDto>(json, ArchiveJsonOptions)
             ?? throw new InvalidOperationException($"{path} did not deserialise into a diary archive.");
 
         archive.Diary.DiaryId ??= Guid.NewGuid();
@@ -213,12 +213,12 @@ internal static class Program
 
         return (
             [archive.Diary],
-            new Dictionary<Guid, List<DiaryEntryDTO>> { [diaryId] = archive.DiaryEntries },
+            new Dictionary<Guid, List<DiaryEntryDto>> { [diaryId] = archive.DiaryEntries },
             [],
             []);
     }
 
-    private static void ReportImageStats(Dictionary<Guid, List<DiaryEntryDTO>> entriesByDiary)
+    private static void ReportImageStats(Dictionary<Guid, List<DiaryEntryDto>> entriesByDiary)
     {
         var withImages = entriesByDiary.Values
             .SelectMany(e => e)

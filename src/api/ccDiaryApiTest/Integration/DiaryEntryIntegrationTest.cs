@@ -25,9 +25,9 @@ namespace ccDiaryApiTest.Integration
             await SharedTestFactory.Factory.CreateAppUserAsync(SharedTestFactory.Factory.DefaultUserId, AppRole.DiaryAdmin);
         }
 
-        public async Task<DiaryDTO> CreateDiary()
+        public async Task<DiaryDto> CreateDiary()
         {
-            var diary = new DiaryDTO
+            var diary = new DiaryDto
             {
                 Author = $"Author{DateTime.UtcNow.Ticks}",
                 Title = $"Title{DateTime.UtcNow.Ticks}",
@@ -35,24 +35,24 @@ namespace ccDiaryApiTest.Integration
 
             var response = await _httpClient.PostAsJsonAsync("/api/v1/Diary/Create", diary);
             Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryDTO>();
+            var result = await response.Content.ReadFromJsonAsync<DiaryDto>();
             Assert.IsNotNull(result);
             return result;
         }
 
-        public async Task<DiaryEntryDTO> CreateDiaryEntry(DiaryEntryDTO diaryEntry)
+        public async Task<DiaryEntryDto> CreateDiaryEntry(DiaryEntryDto diaryEntry)
         {
             var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", diaryEntry);
             Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             return result;
         }
 
-        public async Task<DiaryEntryDTO> CreateDiaryEntry(Guid? diaryId, DateTime date)
+        public async Task<DiaryEntryDto> CreateDiaryEntry(Guid? diaryId, DateTime date)
         {
             // Act
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = date,
                 DiaryId = diaryId!.Value,
@@ -62,7 +62,7 @@ namespace ccDiaryApiTest.Integration
             return await CreateDiaryEntry(diaryEntry);
         }
 
-        public async Task<DiaryEntryDTO> CreateDiaryEntry(Guid? diaryId)
+        public async Task<DiaryEntryDto> CreateDiaryEntry(Guid? diaryId)
         {
             return await CreateDiaryEntry(diaryId, DateTime.UtcNow);
         }
@@ -79,7 +79,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             Assert.AreEqual(diaryEntry.DiaryEntryId, result.DiaryEntryId);
             Assert.AreEqual(diaryEntry.Location, result.Location);
@@ -101,7 +101,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             Assert.AreEqual(3, result.Count());
             Assert.AreEqual(diaryEntry1.DiaryEntryId, result.ElementAt(0).DiaryEntryId);
@@ -116,7 +116,7 @@ namespace ccDiaryApiTest.Integration
             var diary = await CreateDiary();
 
             // Act
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -127,7 +127,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
 
             Assert.IsNotNull(result);
             Assert.AreNotEqual(Guid.Empty, result.DiaryEntryId);
@@ -140,7 +140,7 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateFailNonExistentDiary()
         {
             // Act
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = Guid.NewGuid(),
@@ -160,7 +160,7 @@ namespace ccDiaryApiTest.Integration
             var diary = await CreateDiary();
 
             // Act
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 DiaryId = diary.DiaryId!.Value,
                 Location = $"Location{DateTime.UtcNow.Ticks}",
@@ -180,7 +180,7 @@ namespace ccDiaryApiTest.Integration
             var diary = await CreateDiary();
 
             // Act
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -200,7 +200,7 @@ namespace ccDiaryApiTest.Integration
             var diary = await CreateDiary();
 
             // Act
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -345,7 +345,7 @@ namespace ccDiaryApiTest.Integration
 
             // Act
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2022/9/30");
-            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
 
             // Assert
             Assert.IsNotNull(result);
@@ -364,7 +364,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             _httpClient.DefaultRequestHeaders.Add("x-utc-offset", "0");
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17");
-            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
 
             // Assert
             Assert.IsNotNull(result);
@@ -384,7 +384,7 @@ namespace ccDiaryApiTest.Integration
             // Act
             _httpClient.DefaultRequestHeaders.Add("x-utc-offset", "60");
             var response = await _httpClient.GetAsync($"api/v1/DiaryEntry/Search/{diary.DiaryId}/2020/6/17");
-            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<IEnumerable<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
 
             // Assert
             Assert.IsNotNull(result);
@@ -396,7 +396,7 @@ namespace ccDiaryApiTest.Integration
         public async Task UpdateNull()
         {
             // Act
-            var response = await _httpClient.PutAsJsonAsync<DiaryDTO?>("/api/v1/Diary/Update", null);
+            var response = await _httpClient.PutAsJsonAsync<DiaryDto?>("/api/v1/Diary/Update", null);
 
             // Assert
             Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
@@ -410,7 +410,7 @@ namespace ccDiaryApiTest.Integration
             var diaryEntry = await CreateDiaryEntry(diary.DiaryId);
 
             // Act
-            var updateDiaryEntry = new DiaryEntryDTO
+            var updateDiaryEntry = new DiaryEntryDto
             {
                 DiaryEntryId = diaryEntry.DiaryEntryId,
                 Date = new DateTime(2021, 5, 16, 13, 0, 0, DateTimeKind.Utc),
@@ -422,7 +422,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             Assert.AreEqual(updateDiaryEntry.DiaryEntryId, result.DiaryEntryId);
             Assert.AreEqual(updateDiaryEntry.Date, result.Date);
@@ -531,7 +531,7 @@ namespace ccDiaryApiTest.Integration
             // Arrange
             var diary = await CreateDiary();
 
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -548,7 +548,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert create
             Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
-            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(created);
             Assert.IsTrue(created.ShowJourney);
             Assert.AreEqual("Sandwich, UK", created.FromLocation);
@@ -558,7 +558,7 @@ namespace ccDiaryApiTest.Integration
             // Verify roundtrip via GET
             var getResponse = await _httpClient.GetAsync($"/api/v1/DiaryEntry/Get/{created.DiaryEntryId}");
             Assert.AreEqual(HttpStatusCode.OK, getResponse.StatusCode);
-            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(fetched);
             Assert.IsTrue(fetched.ShowJourney);
             Assert.AreEqual("Sandwich, UK", fetched.FromLocation);
@@ -574,7 +574,7 @@ namespace ccDiaryApiTest.Integration
             var created = await CreateDiaryEntry(diary.DiaryId);
 
             // Act — update with ShowJourney enabled
-            var updateEntry = new DiaryEntryDTO
+            var updateEntry = new DiaryEntryDto
             {
                 DiaryEntryId = created.DiaryEntryId,
                 Date = created.Date,
@@ -590,7 +590,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, updateResponse.StatusCode);
-            var updated = await updateResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var updated = await updateResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(updated);
             Assert.IsTrue(updated.ShowJourney);
             Assert.AreEqual("London, UK", updated.FromLocation);
@@ -605,7 +605,7 @@ namespace ccDiaryApiTest.Integration
             var diary = await CreateDiary();
             var base64Image = Convert.ToBase64String(new byte[] { 0xFF, 0xD8, 0xFF }); // JPEG magic bytes
 
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -620,7 +620,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert create
             Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
-            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(created);
             Assert.AreEqual(base64Image, created.ImageData);
             Assert.AreEqual("image/jpeg", created.ImageContentType);
@@ -628,7 +628,7 @@ namespace ccDiaryApiTest.Integration
             // Verify roundtrip via GET
             var getResponse = await _httpClient.GetAsync($"/api/v1/DiaryEntry/Get/{created.DiaryEntryId}");
             Assert.AreEqual(HttpStatusCode.OK, getResponse.StatusCode);
-            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(fetched);
             Assert.AreEqual(base64Image, fetched.ImageData);
             Assert.AreEqual("image/jpeg", fetched.ImageContentType);
@@ -645,7 +645,7 @@ namespace ccDiaryApiTest.Integration
             var base64Image = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47 }); // PNG magic bytes
 
             // Act — update with image
-            var updateEntry = new DiaryEntryDTO
+            var updateEntry = new DiaryEntryDto
             {
                 DiaryEntryId = created.DiaryEntryId,
                 Date = created.Date,
@@ -659,7 +659,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, updateResponse.StatusCode);
-            var updated = await updateResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var updated = await updateResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(updated);
             Assert.AreEqual(base64Image, updated.ImageData);
             Assert.AreEqual("image/png", updated.ImageContentType);
@@ -669,13 +669,13 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateWithSeveralImages_RoundTripsThemInOrder()
         {
             var diary = await CreateDiary();
-            var images = new List<DiaryEntryImageDTO>
+            var images = new List<DiaryEntryImageDto>
             {
-                new DiaryEntryImageDTO { Data = Convert.ToBase64String(new byte[] { 0xFF, 0xD8, 0xFF }), ContentType = "image/jpeg" },
-                new DiaryEntryImageDTO { Data = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), ContentType = "image/png" },
+                new DiaryEntryImageDto { Data = Convert.ToBase64String(new byte[] { 0xFF, 0xD8, 0xFF }), ContentType = "image/jpeg" },
+                new DiaryEntryImageDto { Data = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), ContentType = "image/png" },
             };
 
-            var createResponse = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", new DiaryEntryDTO
+            var createResponse = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -684,10 +684,10 @@ namespace ccDiaryApiTest.Integration
                 Images = images,
             });
             Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
-            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
 
             var getResponse = await _httpClient.GetAsync($"/api/v1/DiaryEntry/Get/{created!.DiaryEntryId}");
-            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var fetched = await getResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
 
             Assert.IsNotNull(fetched);
             CollectionAssert.AreEqual(images.Select(i => i.Data).ToArray(), fetched.Images!.Select(i => i.Data).ToArray());
@@ -699,11 +699,11 @@ namespace ccDiaryApiTest.Integration
         public async Task CreateWithTooManyImages_ReturnsBadRequest()
         {
             var diary = await CreateDiary();
-            var images = Enumerable.Range(0, DiaryEntryDTO.MaxImages + 1)
-                .Select(i => new DiaryEntryImageDTO { Data = Convert.ToBase64String(new[] { (byte)i }), ContentType = "image/png" })
+            var images = Enumerable.Range(0, DiaryEntryDto.MaxImages + 1)
+                .Select(i => new DiaryEntryImageDto { Data = Convert.ToBase64String(new[] { (byte)i }), ContentType = "image/png" })
                 .ToList();
 
-            var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", new DiaryEntryDTO
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/DiaryEntry/Create", new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -722,7 +722,7 @@ namespace ccDiaryApiTest.Integration
             var diary = await CreateDiary();
 
             // Act — create without setting ShowJourney
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 17, 14, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -733,7 +733,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
-            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDTO>(SharedTestFactory.ApiJsonOptions);
+            var created = await createResponse.Content.ReadFromJsonAsync<DiaryEntryDto>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(created);
             Assert.IsFalse(created.ShowJourney);
             Assert.IsNull(created.FromLocation);
@@ -745,14 +745,14 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            await CreateDiaryEntry(new DiaryEntryDTO
+            await CreateDiaryEntry(new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 1, 9, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
                 Location = "Ypres",
                 Entry = "Arrived at the Menin Gate.",
             });
-            await CreateDiaryEntry(new DiaryEntryDTO
+            await CreateDiaryEntry(new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 2, 10, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -765,7 +765,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.TotalCount);
             Assert.AreEqual("Ypres", result.Items.First().Location);
@@ -776,14 +776,14 @@ namespace ccDiaryApiTest.Integration
         {
             // Arrange
             var diary = await CreateDiary();
-            await CreateDiaryEntry(new DiaryEntryDTO
+            await CreateDiaryEntry(new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 1, 9, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
                 Location = "Passchendaele",
                 Entry = "Quiet day.",
             });
-            await CreateDiaryEntry(new DiaryEntryDTO
+            await CreateDiaryEntry(new DiaryEntryDto
             {
                 Date = new DateTime(2020, 6, 2, 9, 0, 0, DateTimeKind.Utc),
                 DiaryId = diary.DiaryId!.Value,
@@ -796,7 +796,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.TotalCount);
             Assert.AreEqual("Passchendaele", result.Items.First().Location);
@@ -822,7 +822,7 @@ namespace ccDiaryApiTest.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<PagedResultDTO<DiaryEntryDTO>>(SharedTestFactory.ApiJsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<PagedResultDto<DiaryEntryDto>>(SharedTestFactory.ApiJsonOptions);
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.TotalCount);
             Assert.AreEqual(0, result.Items.Count());

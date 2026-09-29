@@ -1,15 +1,14 @@
 <template>
   <Transition name="api-status-fade">
-    <div
+    <output
       v-if="!apiStatus.available"
       aria-live="polite"
       class="api-status-bar"
-      role="status"
     >
       <span aria-hidden="true" class="api-status-dot" />
       <span>Preparing the ingredients, please wait...</span>
       <span class="wait-counter">({{ elapsedSeconds }}s)</span>
-    </div>
+    </output>
   </Transition>
 </template>
 

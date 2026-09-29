@@ -14,6 +14,10 @@ namespace ccDiaryApiTest.v1
     [TestClass]
     public class DiaryEntryServiceTest
     {
+        private static readonly string[] BattlesInDateOrder = { "Somme", "Passchendaele", "Armistice" };
+        private static readonly string[] ImageTypesInOrder = { "image/png", "image/jpeg", "image/webp" };
+        private static readonly int[] YearsWithEntries = { 1916, 1918 };
+
         private StorageTestFixture _fixture = null!;
         private DiaryEntryService _service = null!;
 
@@ -44,7 +48,7 @@ namespace ccDiaryApiTest.v1
         {
             await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
-                await _service.CreateDiaryEntryAsync(new DiaryEntryDTO { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = null });
+                await _service.CreateDiaryEntryAsync(new DiaryEntryDto { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = null });
             });
         }
 
@@ -53,7 +57,7 @@ namespace ccDiaryApiTest.v1
         {
             await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
-                await _service.CreateDiaryEntryAsync(new DiaryEntryDTO { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = DateTime.MinValue });
+                await _service.CreateDiaryEntryAsync(new DiaryEntryDto { DiaryId = Guid.NewGuid(), Entry = "E", Location = "L", Date = DateTime.MinValue });
             });
         }
 
@@ -101,7 +105,7 @@ namespace ccDiaryApiTest.v1
             var entries = await _service.GetDiaryEntriesAsync(diaryId);
 
             CollectionAssert.AreEqual(
-                new[] { "Somme", "Passchendaele", "Armistice" },
+                BattlesInDateOrder,
                 entries.Select(e => e.Entry).ToArray());
         }
 
@@ -159,7 +163,7 @@ namespace ccDiaryApiTest.v1
             // API contract still returns base64, so the round trip must be exact.
             var diaryId = Guid.NewGuid();
             var bytes = new byte[] { 1, 2, 3, 4, 5 };
-            var entry = new DiaryEntryDTO
+            var entry = new DiaryEntryDto
             {
                 DiaryId = diaryId,
                 Date = DateTime.UtcNow,
@@ -181,7 +185,7 @@ namespace ccDiaryApiTest.v1
         public async Task DeletingAnEntryRemovesItsImage()
         {
             var diaryId = Guid.NewGuid();
-            var entry = await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            var entry = await _service.CreateDiaryEntryAsync(new DiaryEntryDto
             {
                 DiaryId = diaryId,
                 Date = DateTime.UtcNow,
@@ -212,7 +216,7 @@ namespace ccDiaryApiTest.v1
                 new[] { Base64(1), Base64(2), Base64(3) },
                 fetched.Images!.Select(i => i.Data).ToArray());
             CollectionAssert.AreEqual(
-                new[] { "image/png", "image/jpeg", "image/webp" },
+                ImageTypesInOrder,
                 fetched.Images!.Select(i => i.ContentType).ToArray());
         }
 
@@ -231,7 +235,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task ASingleImageRequestIsAOneImageEntry()
         {
-            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Date = DateTime.UtcNow,
@@ -253,7 +257,7 @@ namespace ccDiaryApiTest.v1
             var diaryId = Guid.NewGuid();
             var entry = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/png"), Image(3, "image/png"));
 
-            entry.Images = new List<DiaryEntryImageDTO> { Image(1, "image/png") };
+            entry.Images = new List<DiaryEntryImageDto> { Image(1, "image/png") };
             await _service.UpdateDiaryEntryAsync(entry);
 
             var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
@@ -270,7 +274,7 @@ namespace ccDiaryApiTest.v1
             var diaryId = Guid.NewGuid();
             var entry = await CreateWithImagesAsync(diaryId, Image(1, "image/png"), Image(2, "image/png"));
 
-            entry.Images = new List<DiaryEntryImageDTO>();
+            entry.Images = new List<DiaryEntryImageDto>();
             entry.ImageData = Base64(1);
             await _service.UpdateDiaryEntryAsync(entry);
 
@@ -295,7 +299,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task CreatingWithTheSingleImageFieldsReturnsTheList()
         {
-            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Date = DateTime.UtcNow,
@@ -314,7 +318,7 @@ namespace ccDiaryApiTest.v1
         {
             var entry = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"));
 
-            entry.Images = new List<DiaryEntryImageDTO>();
+            entry.Images = new List<DiaryEntryImageDto>();
             var updated = await _service.UpdateDiaryEntryAsync(entry);
             var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
 
@@ -328,7 +332,7 @@ namespace ccDiaryApiTest.v1
         {
             var entry = await CreateWithImagesAsync(Guid.NewGuid(), Image(1, "image/png"), Image(2, "image/jpeg"));
 
-            entry.Images = new List<DiaryEntryImageDTO> { Image(2, "image/jpeg"), Image(1, "image/png") };
+            entry.Images = new List<DiaryEntryImageDto> { Image(2, "image/jpeg"), Image(1, "image/png") };
             await _service.UpdateDiaryEntryAsync(entry);
 
             var fetched = await _service.GetDiaryEntryAsync(entry.DiaryEntryId!.Value);
@@ -406,7 +410,7 @@ namespace ccDiaryApiTest.v1
             var diaryId = Guid.NewGuid();
             var large = new string('x', _fixture.Options.JsonSpillThresholdBytes + 1000);
 
-            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            var created = await _service.CreateDiaryEntryAsync(new DiaryEntryDto
             {
                 DiaryId = diaryId,
                 Date = DateTime.UtcNow,
@@ -447,7 +451,7 @@ namespace ccDiaryApiTest.v1
             var years = await _service.SearchDiaryEntriesAsync(
                 diaryId, DateTime.MinValue, DateTime.MaxValue, SearchType.Year);
 
-            CollectionAssert.AreEqual(new[] { 1916, 1918 }, years.ToArray());
+            CollectionAssert.AreEqual(YearsWithEntries, years.ToArray());
         }
 
         [TestMethod]
@@ -465,12 +469,12 @@ namespace ccDiaryApiTest.v1
 
         private static string Base64(byte marker) => Convert.ToBase64String(new byte[] { marker, marker, marker });
 
-        private static DiaryEntryImageDTO Image(byte marker, string contentType) =>
-            new DiaryEntryImageDTO { Data = Base64(marker), ContentType = contentType };
+        private static DiaryEntryImageDto Image(byte marker, string contentType) =>
+            new DiaryEntryImageDto { Data = Base64(marker), ContentType = contentType };
 
-        private async Task<DiaryEntryDTO> CreateAsync(Guid diaryId, DateTime date, string entry, string location = "L")
+        private async Task<DiaryEntryDto> CreateAsync(Guid diaryId, DateTime date, string entry, string location = "L")
         {
-            return await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            return await _service.CreateDiaryEntryAsync(new DiaryEntryDto
             {
                 DiaryId = diaryId,
                 Date = date,
@@ -479,9 +483,9 @@ namespace ccDiaryApiTest.v1
             });
         }
 
-        private async Task<DiaryEntryDTO> CreateWithImagesAsync(Guid diaryId, params DiaryEntryImageDTO[] images)
+        private async Task<DiaryEntryDto> CreateWithImagesAsync(Guid diaryId, params DiaryEntryImageDto[] images)
         {
-            return await _service.CreateDiaryEntryAsync(new DiaryEntryDTO
+            return await _service.CreateDiaryEntryAsync(new DiaryEntryDto
             {
                 DiaryId = diaryId,
                 Date = DateTime.UtcNow,
@@ -491,7 +495,7 @@ namespace ccDiaryApiTest.v1
             });
         }
 
-        private Task<StoredBlob?> ImageBlobAsync(Guid diaryId, DiaryEntryDTO entry, int index) =>
+        private Task<StoredBlob?> ImageBlobAsync(Guid diaryId, DiaryEntryDto entry, int index) =>
             _fixture.Blobs.TryGetAsync(
                 _fixture.Options.ImagesContainer,
                 StorageKeys.ImageBlobKey(diaryId, entry.DiaryEntryId!.Value, index));

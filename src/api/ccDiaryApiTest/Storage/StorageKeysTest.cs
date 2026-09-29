@@ -16,7 +16,7 @@ namespace ccDiaryApiTest.Storage
     /// them. These tests pin the derivations down.
     /// </remarks>
     [TestClass]
-    public class StorageKeysTest
+    public partial class StorageKeysTest
     {
         [TestMethod]
         public void EntryRowKey_OrdersChronologically_AsPlainStringComparison()
@@ -121,7 +121,7 @@ namespace ccDiaryApiTest.Storage
             // Row keys forbid / \ # ? — all of which appear in real search text.
             var key = StorageKeys.GeocodeKey("a/b\\c#d?e");
 
-            Assert.IsTrue(Regex.IsMatch(key, "^[0-9A-F]{32}$"), $"unexpected key: {key}");
+            Assert.IsTrue(UpperHex32().IsMatch(key), $"unexpected key: {key}");
         }
 
         [TestMethod]
@@ -242,5 +242,8 @@ namespace ccDiaryApiTest.Storage
         {
             Assert.AreEqual(1024, StorageKeys.SanitiseKey(new string('x', 2000)).Length);
         }
+
+        [GeneratedRegex("^[0-9A-F]{32}$")]
+        private static partial Regex UpperHex32();
     }
 }

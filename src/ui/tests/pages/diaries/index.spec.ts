@@ -191,7 +191,7 @@ describe('pages/diaries/index.vue', () => {
     const inputsBefore = wrapper.findAll('input').filter((i: any) =>
       i.attributes('placeholder')?.toLowerCase().includes('search')
     )
-    expect(inputsBefore.length).toBe(0)
+    expect(inputsBefore).toHaveLength(0)
 
     const searchBtn = wrapper.findAll('button').find((btn: any) =>
       btn.attributes('aria-label') === 'Search diaries'

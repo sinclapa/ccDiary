@@ -372,7 +372,7 @@ describe('DiaryTimeline.vue', () => {
     const inline = wrapper.findComponent({ name: 'MapView' })
     expect(inline.props('interactive')).toBeFalsy()
 
-    await wrapper.find('.entry-map').trigger('click')
+    await wrapper.find('.entry-map__shield').trigger('click')
 
     expect(viewerState(wrapper).mapDialog).toBe(true)
     expect(viewerState(wrapper).zoomedMapCaption).toBe('Lumbo — 2 August 1918')
@@ -381,9 +381,13 @@ describe('DiaryTimeline.vue', () => {
     expect(views[1].props()).toMatchObject({ interactive: true, height: '70dvh', location: 'Lumbo, Mozambique' })
   })
 
-  it('opens a journey full size from the keyboard', async () => {
+  it('opens a journey full size from a native button, so the keyboard works too', async () => {
     const wrapper = mountTimeline([makeEntry({ showJourney: true, fromLocation: 'Lindi', toLocation: 'Lumbo' })])
-    await wrapper.find('.entry-map').trigger('keydown.enter')
+    const shield = wrapper.find('.entry-map__shield')
+    // a real <button> takes Enter and Space itself; no key handlers of our own to test
+    expect(shield.element.tagName).toBe('BUTTON')
+    expect(shield.attributes('type')).toBe('button')
+    await shield.trigger('click')
     const views = wrapper.findAllComponents({ name: 'JourneyView' })
     expect(views).toHaveLength(2)
     expect(views[1].props()).toMatchObject({ interactive: true, fromLocation: 'Lindi', toLocation: 'Lumbo' })
@@ -391,7 +395,7 @@ describe('DiaryTimeline.vue', () => {
 
   it('names the map by its entry for assistive technology', () => {
     const wrapper = mountTimeline([makeEntry({ location: 'Lumbo', showMap: true, mapLocation: 'Lumbo, Mozambique' })])
-    expect(wrapper.find('.entry-map').attributes('aria-label')).toBe('Open the map for Lumbo full size')
+    expect(wrapper.find('.entry-map__shield').attributes('aria-label')).toBe('Open the map for Lumbo full size')
   })
 
   it('does not open the map panel for an entry without a map', () => {

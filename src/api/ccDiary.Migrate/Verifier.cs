@@ -19,7 +19,7 @@ internal sealed class Verifier(StorageWriter storage)
 
     public IReadOnlyList<string> Problems => _problems;
 
-    public async Task<bool> VerifyDiaryAsync(DiaryDTO expectedDiary, List<DiaryEntryDTO> expectedEntries)
+    public async Task<bool> VerifyDiaryAsync(DiaryDto expectedDiary, List<DiaryEntryDto> expectedEntries)
     {
         var diaryId = expectedDiary.DiaryId!.Value;
         var actualDiary = await storage.Diaries.GetDiaryAsync(diaryId);
@@ -69,35 +69,7 @@ internal sealed class Verifier(StorageWriter storage)
                 continue;
             }
 
-            CompareField(id, "location", expected.Location, actual.Location);
-            CompareField(id, "entry", expected.Entry, actual.Entry);
-            CompareField(id, "mapLocation", expected.MapLocation, actual.MapLocation);
-            CompareField(id, "fromLocation", expected.FromLocation, actual.FromLocation);
-            CompareField(id, "toLocation", expected.ToLocation, actual.ToLocation);
-            CompareField(id, "imageContentType", expected.ImageContentType, actual.ImageContentType);
-
-            if (expected.ShowMap != actual.ShowMap)
-            {
-                _problems.Add($"entry {id}: showMap {expected.ShowMap} became {actual.ShowMap}");
-            }
-
-            if (expected.ShowJourney != actual.ShowJourney)
-            {
-                _problems.Add($"entry {id}: showJourney {expected.ShowJourney} became {actual.ShowJourney}");
-            }
-
-            if (expected.JourneyMode != actual.JourneyMode)
-            {
-                _problems.Add($"entry {id}: journeyMode {expected.JourneyMode} became {actual.JourneyMode}");
-            }
-
-            if (expected.Date.HasValue && actual.Date.HasValue
-                && Math.Abs((expected.Date.Value - actual.Date.Value).TotalSeconds) > 1)
-            {
-                _problems.Add($"entry {id}: date {expected.Date:O} became {actual.Date:O}");
-            }
-
-            CompareImage(id, expected.ImageData, actual.ImageData);
+            CompareEntry(id, expected, actual);
         }
 
         return _problems.Count == 0;
@@ -168,6 +140,39 @@ internal sealed class Verifier(StorageWriter storage)
 
     private static string Hash(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
+    private void CompareEntry(Guid id, DiaryEntryDto expected, DiaryEntryDto actual)
+    {
+        CompareField(id, "location", expected.Location, actual.Location);
+        CompareField(id, "entry", expected.Entry, actual.Entry);
+        CompareField(id, "mapLocation", expected.MapLocation, actual.MapLocation);
+        CompareField(id, "fromLocation", expected.FromLocation, actual.FromLocation);
+        CompareField(id, "toLocation", expected.ToLocation, actual.ToLocation);
+        CompareField(id, "imageContentType", expected.ImageContentType, actual.ImageContentType);
+
+        if (expected.ShowMap != actual.ShowMap)
+        {
+            _problems.Add($"entry {id}: showMap {expected.ShowMap} became {actual.ShowMap}");
+        }
+
+        if (expected.ShowJourney != actual.ShowJourney)
+        {
+            _problems.Add($"entry {id}: showJourney {expected.ShowJourney} became {actual.ShowJourney}");
+        }
+
+        if (expected.JourneyMode != actual.JourneyMode)
+        {
+            _problems.Add($"entry {id}: journeyMode {expected.JourneyMode} became {actual.JourneyMode}");
+        }
+
+        if (expected.Date.HasValue && actual.Date.HasValue
+            && Math.Abs((expected.Date.Value - actual.Date.Value).TotalSeconds) > 1)
+        {
+            _problems.Add($"entry {id}: date {expected.Date:O} became {actual.Date:O}");
+        }
+
+        CompareImage(id, expected.ImageData, actual.ImageData);
+    }
 
     private void CompareField(object id, string field, string? expected, string? actual)
     {

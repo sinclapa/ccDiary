@@ -37,8 +37,8 @@ namespace ccDiaryApiTest.v1
         public async Task Insert()
         {
             // Arrange
-            _diaryService.Setup(x => x.CreateAsync(It.IsAny<DiaryDTO>()))
-                .ReturnsAsync((DiaryDTO d) =>
+            _diaryService.Setup(x => x.CreateAsync(It.IsAny<DiaryDto>()))
+                .ReturnsAsync((DiaryDto d) =>
                 {
                     d.DiaryId = Guid.NewGuid();
                     return d;
@@ -46,7 +46,7 @@ namespace ccDiaryApiTest.v1
             var controller = CreateController();
 
             // Act
-            var response = await controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
+            var response = await controller.Create(new DiaryDto { Author = "Paul", Title = "Paul's Diary" });
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(CreatedResult));
@@ -61,14 +61,14 @@ namespace ccDiaryApiTest.v1
         public async Task Create_StampsOwnerIdFromCallersOid()
         {
             // Arrange
-            DiaryDTO? captured = null;
-            _diaryService.Setup(x => x.CreateAsync(It.IsAny<DiaryDTO>()))
-                .Callback<DiaryDTO>(d => captured = d)
-                .ReturnsAsync((DiaryDTO d) => d);
+            DiaryDto? captured = null;
+            _diaryService.Setup(x => x.CreateAsync(It.IsAny<DiaryDto>()))
+                .Callback<DiaryDto>(d => captured = d)
+                .ReturnsAsync((DiaryDto d) => d);
             var controller = CreateController(oid: "owner-oid");
 
             // Act
-            await controller.Create(new DiaryDTO { Author = "Paul", Title = "Paul's Diary" });
+            await controller.Create(new DiaryDto { Author = "Paul", Title = "Paul's Diary" });
 
             // Assert
             Assert.IsNotNull(captured);
@@ -80,9 +80,9 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var page = NewPage(
-                new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Paul1", Title = "Paul's 1st Diary" },
-                new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Paul2", Title = "Paul's 2nd Diary" },
-                new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Paul3", Title = "Paul's 3rd Diary" });
+                new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Paul1", Title = "Paul's 1st Diary" },
+                new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Paul2", Title = "Paul's 2nd Diary" },
+                new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Paul3", Title = "Paul's 3rd Diary" });
             _diaryService.Setup(x => x.GetDiariesAsync(1, 12, null)).ReturnsAsync(page);
             var controller = CreateController();
 
@@ -121,7 +121,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var diary = new DiaryDTO
+            var diary = new DiaryDto
             {
                 DiaryId = diaryId,
                 Author = "Paul2",
@@ -192,7 +192,7 @@ namespace ccDiaryApiTest.v1
         public async Task GetPaged_PassesPagingThrough()
         {
             // Arrange
-            var page = NewPage(new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Author01", Title = "Diary01" });
+            var page = NewPage(new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Author01", Title = "Diary01" });
             page.TotalCount = 15;
             page.Page = 2;
             page.PageSize = 5;
@@ -216,7 +216,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Paul", Title = "Paul's Diary", OwnerId = "owner-oid" };
+            var diary = new DiaryDto { DiaryId = diaryId, Author = "Paul", Title = "Paul's Diary", OwnerId = "owner-oid" };
             _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
             var controller = CreateController(oid: "owner-oid");
 
@@ -232,7 +232,7 @@ namespace ccDiaryApiTest.v1
         public async Task DeleteNone()
         {
             // Arrange
-            _diaryService.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDTO?)null);
+            _diaryService.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDto?)null);
             var controller = CreateController();
 
             // Act
@@ -240,7 +240,7 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsInstanceOfType(response, typeof(NotFoundResult));
-            _diaryService.Verify(x => x.DeleteAsync(It.IsAny<DiaryDTO>()), Times.Never);
+            _diaryService.Verify(x => x.DeleteAsync(It.IsAny<DiaryDto>()), Times.Never);
         }
 
         [TestMethod]
@@ -248,7 +248,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var updated = new DiaryDTO
+            var updated = new DiaryDto
             {
                 DiaryId = diaryId,
                 Author = "John",
@@ -257,7 +257,7 @@ namespace ccDiaryApiTest.v1
                 OwnerId = "owner-oid",
             };
             _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(updated);
-            _diaryService.Setup(x => x.UpdateAsync(It.IsAny<DiaryDTO>())).ReturnsAsync((DiaryDTO d) => d);
+            _diaryService.Setup(x => x.UpdateAsync(It.IsAny<DiaryDto>())).ReturnsAsync((DiaryDto d) => d);
             var controller = CreateController(oid: "owner-oid");
 
             // Act
@@ -278,27 +278,27 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
+            var diary = new DiaryDto { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
             _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
             var controller = CreateController(oid: "other-oid");
 
             // Act
-            var response = await controller.Update(new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Hijacked" });
+            var response = await controller.Update(new DiaryDto { DiaryId = diaryId, Author = "Owner", Title = "Hijacked" });
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
-            _diaryService.Verify(x => x.UpdateAsync(It.IsAny<DiaryDTO>()), Times.Never);
+            _diaryService.Verify(x => x.UpdateAsync(It.IsAny<DiaryDto>()), Times.Never);
         }
 
         [TestMethod]
         public async Task Update_WithMissingDiary_ReturnsForbid()
         {
             // Arrange
-            _diaryService.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDTO?)null);
+            _diaryService.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDto?)null);
             var controller = CreateController(oid: "user-oid");
 
             // Act
-            var response = await controller.Update(new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Ghost", Title = "Ghost Diary" });
+            var response = await controller.Update(new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Ghost", Title = "Ghost Diary" });
 
             // Assert
             Assert.IsInstanceOfType(response.Result, typeof(ForbidResult));
@@ -308,8 +308,8 @@ namespace ccDiaryApiTest.v1
         public async Task Update_AsAdmin_ReturnsOk()
         {
             // Arrange — an admin never triggers the ownership lookup
-            var diary = new DiaryDTO { DiaryId = Guid.NewGuid(), Author = "Owner", Title = "Admin Updated", OwnerId = "owner-oid" };
-            _diaryService.Setup(x => x.UpdateAsync(It.IsAny<DiaryDTO>())).ReturnsAsync((DiaryDTO d) => d);
+            var diary = new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Owner", Title = "Admin Updated", OwnerId = "owner-oid" };
+            _diaryService.Setup(x => x.UpdateAsync(It.IsAny<DiaryDto>())).ReturnsAsync((DiaryDto d) => d);
             var controller = CreateController(oid: "admin-oid", isAdmin: true);
 
             // Act
@@ -325,7 +325,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
+            var diary = new DiaryDto { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
             _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
             var controller = CreateController(oid: "other-oid");
 
@@ -334,7 +334,7 @@ namespace ccDiaryApiTest.v1
 
             // Assert
             Assert.IsInstanceOfType(response, typeof(ForbidResult));
-            _diaryService.Verify(x => x.DeleteAsync(It.IsAny<DiaryDTO>()), Times.Never);
+            _diaryService.Verify(x => x.DeleteAsync(It.IsAny<DiaryDto>()), Times.Never);
         }
 
         [TestMethod]
@@ -342,7 +342,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var diary = new DiaryDTO { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
+            var diary = new DiaryDto { DiaryId = diaryId, Author = "Owner", Title = "Owner's Diary", OwnerId = "owner-oid" };
             _diaryService.Setup(x => x.GetDiaryAsync(diaryId)).ReturnsAsync(diary);
             var controller = CreateController(oid: "admin-oid", isAdmin: true);
 
@@ -354,7 +354,7 @@ namespace ccDiaryApiTest.v1
             _diaryService.Verify(x => x.DeleteAsync(diary), Times.Once);
         }
 
-        private static PagedResultDTO<DiaryDTO> NewPage(params DiaryDTO[] items) => new ()
+        private static PagedResultDto<DiaryDto> NewPage(params DiaryDto[] items) => new ()
         {
             Items = items.ToList(),
             TotalCount = items.Length,

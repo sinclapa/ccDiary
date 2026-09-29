@@ -24,7 +24,7 @@ namespace ccDiaryApiTest.v1
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
 
             Guid id = Guid.NewGuid();
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = id, DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "London", Entry = "Some text." };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = id, DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "London", Entry = "Some text." };
             diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(id)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
@@ -209,7 +209,7 @@ namespace ccDiaryApiTest.v1
             Guid diaryId = Guid.Empty;
             var from = DateTime.UtcNow;
             var to = DateTime.UtcNow;
-            var diaryEntry = new DiaryEntryDTO
+            var diaryEntry = new DiaryEntryDto
             {
                 Date = new DateTime(2022, 5, 23, 14, 25, 7, DateTimeKind.Utc),
                 DiaryId = Guid.NewGuid(),
@@ -224,7 +224,7 @@ namespace ccDiaryApiTest.v1
                     from = f;
                     to = t;
                 })
-                .ReturnsAsync(new List<DiaryEntryDTO> { diaryEntry });
+                .ReturnsAsync(new List<DiaryEntryDto> { diaryEntry });
 
             var diaryServiceMock = new Mock<IDiaryService>();
             var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
@@ -248,8 +248,8 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
 
-            DiaryEntryDTO? captured = null;
-            var diaryEntry = new DiaryEntryDTO
+            DiaryEntryDto? captured = null;
+            var diaryEntry = new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = Guid.NewGuid(),
@@ -261,13 +261,13 @@ namespace ccDiaryApiTest.v1
                 ToLocation = "Southampton, UK",
             };
             diaryEntryServiceMock
-                .Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>()))
-                .Callback<DiaryEntryDTO>(d => captured = d)
+                .Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDto>()))
+                .Callback<DiaryEntryDto>(d => captured = d)
                 .ReturnsAsync(diaryEntry);
 
             var diaryServiceMock = new Mock<IDiaryService>();
             diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
-                .ReturnsAsync(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
+                .ReturnsAsync(new DiaryDto { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
@@ -287,8 +287,8 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
 
-            DiaryEntryDTO? captured = null;
-            var diaryEntry = new DiaryEntryDTO
+            DiaryEntryDto? captured = null;
+            var diaryEntry = new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = Guid.NewGuid(),
@@ -300,13 +300,13 @@ namespace ccDiaryApiTest.v1
                 ToLocation = "Paris, France",
             };
             diaryEntryServiceMock
-                .Setup(x => x.UpdateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>()))
-                .Callback<DiaryEntryDTO>(d => captured = d)
+                .Setup(x => x.UpdateDiaryEntryAsync(It.IsAny<DiaryEntryDto>()))
+                .Callback<DiaryEntryDto>(d => captured = d)
                 .ReturnsAsync(diaryEntry);
 
             var diaryServiceMock = new Mock<IDiaryService>();
             diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
-                .ReturnsAsync(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
+                .ReturnsAsync(new DiaryDto { DiaryId = diaryEntry.DiaryId, Title = "Test", Author = "Test", OwnerId = null });
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
 
             // Act
@@ -323,11 +323,11 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Create_AsNonOwner_ReturnsForbid()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
             diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
-                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+                .ReturnsAsync(new DiaryDto { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
             var response = await controller.Create(diaryEntry);
@@ -338,15 +338,15 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Create_AsAdmin_ReturnsCreated()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>())).ReturnsAsync(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDto>())).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
 
             // Even an admin now needs the diary to exist: there is no foreign key to
             // reject an orphan, so the controller checks explicitly.
             diaryServiceMock.Setup(x => x.GetDiaryAsync(diaryEntry.DiaryId))
-                .ReturnsAsync(new DiaryDTO { DiaryId = diaryEntry.DiaryId, Title = "T", Author = "A" });
+                .ReturnsAsync(new DiaryDto { DiaryId = diaryEntry.DiaryId, Title = "T", Author = "A" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
             var response = await controller.Create(diaryEntry);
@@ -357,26 +357,26 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Create_AsAdmin_AgainstMissingDiary_ReturnsBadRequest()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
-            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDTO?)null);
+            diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>())).ReturnsAsync((DiaryDto?)null);
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
             var response = await controller.Create(diaryEntry);
 
             Assert.IsInstanceOfType(response.Result, typeof(BadRequestObjectResult));
-            diaryEntryServiceMock.Verify(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>()), Times.Never);
+            diaryEntryServiceMock.Verify(x => x.CreateDiaryEntryAsync(It.IsAny<DiaryEntryDto>()), Times.Never);
         }
 
         [TestMethod]
         public async Task Update_AsNonOwner_ReturnsForbid()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
             diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
-                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+                .ReturnsAsync(new DiaryDto { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
             var response = await controller.Update(diaryEntry);
@@ -387,9 +387,9 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Update_AsAdmin_ReturnsOk()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
-            diaryEntryServiceMock.Setup(x => x.UpdateDiaryEntryAsync(It.IsAny<DiaryEntryDTO>())).ReturnsAsync(diaryEntry);
+            diaryEntryServiceMock.Setup(x => x.UpdateDiaryEntryAsync(It.IsAny<DiaryEntryDto>())).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "admin-oid", isAdmin: true);
@@ -413,12 +413,12 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Delete_AsOwner_ReturnsOk()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(diaryEntry.DiaryEntryId!.Value)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
             diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
-                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+                .ReturnsAsync(new DiaryDto { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "owner-oid");
             var response = await controller.Delete(diaryEntry.DiaryEntryId!.Value);
@@ -429,12 +429,12 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Delete_AsNonOwner_ReturnsForbid()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(diaryEntry.DiaryEntryId!.Value)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
             diaryServiceMock.Setup(x => x.GetDiaryAsync(It.IsAny<Guid>()))
-                .ReturnsAsync(new DiaryDTO { Title = "T", Author = "A", OwnerId = "owner-oid" });
+                .ReturnsAsync(new DiaryDto { Title = "T", Author = "A", OwnerId = "owner-oid" });
 
             var controller = CreateController(diaryEntryServiceMock.Object, diaryServiceMock.Object, oid: "other-oid");
             var response = await controller.Delete(diaryEntry.DiaryEntryId!.Value);
@@ -445,7 +445,7 @@ namespace ccDiaryApiTest.v1
         [TestMethod]
         public async Task Delete_AsAdmin_ReturnsOk()
         {
-            var diaryEntry = new DiaryEntryDTO { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
+            var diaryEntry = new DiaryEntryDto { DiaryEntryId = Guid.NewGuid(), DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "L", Entry = "E" };
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(diaryEntry.DiaryEntryId!.Value)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
@@ -461,7 +461,7 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var matchingEntry = new DiaryEntryDTO
+            var matchingEntry = new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = diaryId,
@@ -469,9 +469,9 @@ namespace ccDiaryApiTest.v1
                 Location = "Ypres",
                 Entry = "Arrived at the Menin Gate.",
             };
-            var paged = new PagedResultDTO<DiaryEntryDTO>
+            var paged = new PagedResultDto<DiaryEntryDto>
             {
-                Items =[matchingEntry],
+                Items = new[] { matchingEntry },
                 TotalCount = 1,
                 Page = 1,
                 PageSize = 20,
@@ -500,9 +500,9 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var paged = new PagedResultDTO<DiaryEntryDTO>
+            var paged = new PagedResultDto<DiaryEntryDto>
             {
-                Items =[new DiaryEntryDTO { DiaryId = diaryId, Location = "Passchendaele", Entry = "Quiet day.", Date = DateTime.UtcNow }],
+                Items = new[] { new DiaryEntryDto { DiaryId = diaryId, Location = "Passchendaele", Entry = "Quiet day.", Date = DateTime.UtcNow } },
                 TotalCount = 1,
                 Page = 1,
                 PageSize = 20,
@@ -545,9 +545,9 @@ namespace ccDiaryApiTest.v1
         {
             // Arrange
             var diaryId = Guid.NewGuid();
-            var emptyPaged = new PagedResultDTO<DiaryEntryDTO>
+            var emptyPaged = new PagedResultDto<DiaryEntryDto>
             {
-                Items =[],
+                Items = Array.Empty<DiaryEntryDto>(),
                 TotalCount = 0,
                 Page = 1,
                 PageSize = 20,

@@ -24,7 +24,7 @@ namespace ccDiaryApi.Controllers.v1
         }
 
         [HttpGet]
-        public async Task<ActionResult<AppInfoDTO>> Get()
+        public async Task<ActionResult<AppInfoDto>> Get()
         {
             var appInfo = await _appInfoService.GetAppInfoAsync();
             if (appInfo == null)

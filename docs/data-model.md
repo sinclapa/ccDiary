@@ -132,7 +132,7 @@ There is no migration step. A new property appears with its CLR default on rows 
 before it existed, which is the whole mechanism.
 
 For that to work, the storage serializer **disables required-property enforcement**.
-`DiaryEntryDTO` marks `ShowMap`/`ShowJourney` `[JsonRequired]` and `DiaryId` `required`,
+`DiaryEntryDto` marks `ShowMap`/`ShowJourney` `[JsonRequired]` and `DiaryId` `required`,
 which is correct for the HTTP contract — a client omitting them should be rejected —
 but applied to stored rows it converts "fall back to a default" into a hard
 deserialisation failure, making any future field change a data-loss event. The values are

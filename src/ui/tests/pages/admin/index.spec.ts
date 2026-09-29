@@ -51,24 +51,18 @@ describe('admin/index.vue', () => {
     wrapper.unmount()
   })
 
-  it('renders the access requests heading', async () => {
+  it.each([
+    ['the access requests heading', 'Access Requests'],
+    ['the request display name', 'John Doe'],
+    ['the request email', 'john@example.com'],
+  ])('renders %s', async (_what, text) => {
     await flushPromises()
-    expect(wrapper.text()).toContain('Access Requests')
+    expect(wrapper.text()).toContain(text)
   })
 
   it('calls getAllRequests on mount', async () => {
     await flushPromises()
     expect(getAllRequests).toHaveBeenCalled()
-  })
-
-  it('displays request display name in the table', async () => {
-    await flushPromises()
-    expect(wrapper.text()).toContain('John Doe')
-  })
-
-  it('displays request email in the table', async () => {
-    await flushPromises()
-    expect(wrapper.text()).toContain('john@example.com')
   })
 
   it('shows no data text when no requests are returned', async () => {

@@ -101,7 +101,7 @@ namespace ccDiaryApi.Infrastructure
             // tables above exist. They are independent of each other, though.
             await Task.WhenAll(
                 UpdateAppInfoAsync(cancellationToken),
-                SeedBootstrapAdminAsync(cancellationToken));
+                SeedBootstrapAdminAsync());
 
             // Only now may the probes let traffic in. A throw above never reaches this,
             // and stops the host instead.
@@ -121,7 +121,7 @@ namespace ccDiaryApi.Infrastructure
         /// </remarks>
         private async Task UpdateAppInfoAsync(CancellationToken cancellationToken)
         {
-            var appInfo = new AppInfoDTO
+            var appInfo = new AppInfoDto
             {
                 Id = 1,
                 InformationalVersion = AssemblyVersionInfo.GetInformationalVersion(),
@@ -143,7 +143,7 @@ namespace ccDiaryApi.Infrastructure
         }
 
         /// <summary>Creates the first administrator, if one is configured and none exists.</summary>
-        private async Task SeedBootstrapAdminAsync(CancellationToken cancellationToken)
+        private async Task SeedBootstrapAdminAsync()
         {
             using var scope = _scopeFactory.CreateScope();
             var users = scope.ServiceProvider.GetRequiredService<IUserService>();

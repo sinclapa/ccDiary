@@ -16,7 +16,7 @@ namespace ccDiaryApiTest.Storage
         [TestMethod]
         public void RoundTrips_ADiaryEntry()
         {
-            var entry = new DiaryEntryDTO
+            var entry = new DiaryEntryDto
             {
                 DiaryEntryId = Guid.NewGuid(),
                 DiaryId = Guid.NewGuid(),
@@ -27,7 +27,7 @@ namespace ccDiaryApiTest.Storage
                 JourneyMode = JourneyMode.CrowFlies,
             };
 
-            var restored = TableJson.Deserialize<DiaryEntryDTO>(TableJson.Serialize(entry));
+            var restored = TableJson.Deserialize<DiaryEntryDto>(TableJson.Serialize(entry));
 
             Assert.IsNotNull(restored);
             Assert.AreEqual(entry.DiaryEntryId, restored.DiaryEntryId);
@@ -42,7 +42,7 @@ namespace ccDiaryApiTest.Storage
         {
             // A date coming back as Unspecified would shift the moment a caller
             // converted it, which is the bug UtcValueConverter existed to prevent.
-            var entry = new DiaryEntryDTO
+            var entry = new DiaryEntryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Location = "L",
@@ -50,7 +50,7 @@ namespace ccDiaryApiTest.Storage
                 Date = new DateTime(1916, 7, 1, 7, 30, 0, DateTimeKind.Utc),
             };
 
-            var restored = TableJson.Deserialize<DiaryEntryDTO>(TableJson.Serialize(entry));
+            var restored = TableJson.Deserialize<DiaryEntryDto>(TableJson.Serialize(entry));
 
             Assert.IsNotNull(restored?.Date);
             Assert.AreEqual(DateTimeKind.Utc, restored.Date!.Value.Kind);
@@ -59,7 +59,7 @@ namespace ccDiaryApiTest.Storage
         [TestMethod]
         public void TreatsUnspecifiedDatesAsUtcRatherThanLocal()
         {
-            var entry = new DiaryEntryDTO
+            var entry = new DiaryEntryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Location = "L",
@@ -67,7 +67,7 @@ namespace ccDiaryApiTest.Storage
                 Date = new DateTime(1916, 7, 1, 7, 30, 0, DateTimeKind.Unspecified),
             };
 
-            var restored = TableJson.Deserialize<DiaryEntryDTO>(TableJson.Serialize(entry));
+            var restored = TableJson.Deserialize<DiaryEntryDto>(TableJson.Serialize(entry));
 
             Assert.AreEqual(new DateTime(1916, 7, 1, 7, 30, 0, DateTimeKind.Utc), restored?.Date);
         }
@@ -75,7 +75,7 @@ namespace ccDiaryApiTest.Storage
         [TestMethod]
         public void WritesEnumsAsKebabCase_MatchingTheHttpContract()
         {
-            var entry = new DiaryEntryDTO
+            var entry = new DiaryEntryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Location = "L",
@@ -92,7 +92,7 @@ namespace ccDiaryApiTest.Storage
         [TestMethod]
         public void ReadsEnumsBackFromKebabCase()
         {
-            var entry = new DiaryEntryDTO
+            var entry = new DiaryEntryDto
             {
                 DiaryId = Guid.NewGuid(),
                 Location = "L",
@@ -101,7 +101,7 @@ namespace ccDiaryApiTest.Storage
                 JourneyMode = JourneyMode.CrowFlies,
             };
 
-            var restored = TableJson.Deserialize<DiaryEntryDTO>(TableJson.Serialize(entry));
+            var restored = TableJson.Deserialize<DiaryEntryDto>(TableJson.Serialize(entry));
 
             Assert.AreEqual(JourneyMode.CrowFlies, restored?.JourneyMode);
         }
@@ -109,8 +109,8 @@ namespace ccDiaryApiTest.Storage
         [TestMethod]
         public void Deserialize_ReturnsDefaultForEmptyInput()
         {
-            Assert.IsNull(TableJson.Deserialize<DiaryEntryDTO>(null));
-            Assert.IsNull(TableJson.Deserialize<DiaryEntryDTO>(string.Empty));
+            Assert.IsNull(TableJson.Deserialize<DiaryEntryDto>(null));
+            Assert.IsNull(TableJson.Deserialize<DiaryEntryDto>(string.Empty));
         }
 
         [TestMethod]
@@ -130,7 +130,7 @@ namespace ccDiaryApiTest.Storage
             // a row written before a property existed must still deserialise.
             var json = """{"diaryId":"11111111-1111-1111-1111-111111111111","location":"L","entry":"E"}""";
 
-            var restored = TableJson.Deserialize<DiaryEntryDTO>(json);
+            var restored = TableJson.Deserialize<DiaryEntryDto>(json);
 
             Assert.IsNotNull(restored);
             Assert.AreEqual("L", restored.Location);

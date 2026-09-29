@@ -88,9 +88,9 @@ ccDiary/
 
 | Model | Table | Key Fields |
 |---|---|---|
-| DiaryDTO | Diary | DiaryId (Guid PK), Title (5-50 chars), Author (5-50 chars), Description |
-| DiaryEntryDTO | DiaryEntry | DiaryEntryId (Guid PK), Date, Location, Entry, DiaryId (FK) |
-| DiaryArchiveDTO | (composite) | Diary + List\<DiaryEntryDTO\> |
+| DiaryDto | Diary | DiaryId (Guid PK), Title (5-50 chars), Author (5-50 chars), Description |
+| DiaryEntryDto | DiaryEntry | DiaryEntryId (Guid PK), Date, Location, Entry, DiaryId (FK) |
+| DiaryArchiveDto | (composite) | Diary + List\<DiaryEntryDto\> |
 
 ## Development Commands
 

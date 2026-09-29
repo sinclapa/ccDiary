@@ -28,12 +28,12 @@ namespace ccDiaryApiTest
          : WebApplicationFactory<TProgram>
         where TProgram : class
     {
+        /// <summary>The client id the application runs as, for tests of its own app-only token.</summary>
+        public const string ApplicationClientId = "00000000-aaaa-bbbb-cccc-000000000001";
+
         private readonly string _prefix = "t" + Guid.NewGuid().ToString("N")[..8];
 
         public string DefaultUserId { get; set; } = "TestUser";
-
-        /// <summary>The client id the application runs as, for tests of its own app-only token.</summary>
-        public const string ApplicationClientId = "00000000-aaaa-bbbb-cccc-000000000001";
 
         /// <summary>
         /// Gets or sets the redeem URL returned by the mocked <see cref="IGraphService"/>.

@@ -31,7 +31,7 @@ namespace ccDiaryApi.Controllers.v1
 
         [Route("{diaryId:guid}")]
         [HttpGet]
-        public async Task<ActionResult<DiaryArchiveDTO>> Export(Guid diaryId)
+        public async Task<ActionResult<DiaryArchiveDto>> Export(Guid diaryId)
         {
             _logger.LogInformation("Export requested. DiaryId={DiaryId}", SanitizeForLog(diaryId));
 
@@ -66,10 +66,10 @@ namespace ccDiaryApi.Controllers.v1
         [HttpPost]
         [AllowAnonymous]
         [RequestSizeLimit(RequestLimits.ArchiveImportBytes)]
-        public async Task<ActionResult<DiaryDTO>> Import(
+        public async Task<ActionResult<DiaryDto>> Import(
             [FromServices] IWebHostEnvironment env,
             [FromServices] IAuthorizationService authorization,
-            DiaryArchiveDTO diaryArchive)
+            DiaryArchiveDto diaryArchive)
         {
             bool isLocalEnvironment = env.IsEnvironment("local")
                 || env.IsEnvironment("LocalContainer")

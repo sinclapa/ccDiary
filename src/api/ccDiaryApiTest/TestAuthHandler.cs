@@ -65,7 +65,7 @@ namespace ccDiaryApiTest
 
             if (Context.Request.Headers.TryGetValue(AppClientId, out var appClientId) && !string.IsNullOrEmpty(appClientId[0]))
             {
-                claims.Add(new Claim("azp", appClientId[0]!));
+                claims.Add(new Claim("azp", appClientId.ToString()));
             }
 
             // Extract email from the X-Test-Email header if present

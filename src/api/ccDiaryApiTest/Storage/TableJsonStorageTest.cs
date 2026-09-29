@@ -157,7 +157,11 @@ namespace ccDiaryApiTest.Storage
         [TestMethod]
         public async Task DeleteBatchWithNoKeysIsANoOp()
         {
+            await _table.AddEntityAsync(new TableEntity("p", "kept"));
+
             await TableJson.DeleteBatchAsync(_table, "p", Array.Empty<string>());
+
+            Assert.IsNotNull(await TableJson.GetIfExistsAsync(_table, "p", "kept"));
         }
     }
 }

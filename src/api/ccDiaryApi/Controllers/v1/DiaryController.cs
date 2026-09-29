@@ -30,7 +30,7 @@ namespace ccDiaryApi.Controllers.v1
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<PagedResultDTO<DiaryDTO>>> Get(
+        public async Task<ActionResult<PagedResultDto<DiaryDto>>> Get(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12,
             [FromQuery] string? search = null)
@@ -45,7 +45,7 @@ namespace ccDiaryApi.Controllers.v1
         [Route("{diaryId:guid}")]
         [HttpGet]
         [AllowAnonymous]
-        public async Task<ActionResult<DiaryDTO>> Get(Guid diaryId)
+        public async Task<ActionResult<DiaryDto>> Get(Guid diaryId)
         {
             var diary = await _diaryService.GetDiaryAsync(diaryId);
             return Ok(diary);
@@ -53,7 +53,7 @@ namespace ccDiaryApi.Controllers.v1
 
         [HttpPost]
         [Authorize(Policy = "DiaryContributor")]
-        public async Task<ActionResult<DiaryDTO>> Create([FromBody] DiaryDTO diary)
+        public async Task<ActionResult<DiaryDto>> Create([FromBody] DiaryDto diary)
         {
             diary.OwnerId = User.GetOid();
             var retDiary = await _diaryService.CreateAsync(diary);
@@ -63,7 +63,7 @@ namespace ccDiaryApi.Controllers.v1
 
         [HttpPut]
         [Authorize(Policy = "DiaryContributor")]
-        public async Task<ActionResult<DiaryDTO>> Update([FromBody] DiaryDTO diary)
+        public async Task<ActionResult<DiaryDto>> Update([FromBody] DiaryDto diary)
         {
             if (!User.IsInRole("DiaryAdmin"))
             {

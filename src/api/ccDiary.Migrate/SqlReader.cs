@@ -15,10 +15,10 @@ using Microsoft.Data.SqlClient;
     Justification = "Reads a live SQL Server; there is no database left in the test environment to read from.")]
 internal sealed class SqlReader(string connectionString)
 {
-    public async Task<List<DiaryDTO>> ReadDiariesAsync()
+    public async Task<List<DiaryDto>> ReadDiariesAsync()
     {
         const string sql = "SELECT DiaryId, Title, Author, Description, OwnerId FROM Diary";
-        var diaries = new List<DiaryDTO>();
+        var diaries = new List<DiaryDto>();
 
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
@@ -27,20 +27,20 @@ internal sealed class SqlReader(string connectionString)
 
         while (await reader.ReadAsync())
         {
-            diaries.Add(new DiaryDTO
+            diaries.Add(new DiaryDto
             {
                 DiaryId = reader.GetGuid(0),
                 Title = reader.GetString(1),
                 Author = reader.GetString(2),
-                Description = reader.IsDBNull(3) ? null : reader.GetString(3),
-                OwnerId = reader.IsDBNull(4) ? null : reader.GetString(4),
+                Description = StringOrNull(reader, 3),
+                OwnerId = StringOrNull(reader, 4),
             });
         }
 
         return diaries;
     }
 
-    public async Task<List<DiaryEntryDTO>> ReadEntriesAsync(Guid diaryId)
+    public async Task<List<DiaryEntryDto>> ReadEntriesAsync(Guid diaryId)
     {
         const string sql = """
             SELECT DiaryEntryId, Date, Location, Entry, MapLocation, ShowMap,
@@ -51,7 +51,7 @@ internal sealed class SqlReader(string connectionString)
             ORDER BY Date
             """;
 
-        var entries = new List<DiaryEntryDTO>();
+        var entries = new List<DiaryEntryDto>();
 
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
@@ -61,26 +61,26 @@ internal sealed class SqlReader(string connectionString)
 
         while (await reader.ReadAsync())
         {
-            entries.Add(new DiaryEntryDTO
+            entries.Add(new DiaryEntryDto
             {
                 DiaryEntryId = reader.GetGuid(0),
 
                 // Stored as datetime2 with no offset; the application has always treated
                 // these as UTC, so the kind is asserted rather than converted.
                 Date = reader.IsDBNull(1) ? null : DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc),
-                Location = reader.IsDBNull(2) ? null : reader.GetString(2),
-                Entry = reader.IsDBNull(3) ? null : reader.GetString(3),
-                MapLocation = reader.IsDBNull(4) ? null : reader.GetString(4),
-                ShowMap = !reader.IsDBNull(5) && reader.GetBoolean(5),
-                FromLocation = reader.IsDBNull(6) ? null : reader.GetString(6),
-                ToLocation = reader.IsDBNull(7) ? null : reader.GetString(7),
-                ShowJourney = !reader.IsDBNull(8) && reader.GetBoolean(8),
+                Location = StringOrNull(reader, 2),
+                Entry = StringOrNull(reader, 3),
+                MapLocation = StringOrNull(reader, 4),
+                ShowMap = FlagOrFalse(reader, 5),
+                FromLocation = StringOrNull(reader, 6),
+                ToLocation = StringOrNull(reader, 7),
+                ShowJourney = FlagOrFalse(reader, 8),
 
                 // Enums were persisted as ints by EF; they are stored as kebab-case
                 // strings now, and the DTO carries the conversion.
                 JourneyMode = reader.IsDBNull(9) ? JourneyMode.CrowFlies : (JourneyMode)reader.GetInt32(9),
-                ImageData = reader.IsDBNull(10) ? null : reader.GetString(10),
-                ImageContentType = reader.IsDBNull(11) ? null : reader.GetString(11),
+                ImageData = StringOrNull(reader, 10),
+                ImageContentType = StringOrNull(reader, 11),
                 DiaryId = reader.GetGuid(12),
             });
         }
@@ -140,10 +140,18 @@ internal sealed class SqlReader(string connectionString)
                 RequestedAt = DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc),
                 ProcessedAt = reader.IsDBNull(5) ? null : DateTime.SpecifyKind(reader.GetDateTime(5), DateTimeKind.Utc),
                 ProcessedByUserId = reader.IsDBNull(6) ? null : reader.GetGuid(6),
-                InviteRedeemUrl = reader.IsDBNull(7) ? null : reader.GetString(7),
+                InviteRedeemUrl = StringOrNull(reader, 7),
             });
         }
 
         return requests;
     }
+
+    /// <summary>Reads a nullable text column.</summary>
+    private static string? StringOrNull(SqlDataReader reader, int ordinal) =>
+        reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+
+    /// <summary>Reads a nullable bit column, treating NULL as false.</summary>
+    private static bool FlagOrFalse(SqlDataReader reader, int ordinal) =>
+        !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
 }

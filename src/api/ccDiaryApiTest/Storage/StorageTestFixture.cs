@@ -62,6 +62,31 @@ namespace ccDiaryApiTest.Storage
         public StartupReadiness Readiness { get; } = new StartupReadiness();
 
         /// <summary>
+        /// Fails with an actionable message when the emulator is not running, rather
+        /// than letting every storage test die on a raw socket exception.
+        /// </summary>
+        public static void RequireAzurite()
+        {
+            try
+            {
+                using var client = new TcpClient();
+                if (!client.ConnectAsync("127.0.0.1", 10002).Wait(TimeSpan.FromSeconds(5)))
+                {
+                    throw new SocketException();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Deliberately a failure, not Assert.Inconclusive: a skip would let CI
+                // go green when the Azurite service container never came up.
+                Assert.Fail(
+                    "Azurite is not reachable on 127.0.0.1:10002. Start it with " +
+                    "'docker compose -f src/api/docker-compose.yml up -d azurite'. " +
+                    $"({ex.GetType().Name})");
+            }
+        }
+
+        /// <summary>
         /// Creates a fixture with a unique prefix and its tables and containers already made.
         /// </summary>
         /// <returns>The ready fixture.</returns>
@@ -242,31 +267,6 @@ namespace ccDiaryApiTest.Storage
                 {
                     // As above.
                 }
-            }
-        }
-
-        /// <summary>
-        /// Fails with an actionable message when the emulator is not running, rather
-        /// than letting every storage test die on a raw socket exception.
-        /// </summary>
-        public static void RequireAzurite()
-        {
-            try
-            {
-                using var client = new TcpClient();
-                if (!client.ConnectAsync("127.0.0.1", 10002).Wait(TimeSpan.FromSeconds(5)))
-                {
-                    throw new SocketException();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Deliberately a failure, not Assert.Inconclusive: a skip would let CI
-                // go green when the Azurite service container never came up.
-                Assert.Fail(
-                    "Azurite is not reachable on 127.0.0.1:10002. Start it with " +
-                    "'docker compose -f src/api/docker-compose.yml up -d azurite'. " +
-                    $"({ex.GetType().Name})");
             }
         }
     }

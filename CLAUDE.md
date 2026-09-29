@@ -50,7 +50,7 @@ ccDiary/
     │   │   ├── Controllers/v1/        # API v1 controllers
     │   │   ├── Data/
     │   │   │   ├── Storage/           # TableStore, BlobStore, StorageKeys, TableJson
-    │   │   │   └── Model/             # Entities + enums + PagedResultDTO
+    │   │   │   └── Model/             # Entities + enums + PagedResultDto
     │   │   ├── Endpoints/             # Minimal-API endpoints (assembly info)
     │   │   ├── Extensions/            # OTel, request logging, claims, app builder
     │   │   ├── Health/                # Steeltoe IHealthContributor implementations
@@ -159,14 +159,14 @@ Rolling back a bad deploy means uploading a previous release's `func-package.zip
 
 | Model | Table | Notes |
 |---|---|---|
-| `DiaryDTO` | Diary | DiaryId (Guid PK), Title (5–50), Author (≤50), Description, **OwnerId** |
-| `DiaryEntryDTO` | DiaryEntry | Date, Location, Entry, map fields, journey fields, `Images` (up to 10, base64 inline; `ImageData`/`ImageContentType` repeat the first), DiaryId FK |
+| `DiaryDto` | Diary | DiaryId (Guid PK), Title (5–50), Author (≤50), Description, **OwnerId** |
+| `DiaryEntryDto` | DiaryEntry | Date, Location, Entry, map fields, journey fields, `Images` (up to 10, base64 inline; `ImageData`/`ImageContentType` repeat the first), DiaryId FK |
 | `AppUserDto` | AppUser | EntraObjectId (the `oid`), DisplayName, Email, `AppRole` |
 | `AccessRequestDto` | AccessRequest | Registration requests + `RequestStatus`, invite redeem URL |
 | `MapTileCacheDto` / `GeocodingCacheDto` / `RoutingCacheDto` | *Cache | Server-side caches for the map proxy |
-| `AppInfoDTO` | AppInfo | `DatabaseLastUpdated`, surfaced by `AppInfoController` |
-| `DiaryArchiveDTO` | (composite) | Diary + `List<DiaryEntryDTO>` |
-| `PagedResultDTO<T>` | (transport) | `Items`, `TotalCount`, `Page`, `PageSize` |
+| `AppInfoDto` | AppInfo | `DatabaseLastUpdated`, surfaced by `AppInfoController` |
+| `DiaryArchiveDto` | (composite) | Diary + `List<DiaryEntryDto>` |
+| `PagedResultDto<T>` | (transport) | `Items`, `TotalCount`, `Page`, `PageSize` |
 
 Dates are stored and returned as UTC via `UtcDateTimeJsonConverter` on the storage serializer.
 

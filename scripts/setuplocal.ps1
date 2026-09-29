@@ -197,107 +197,67 @@ else {
 
 Write-Host "Configuring HTTPS certificate..." -ForegroundColor Cyan
 
+# Windows and Linux (Codespaces) prepare the certificate the same way; only the heading differs.
+function Initialize-DevCertificate {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Heading
+    )
+    Write-Host "  $Heading" -ForegroundColor Green
+
+    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
+    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
+    
+    # Check if certificate exists and validate password
+    $needsRegeneration = $false
+    if (Test-Path $httpsCertOutputPath) {
+        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
+        try {
+            # Try to load the certificate with the password
+            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
+            $cert.Dispose()
+            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
+        } catch {
+            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
+            $needsRegeneration = $true
+        }
+    } else {
+        Write-Host "  Certificate not found" -ForegroundColor Gray
+        $needsRegeneration = $true
+    }
+    
+    if ($needsRegeneration) {
+        # Remove existing certificate if it exists
+        if (Test-Path $httpsCertOutputPath) {
+            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
+            Remove-Item $httpsCertOutputPath -Force
+        }
+        
+        # Clean existing dev-certs to ensure fresh generation
+        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
+        dotnet dev-certs https --clean 2>&1 | Out-Null
+        
+        # Generate a new certificate with the configured password, as Visual Studio does
+        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
+        dotnet dev-certs https --trust 2>&1 | Out-Null
+        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
+        
+        if (-not (Test-Path $httpsCertOutputPath)) {
+            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
+            exit 1
+        }
+        
+        Write-Host "  Certificate created successfully" -ForegroundColor Green
+    }
+    
+    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
+    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
+}
+
 if ($onWindows) {
-    Write-Host "  Windows detected: Installing development certificate" -ForegroundColor Green
-    
-    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
-    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
-    
-    # Check if certificate exists and validate password
-    $needsRegeneration = $false
-    if (Test-Path $httpsCertOutputPath) {
-        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
-        try {
-            # Try to load the certificate with the password
-            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
-            $cert.Dispose()
-            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
-        } catch {
-            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
-            $needsRegeneration = $true
-        }
-    } else {
-        Write-Host "  Certificate not found" -ForegroundColor Gray
-        $needsRegeneration = $true
-    }
-    
-    if ($needsRegeneration) {
-        # Remove existing certificate if it exists
-        if (Test-Path $httpsCertOutputPath) {
-            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
-            Remove-Item $httpsCertOutputPath -Force
-        }
-        
-        # Clean existing dev-certs to ensure fresh generation
-        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
-        dotnet dev-certs https --clean 2>&1 | Out-Null
-        
-        # Generate new certificate with the password - this is what Visual Studio does
-        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
-        dotnet dev-certs https --trust 2>&1 | Out-Null
-        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
-        
-        if (-not (Test-Path $httpsCertOutputPath)) {
-            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
-            exit 1
-        }
-        
-        Write-Host "  Certificate created successfully" -ForegroundColor Green
-    }
-    
-    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
-    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
+    Initialize-DevCertificate -Heading "Windows detected: Installing development certificate"
 } else {
-    # Linux/Codespaces: Generate and manage certificates locally
-    Write-Host "  Linux detected: Generating development certificate" -ForegroundColor Green
-    
-    New-Item -ItemType Directory -Path $httpsCertsPath -Force | Out-Null
-    $httpsCertOutputPath = Join-Path $httpsCertsPath $httpsCertFile
-    
-    # Check if certificate exists and validate password
-    $needsRegeneration = $false
-    if (Test-Path $httpsCertOutputPath) {
-        Write-Host "  Certificate found, validating password..." -ForegroundColor Gray
-        try {
-            # Try to load the certificate with the password
-            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($httpsCertOutputPath, $httpsCertPassword)
-            $cert.Dispose()
-            Write-Host "  Certificate password is valid, skipping regeneration" -ForegroundColor Green
-        } catch {
-            Write-Host "  Certificate password is invalid or certificate is corrupted" -ForegroundColor Yellow
-            $needsRegeneration = $true
-        }
-    } else {
-        Write-Host "  Certificate not found" -ForegroundColor Gray
-        $needsRegeneration = $true
-    }
-    
-    if ($needsRegeneration) {
-        # Remove existing certificate if it exists
-        if (Test-Path $httpsCertOutputPath) {
-            Write-Host "  Removing invalid certificate..." -ForegroundColor Gray
-            Remove-Item $httpsCertOutputPath -Force
-        }
-        
-        # Clean existing dev-certs to ensure fresh generation
-        Write-Host "  Cleaning existing dev-certs..." -ForegroundColor Gray
-        dotnet dev-certs https --clean 2>&1 | Out-Null
-        
-        # Generate new certificate with the password from config
-        Write-Host "  Generating new HTTPS certificate..." -ForegroundColor Gray
-        dotnet dev-certs https --trust 2>&1 | Out-Null
-        dotnet dev-certs https -ep $httpsCertOutputPath -p $httpsCertPassword 2>&1 | Out-Null
-        
-        if (-not (Test-Path $httpsCertOutputPath)) {
-            Write-Error "Failed to create HTTPS certificate at path: $httpsCertOutputPath"
-            exit 1
-        }
-        
-        Write-Host "  Certificate created successfully" -ForegroundColor Green
-    }
-    
-    Write-Host "  Path: $httpsCertOutputPath" -ForegroundColor Gray
-    Write-Host "  Password: $httpsCertPassword" -ForegroundColor Gray
+    Initialize-DevCertificate -Heading "Linux detected: Generating development certificate"
 }
 
 $apiEnv["USER_SECRETS_PATH"] = $userSecretsPath
@@ -418,11 +378,13 @@ function SetValueInHashTable {
         [Parameter(Mandatory, Position = 2)]
         [System.String]$Value
     )
-    if ($HashTable.ContainsKey($Name)) {
-        $HashTable[$Name] = $Value
-    }
-    else {
-        $HashTable.Add($Name, $Value)
+    process {
+        if ($HashTable.ContainsKey($Name)) {
+            $HashTable[$Name] = $Value
+        }
+        else {
+            $HashTable.Add($Name, $Value)
+        }
     }
 }
 

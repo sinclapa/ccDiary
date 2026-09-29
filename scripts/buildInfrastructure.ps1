@@ -81,7 +81,7 @@ else {
     $params = @{}
 }
 
-if (-Not ($params.ContainsKey("Name"))) {
+if (-not ($params.ContainsKey("Name"))) {
     $name = Read-Host -Prompt "Enter the name of the project"
     $params.Add("Name", $name)
 }
@@ -96,7 +96,7 @@ if ($PSBoundParameters.ContainsKey('EnvironmentParam')) {
     # Update settings file with the new environment value
     $params["Environment"] = $environment
 }
-elseif (-Not ($params.ContainsKey("Environment"))) {
+elseif (-not ($params.ContainsKey("Environment"))) {
     $environment = Read-Host -Prompt "Enter the environment name"
     $params.Add("Environment", $environment)
 }
@@ -104,14 +104,14 @@ else {
     $environment = $params["Environment"]
 }
 
-if (-Not ($params.ContainsKey("Location"))) {
+if (-not ($params.ContainsKey("Location"))) {
     $location = Read-Host -Prompt "Enter the Azure location e.g. westeurope"
     $params.Add("Location", $location)
 }
 else {
     $location = $params["Location"]
 }
-if (-Not ($params.ContainsKey("GitHubOwnerRepo"))) {
+if (-not ($params.ContainsKey("GitHubOwnerRepo"))) {
     $gitHubOwnerRepo = Read-Host -Prompt "Enter the GitHub Owner/Repo e.g. last part from https://github.com/OWNER/REPO"
     $gitHubRepo = "https://github.com/${gitHubOwnerRepo}"
     $params.Add("GitHubOwnerRepo", $gitHubRepo)
@@ -120,7 +120,7 @@ else {
     $gitHubOwnerRepo = $params["GitHubOwnerRepo"]
     $gitHubRepo = "https://github.com/${gitHubOwnerRepo}"
 }
-if (-Not ($params.ContainsKey("ExternalDomainName"))) {
+if (-not ($params.ContainsKey("ExternalDomainName"))) {
     $externalDomainName = Read-Host -Prompt "Enter the external domain name for prod (leave empty to skip)"
     $params.Add("ExternalDomainName", $externalDomainName)
 }
@@ -133,7 +133,7 @@ if ($environment -ne "prod") {
     $externalDomainName = ""
 }
 
-if (-Not ($params.ContainsKey("SonarApiProjectKey"))) {
+if (-not ($params.ContainsKey("SonarApiProjectKey"))) {
     $sonarApiProjectKey = Read-Host -Prompt "Enter the SonarCloud API project key (e.g. cookingcode_ccDiary_api)"
     $params.Add("SonarApiProjectKey", $sonarApiProjectKey)
 }
@@ -141,7 +141,7 @@ else {
     $sonarApiProjectKey = $params["SonarApiProjectKey"]
 }
 
-if (-Not ($params.ContainsKey("SonarUiProjectKey"))) {
+if (-not ($params.ContainsKey("SonarUiProjectKey"))) {
     $sonarUiProjectKey = Read-Host -Prompt "Enter the SonarCloud UI project key (e.g. cookingcode_ccDiary_ui)"
     $params.Add("SonarUiProjectKey", $sonarUiProjectKey)
 }
@@ -149,7 +149,7 @@ else {
     $sonarUiProjectKey = $params["SonarUiProjectKey"]
 }
 
-if (-Not ($params.ContainsKey("SonarInfraProjectKey"))) {
+if (-not ($params.ContainsKey("SonarInfraProjectKey"))) {
     $sonarInfraProjectKey = Read-Host -Prompt "Enter the SonarCloud Infra project key (e.g. cookingcode_ccDiary_infra)"
     $params.Add("SonarInfraProjectKey", $sonarInfraProjectKey)
 }
@@ -157,7 +157,7 @@ else {
     $sonarInfraProjectKey = $params["SonarInfraProjectKey"]
 }
 
-if (-Not ($params.ContainsKey("SonarOrganization"))) {
+if (-not ($params.ContainsKey("SonarOrganization"))) {
     $sonarOrganization = Read-Host -Prompt "Enter the SonarQube organization (e.g. name)"
     $params.Add("SonarOrganization", $sonarOrganization)
 }
@@ -165,7 +165,7 @@ else {
     $sonarOrganization = $params["SonarOrganization"]
 }
 
-if (-Not ($params.ContainsKey("SonarToken"))) {
+if (-not ($params.ContainsKey("SonarToken"))) {
     $sonarToken = Read-Host -Prompt "Enter the SonarQube access token" -AsSecureString
     $sonarToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sonarToken))
     $params.Add("SonarToken", $sonarToken)
@@ -197,7 +197,7 @@ while (-not (Test-SonarToken -Token $sonarToken)) {
 $params["SonarToken"] = $sonarToken
 Write-Host "SonarCloud token validated." -ForegroundColor Green
 
-if (-Not ($params.ContainsKey("GrafanaOtlpEndpoint"))) {
+if (-not ($params.ContainsKey("GrafanaOtlpEndpoint"))) {
     $grafanaOtlpEndpoint = Read-Host -Prompt "Enter the Grafana Cloud OTLP endpoint (leave empty to disable telemetry, e.g. https://otlp-gateway-prod-eu-west-0.grafana.net/otlp)"
     $params.Add("GrafanaOtlpEndpoint", $grafanaOtlpEndpoint)
 }
@@ -205,7 +205,7 @@ else {
     $grafanaOtlpEndpoint = $params["GrafanaOtlpEndpoint"]
 }
 
-if (-Not ($params.ContainsKey("GrafanaInstanceId"))) {
+if (-not ($params.ContainsKey("GrafanaInstanceId"))) {
     $grafanaInstanceId = Read-Host -Prompt "Enter the Grafana Cloud instance ID (numeric, found on the OTLP connection page)"
     $params.Add("GrafanaInstanceId", $grafanaInstanceId)
 }
@@ -213,7 +213,7 @@ else {
     $grafanaInstanceId = $params["GrafanaInstanceId"]
 }
 
-if (-Not ($params.ContainsKey("GrafanaApiToken"))) {
+if (-not ($params.ContainsKey("GrafanaApiToken"))) {
     $grafanaApiTokenSecure = Read-Host -Prompt "Enter the Grafana Cloud API token (scopes: metrics:write, logs:write, traces:write)" -AsSecureString
     $grafanaApiToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($grafanaApiTokenSecure))
     $params.Add("GrafanaApiToken", $grafanaApiToken)
@@ -228,7 +228,7 @@ if ($grafanaInstanceId -and $grafanaApiToken) {
     $grafanaOtlpAuthHeader = "Authorization=Basic $([System.Convert]::ToBase64String($grafanaOtlpAuthHeaderBytes))"
 }
 
-if (-Not ($params.ContainsKey("GrafanaFaroUrl"))) {
+if (-not ($params.ContainsKey("GrafanaFaroUrl"))) {
     $grafanaFaroUrl = Read-Host -Prompt "Enter the Grafana Cloud Faro collector URL (leave empty to disable frontend telemetry, e.g. https://faro-collector-prod-eu-west-0.grafana.net/collect/<appId>)"
     $params.Add("GrafanaFaroUrl", $grafanaFaroUrl)
 }
@@ -236,7 +236,7 @@ else {
     $grafanaFaroUrl = $params["GrafanaFaroUrl"]
 }
 
-if (-Not ($params.ContainsKey("SmtpHost"))) {
+if (-not ($params.ContainsKey("SmtpHost"))) {
     $smtpHost = Read-Host -Prompt "Enter the SMTP server hostname (e.g. smtp.office365.com, leave empty to use Entra invitation email)"
     $params.Add("SmtpHost", $smtpHost)
 }
@@ -245,7 +245,7 @@ else {
 }
 
 if ($smtpHost) {
-    if (-Not ($params.ContainsKey("SmtpPort"))) {
+    if (-not ($params.ContainsKey("SmtpPort"))) {
         $smtpPort = Read-Host -Prompt "Enter the SMTP port (587 for STARTTLS)"
         if (-not $smtpPort) { $smtpPort = "587" }
         $params.Add("SmtpPort", $smtpPort)
@@ -254,7 +254,7 @@ if ($smtpHost) {
         $smtpPort = $params["SmtpPort"]
     }
 
-    if (-Not ($params.ContainsKey("SmtpUsername"))) {
+    if (-not ($params.ContainsKey("SmtpUsername"))) {
         $smtpUsername = Read-Host -Prompt "Enter the SMTP username / email address"
         $params.Add("SmtpUsername", $smtpUsername)
     }
@@ -262,7 +262,7 @@ if ($smtpHost) {
         $smtpUsername = $params["SmtpUsername"]
     }
 
-    if (-Not ($params.ContainsKey("SmtpPassword"))) {
+    if (-not ($params.ContainsKey("SmtpPassword"))) {
         $smtpPasswordSecure = Read-Host -Prompt "Enter the SMTP password" -AsSecureString
         $smtpPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($smtpPasswordSecure))
         $params.Add("SmtpPassword", $smtpPassword)
@@ -271,7 +271,7 @@ if ($smtpHost) {
         $smtpPassword = $params["SmtpPassword"]
     }
 
-    if (-Not ($params.ContainsKey("SmtpFrom"))) {
+    if (-not ($params.ContainsKey("SmtpFrom"))) {
         $smtpFrom = Read-Host -Prompt "Enter the From email address (e.g. noreply@yourdomain.com)"
         $params.Add("SmtpFrom", $smtpFrom)
     }
@@ -279,7 +279,7 @@ if ($smtpHost) {
         $smtpFrom = $params["SmtpFrom"]
     }
 
-    if (-Not ($params.ContainsKey("SmtpFromName"))) {
+    if (-not ($params.ContainsKey("SmtpFromName"))) {
         $smtpFromName = Read-Host -Prompt "Enter the From display name (leave empty for 'ccDiary')"
         if (-not $smtpFromName) { $smtpFromName = "ccDiary" }
         $params.Add("SmtpFromName", $smtpFromName)
@@ -296,7 +296,7 @@ else {
     $smtpFromName = ""
 }
 
-if (-Not ($params.ContainsKey("BootstrapAdminObjectId"))) {
+if (-not ($params.ContainsKey("BootstrapAdminObjectId"))) {
     $bootstrapAdminObjectId = Read-Host -Prompt "Enter the Bootstrap Admin Entra Object ID (leave empty to skip)"
     $params.Add("BootstrapAdminObjectId", $bootstrapAdminObjectId)
 }
@@ -304,7 +304,7 @@ else {
     $bootstrapAdminObjectId = $params["BootstrapAdminObjectId"]
 }
 
-if (-Not ($params.ContainsKey("BootstrapAdminEmail"))) {
+if (-not ($params.ContainsKey("BootstrapAdminEmail"))) {
     $bootstrapAdminEmail = Read-Host -Prompt "Enter the Bootstrap Admin email (leave empty to skip)"
     $params.Add("BootstrapAdminEmail", $bootstrapAdminEmail)
 }
@@ -312,7 +312,7 @@ else {
     $bootstrapAdminEmail = $params["BootstrapAdminEmail"]
 }
 
-if (-Not ($params.ContainsKey("BootstrapAdminDisplayName"))) {
+if (-not ($params.ContainsKey("BootstrapAdminDisplayName"))) {
     $bootstrapAdminDisplayName = Read-Host -Prompt "Enter the Bootstrap Admin display name (leave empty to skip)"
     $params.Add("BootstrapAdminDisplayName", $bootstrapAdminDisplayName)
 }
@@ -502,7 +502,7 @@ $priorGitHubKeyIds = @(az ad app credential list `
   --query "[?displayName=='GIT_HUB'].keyId" `
   --output tsv | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
 
-$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 --append | ConvertFrom-JSON
+$entraClientCredentials = az ad app credential reset --id $entraClientId --display-name GIT_HUB --years 2 --append | ConvertFrom-Json
 $entraClientCredentialsPassword = $entraClientCredentials.password
 
 if (-not $entraClientCredentialsPassword) {

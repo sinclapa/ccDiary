@@ -10,24 +10,24 @@ namespace ccDiaryApi.Services
     {
         Task<List<int>> SearchDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until, SearchType searchType, int utcOffsetMinutes = 0);
 
-        Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until);
+        Task<List<DiaryEntryDto>> GetDiaryEntriesAsync(Guid diaryId, DateTime from, DateTime until);
 
-        Task<List<DiaryEntryDTO>> GetDiaryEntriesAsync(Guid diaryId);
+        Task<List<DiaryEntryDto>> GetDiaryEntriesAsync(Guid diaryId);
 
-        Task<DiaryEntryDTO?> GetDiaryEntryAsync(Guid id);
+        Task<DiaryEntryDto?> GetDiaryEntryAsync(Guid id);
 
         Task<DiaryDateRange> GetDiaryDateRangeAsync(Guid diaryId);
 
-        Task DeleteDiaryEntryAsync(DiaryEntryDTO diaryEntry);
+        Task DeleteDiaryEntryAsync(DiaryEntryDto diaryEntry);
 
-        Task<DiaryEntryDTO> CreateDiaryEntryAsync(DiaryEntryDTO diaryEntry);
+        Task<DiaryEntryDto> CreateDiaryEntryAsync(DiaryEntryDto diaryEntry);
 
-        Task<DiaryEntryDTO> UpdateDiaryEntryAsync(DiaryEntryDTO diaryEntry);
+        Task<DiaryEntryDto> UpdateDiaryEntryAsync(DiaryEntryDto diaryEntry);
 
         Task<DateTime> MinDiaryEntryDateAsync(Guid diaryId);
 
         Task<DateTime> MaxDiaryEntryDateAsync(Guid diaryId);
 
-        Task<PagedResultDTO<DiaryEntryDTO>> TextSearchDiaryEntriesAsync(Guid diaryId, string search, int page = 1, int pageSize = 20);
+        Task<PagedResultDto<DiaryEntryDto>> TextSearchDiaryEntriesAsync(Guid diaryId, string search, int page = 1, int pageSize = 20);
     }
 }

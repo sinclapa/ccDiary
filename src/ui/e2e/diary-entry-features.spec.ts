@@ -114,7 +114,7 @@ test.describe('Map display on diary entries', () => {
   })
 })
 
-// ─── API: new fields on DiaryEntryDTO ──────────────────────────────────────────
+// ─── API: new fields on DiaryEntryDto ──────────────────────────────────────────
 
 test.describe('DiaryEntry API — mapLocation and showMap fields', () => {
   let ww1DiaryId: string

@@ -8,14 +8,14 @@ namespace ccDiaryApi.Services
 
     public interface IDiaryService
     {
-        Task<PagedResultDTO<DiaryDTO>> GetDiariesAsync(int page, int pageSize, string? search = null);
+        Task<PagedResultDto<DiaryDto>> GetDiariesAsync(int page, int pageSize, string? search = null);
 
-        Task<DiaryDTO?> GetDiaryAsync(Guid diaryId);
+        Task<DiaryDto?> GetDiaryAsync(Guid diaryId);
 
-        Task<DiaryDTO> CreateAsync(DiaryDTO diary);
+        Task<DiaryDto> CreateAsync(DiaryDto diary);
 
-        Task<DiaryDTO> UpdateAsync(DiaryDTO diary);
+        Task<DiaryDto> UpdateAsync(DiaryDto diary);
 
-        Task DeleteAsync(DiaryDTO diary);
+        Task DeleteAsync(DiaryDto diary);
     }
 }
