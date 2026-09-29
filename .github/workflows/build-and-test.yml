@@ -613,20 +613,28 @@ jobs:
         run: |
           zip -r ui-dist.zip ui-dist
 
-      - name: Create Draft Release
+      # Publishing the release is what deploys prod: release-prod.yml runs on
+      # `release: published`. It is published with the bot's token because a release
+      # published with GITHUB_TOKEN deliberately triggers no other workflow. The deploy runs
+      # as its own workflow, not as a job here, so the next push to main — which cancels
+      # this run — cannot cancel a prod deploy halfway through.
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.BOT_TOKEN }}
           tag_name: v${{ needs.build-prep.outputs.app_version }}
           name: Release ${{ needs.build-prep.outputs.app_version }}
           body: |
             ## Info
-            Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
+            Commit ${{ github.sha }} was deployed to `staging` and passed its end-to-end run. [See code diff](${{ github.event.compare }}).
 
             It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
 
-            ## How to Promote?
-            In order to promote this to prod, edit the draft and press **"Publish release"**.
-          draft: true
+            ## Deployment
+            Publishing this release deploys it to prod automatically. To roll back, run the
+            **Release to prod** workflow from `main` with an earlier tag.
+          draft: false
+          make_latest: true
           files: |
             ui-dist.zip
             func-package/func-package.zip
