@@ -153,7 +153,7 @@
     const redirectPath = await handleRedirect()
     const destination = redirectPath === '/register' ? '/' : redirectPath
     if (destination) await router.replace(destination)
-    await registerAuthorizationHeaderInterceptor()
+    registerAuthorizationHeaderInterceptor()
     if (state.isAuthenticated) {
       await authStore.fetchAppUser()
     }

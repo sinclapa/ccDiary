@@ -41,8 +41,10 @@ router.onError((err, to) => {
   }
 })
 
-router.isReady().then(() => {
-  localStorage.removeItem('vuetify:dynamic-reload')
-})
+router.isReady().then(
+  () => localStorage.removeItem('vuetify:dynamic-reload'),
+  // a failed first navigation rejects here too, and router.onError above has already handled it
+  () => {},
+)
 
 export default router

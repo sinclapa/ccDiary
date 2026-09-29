@@ -92,7 +92,7 @@ export function msalService (
     }
   }
 
-  const registerAuthorizationHeaderInterceptor = async () => {
+  const registerAuthorizationHeaderInterceptor = () => {
     const originalFetch = win.fetch // capture at call time, not module load time
     win.fetch = async (...args) => {
       let [resource, options] = args
