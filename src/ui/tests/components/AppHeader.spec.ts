@@ -37,7 +37,7 @@ const msalServiceSpies = {
   login: vi.fn(),
   logout: vi.fn(),
   handleRedirect: vi.fn().mockResolvedValue(null),
-  registerAuthorizationHeaderInterceptor: vi.fn().mockResolvedValue(null),
+  registerAuthorizationHeaderInterceptor: vi.fn(),
 }
 
 vi.mock('@/services/authentication/msalService', () => {
@@ -135,7 +135,7 @@ describe('AppHeader', () => {
   describe('handleLogin redirect', () => {
     beforeEach(() => {
       msalServiceSpies.handleRedirect.mockResolvedValue(null)
-      msalServiceSpies.registerAuthorizationHeaderInterceptor.mockResolvedValue(undefined)
+      msalServiceSpies.registerAuthorizationHeaderInterceptor.mockReturnValue(undefined)
     })
 
     test('redirects to / after login when on /register', async () => {
@@ -172,7 +172,7 @@ describe('AppHeader', () => {
       state.isAuthenticated = true
       state.user = { name: 'Test User' } as AccountInfo
       msalServiceSpies.handleRedirect.mockResolvedValue(null)
-      msalServiceSpies.registerAuthorizationHeaderInterceptor.mockResolvedValue(undefined)
+      msalServiceSpies.registerAuthorizationHeaderInterceptor.mockReturnValue(undefined)
     })
 
     test('redirects to / after logout when on /admin', async () => {
@@ -217,7 +217,7 @@ describe('AppHeader', () => {
 
   describe('handleRedirect navigation', () => {
     beforeEach(() => {
-      msalServiceSpies.registerAuthorizationHeaderInterceptor.mockResolvedValue(undefined)
+      msalServiceSpies.registerAuthorizationHeaderInterceptor.mockReturnValue(undefined)
     })
 
     test('redirects to / when redirect-based login returns /register as state', async () => {

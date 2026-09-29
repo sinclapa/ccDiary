@@ -55,7 +55,7 @@ internal sealed class Verifier(StorageWriter storage)
             .Select(e => e.DiaryEntryId!.Value)
             .ToHashSet();
 
-        foreach (var extra in actualEntries.Where(e => e.DiaryEntryId.HasValue && !expectedIds.Contains(e.DiaryEntryId!.Value)))
+        foreach (var extra in actualEntries.Where(e => e.DiaryEntryId.HasValue && !expectedIds.Contains(e.DiaryEntryId.Value)))
         {
             _problems.Add($"entry {extra.DiaryEntryId} is in storage but not in the source");
         }

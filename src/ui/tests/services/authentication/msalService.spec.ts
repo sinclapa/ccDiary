@@ -171,7 +171,7 @@ describe('msalService', () => {
     vi.spyOn(msalInstance, 'acquireTokenSilent').mockResolvedValue({ accessToken: 'token' } as any)
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
     globalThis.fetch = fetchMock
-    await service.registerAuthorizationHeaderInterceptor()
+    service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api.example.com/resource'
     await globalThis.fetch(resource, { headers: { 'X-Test': '1' } })
     expect(fetchMock).toHaveBeenCalled()
@@ -184,7 +184,7 @@ describe('msalService', () => {
   it('registerAuthorizationHeaderInterceptor: does not inject header for non-API', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
     globalThis.fetch = fetchMock
-    await service.registerAuthorizationHeaderInterceptor()
+    service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://other-domain.com/resource'
     await globalThis.fetch(resource, { headers: { 'X-Test': '1' } })
     expect(fetchMock).toHaveBeenCalled()
@@ -199,7 +199,7 @@ describe('msalService', () => {
     vi.spyOn(msalInstance, 'acquireTokenSilent').mockResolvedValue({ accessToken: 'token' } as any)
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
     globalThis.fetch = fetchMock
-    await service.registerAuthorizationHeaderInterceptor()
+    service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api.example.com/resource'
     await globalThis.fetch(resource)
     expect(fetchMock).toHaveBeenCalled()
@@ -212,7 +212,7 @@ describe('msalService', () => {
     vi.spyOn(msalInstance, 'getAllAccounts').mockReturnValue([])
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
     globalThis.fetch = fetchMock
-    await service.registerAuthorizationHeaderInterceptor()
+    service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api.example.com/resource'
     await globalThis.fetch(resource, { headers: {} })
     expect(fetchMock).toHaveBeenCalled()
@@ -227,7 +227,7 @@ describe('msalService', () => {
     vi.spyOn(msalInstance, 'acquireTokenSilent').mockResolvedValue({ accessToken: 'new-token' } as any)
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
     globalThis.fetch = fetchMock
-    await service.registerAuthorizationHeaderInterceptor()
+    service.registerAuthorizationHeaderInterceptor()
     const resource = 'https://api.example.com/resource'
     await globalThis.fetch(resource, { headers: { Authorization: 'Bearer old-token' } })
     expect(fetchMock).toHaveBeenCalled()
@@ -243,7 +243,7 @@ describe('msalService', () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('ok')))
     globalThis.fetch = fetchMock
 
-    await service.registerAuthorizationHeaderInterceptor()
+    service.registerAuthorizationHeaderInterceptor()
 
     const request = new Request('https://api.example.com/resource', {
       headers: {

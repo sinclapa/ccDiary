@@ -7,6 +7,7 @@ namespace ccDiaryApi.Services
     using System.Globalization;
     using System.Net.Http.Json;
     using System.Text.Json;
+    using System.Text.Json.Serialization;
     using System.Text.RegularExpressions;
     using ccDiaryApi.Data.Storage;
     using global::Azure.Data.Tables;
@@ -349,11 +350,19 @@ namespace ccDiaryApi.Services
             public string Lon { get; set; } = string.Empty;
         }
 
+        /// <summary>The part of an OSRM route response the proxy reads; bound through its constructor.</summary>
         private sealed class OsrmResponse
         {
-            public string Code { get; set; } = string.Empty;
+            [JsonConstructor]
+            public OsrmResponse(string? code, List<OsrmRoute>? routes)
+            {
+                Code = code;
+                Routes = routes;
+            }
 
-            public List<OsrmRoute>? Routes { get; init; }
+            public string? Code { get; }
+
+            public List<OsrmRoute>? Routes { get; }
         }
 
         private sealed class OsrmRoute
