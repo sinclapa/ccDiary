@@ -251,11 +251,11 @@ Per environment:
 
 1. `buildInfrastructure.ps1 -EnvironmentParam <env>` — creates the function app, plan, Key Vault and deployment container, grants the data-plane roles (including Storage Blob Data Contributor to the CI principal, which the package upload needs), writes the secrets, and repoints that environment's `API_URL`.
 2. Deploy the package. Nothing serves until a zip is in the deployment container: upload it as `released-package.zip`, call `syncfunctiontriggers`, then restart.
-3. Let CI redeploy the UI. `API_URL` is baked into `dist/config.js` at deploy time, so a site calls whatever URL was current when it was last deployed — a PR build for dev, a push to main for staging, a published release for prod.
+3. Let CI redeploy the UI. `API_URL` is baked into `dist/config.js` at deploy time, so a site calls whatever URL was current when it was last deployed — a PR build for dev, a push to main for staging and, once staging passes, prod.
 
 Step 3 is what points traffic at the app, so a new environment has no outage window: the function app can sit empty until the UI knows about it.
 
-For prod, run the infrastructure and deploy the package **before** publishing the release, so the site only switches to an API that has already been verified.
+For prod, run the infrastructure and deploy the package **before** merging the change that needs it. A merge that passes staging deploys prod with no manual step, so the site only switches to an API that has already been verified.
 
 
 #### Credentials
@@ -351,6 +351,8 @@ Jobs: `build-prep` (semver bump + tag) → `build-api` (Sonar scan wraps build+t
 Deploying the function app is **not** `az functionapp deploy`. That one-deploy endpoint rejects this custom-handler package — 415 for a trivial zip, 502 for the real one — so the workflow uploads the package to the deployment container as `released-package.zip`, calls `syncfunctiontriggers`, and restarts the app. Skipping the sync leaves the old routes served; skipping the restart leaves running instances on the old code.
 
 Prod works from the release assets rather than a rebuild: `create-release` attaches `func-package.zip` next to `ui-dist.zip`, and `release-prod.yml` fetches and deploys exactly what staging ran.
+
+**Prod deploys continuously.** Once staging's end-to-end run passes, `create-release` *publishes* the release, and `release: published` starts `release-prod.yml`. It publishes with `BOT_TOKEN` because a release published with `GITHUB_TOKEN` triggers no other workflow — switch the token and prod silently stops deploying. The deploy is its own workflow rather than a job in this one because `build-and-test.yml` cancels in-progress runs on the same ref: the next merge would cancel a prod deploy halfway. An infrastructure change prod depends on (a new app setting, a role) must therefore be applied with `buildInfrastructure.ps1` **before the PR merges**, not afterwards. To add a manual gate later, put required reviewers on the `prod` environment.
 
 In prod the **API goes first and must pass its health check before the UI is deployed**. The site is what points traffic at a version, so switching it last means a function app that never comes up leaves prod wholly on the old release instead of stranding a new UI in front of a broken API. `release-prod.yml` also accepts a `workflow_dispatch` with a `tag`, which redeploys that release's assets — the rollback path, and the reason not to hand-deploy a package.
 
