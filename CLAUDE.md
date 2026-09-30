@@ -142,6 +142,8 @@ Two consequences are not visible from the app's own code:
 - **CORS must be configured on the platform** (`siteConfig.cors.allowedOrigins`). The Functions front end answers preflight `OPTIONS` itself and never forwards it, so `app.UseCors` never sees it and the browser blocks every authenticated call.
 - **The package must be zipped on Linux.** The published `ccDiaryApi` and `run.sh` need their executable bit, which a zip built on Windows drops; the host then cannot start the handler.
 
+**Responses are compressed by the app, not the platform.** Nothing in front of the function app compresses, so `UseResponseCompression()` (Brotli at `Optimal`, then gzip at `Fastest`) is what keeps egress down — entries carry their images as inline base64 JSON. It sits straight after `UseStartupProbe()`, so the probe stays dependency-free and everything else, Swagger included, is compressed. Images (map tiles) are excluded by MIME type since they are already compressed. Brotli's `Fastest` came out larger than gzip on `swagger.json`, which is why it is not used.
+
 Why this hosting at all: the cold start. On Container Apps a wake measured ~23 s median, 13–22 s of it Azure scheduling a pod, pulling the image and building a sandbox before the process started. Flex Consumption draws instances from a pre-provisioned pool, which measured **~3.6 s median** for the same application (prod: 3.48–3.78 s).
 
 Rolling back a bad deploy means uploading a previous release's `func-package.zip` to the deployment container, syncing triggers and restarting — a couple of minutes. The Container App that served as the fallback during the migration was removed once all three environments were stable.

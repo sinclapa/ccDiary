@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Globalization;
+using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,6 +21,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Identity.Web;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -143,6 +145,15 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(
             new JsonStringEnumConverter(JsonNamingPolicy.KebabCaseLower)));
 
+// Compress responses to cut egress: entries carry their images as inline base64, which
+// compresses well. Brotli's Fastest (quality 1) came out larger than gzip on swagger.json, so it
+// uses Optimal (quality 4); gzip stays on Fastest to keep CPU, billed on Flex Consumption, low.
+builder.Services.AddResponseCompression(ConfigureResponseCompression);
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = CompressionLevel.Optimal);
+
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = CompressionLevel.Fastest);
+
 // Add Steeltoe actuators
 builder.Services.AddSingleton<IHealthContributor, StorageHealthContributor>();
 
@@ -199,6 +210,9 @@ hostLifetime.ApplicationStopping.Register(() =>
 // First in the pipeline, so the startup and readiness probes never run any of the middleware
 // below while a cold replica is still coming up. See StartupProbeEndpoint.
 app.UseStartupProbe();
+
+// Ahead of Swagger, static files and MVC so everything they write is compressed.
+app.UseResponseCompression();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
@@ -298,6 +312,23 @@ public partial class Program
     {
         options.ReportApiVersions = true;
         options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    }
+
+    /// <summary>
+    /// Compresses JSON and text responses with Brotli, falling back to gzip.
+    /// </summary>
+    /// <param name="options">The response compression options.</param>
+    /// <remarks>
+    /// Images (map tiles) are left out by MIME type, since they are already compressed.
+    /// HTTPS is enabled deliberately: BREACH needs a secret in the body alongside reflected
+    /// input, and this API authenticates with a bearer header, not a cookie.
+    /// </remarks>
+    internal static void ConfigureResponseCompression(ResponseCompressionOptions options)
+    {
+        options.EnableForHttps = true;
+        options.Providers.Add<BrotliCompressionProvider>();
+        options.Providers.Add<GzipCompressionProvider>();
+        options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/problem+json"]);
     }
 
     internal static void ConfigureApiExplorer(Asp.Versioning.ApiExplorer.ApiExplorerOptions options)

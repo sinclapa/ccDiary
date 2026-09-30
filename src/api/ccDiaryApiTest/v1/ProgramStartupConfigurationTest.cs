@@ -10,6 +10,7 @@ namespace ccDiaryApiTest.v1
     using ccDiaryApi;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.ResponseCompression;
     using Microsoft.Extensions.Configuration;
 
     /// <summary>
@@ -46,6 +47,23 @@ namespace ccDiaryApiTest.v1
             // Assert
             Assert.IsTrue(options.ReportApiVersions);
             Assert.IsInstanceOfType(options.ApiVersionReader, typeof(UrlSegmentApiVersionReader));
+        }
+
+        [TestMethod]
+        public void ConfigureResponseCompression_EnablesTwoProvidersAndSkipsImages()
+        {
+            // Arrange
+            var options = new ResponseCompressionOptions();
+
+            // Act
+            Program.ConfigureResponseCompression(options);
+
+            // Assert
+            Assert.IsTrue(options.EnableForHttps);
+            Assert.AreEqual(2, options.Providers.Count);
+            CollectionAssert.Contains(options.MimeTypes.ToList(), "application/json");
+            CollectionAssert.Contains(options.MimeTypes.ToList(), "application/problem+json");
+            CollectionAssert.DoesNotContain(options.MimeTypes.ToList(), "image/png");
         }
 
         [TestMethod]
