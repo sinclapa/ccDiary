@@ -15,6 +15,7 @@ import Component from '@/pages/diaries/[id].vue'
 import Diary from '@/services/models/diary'
 import DiaryEntry from '@/services/models/diaryEntry'
 import dayjs from 'dayjs'
+import { entryTime } from '@/utils/entryTime'
 
 // Node honours a change to TZ at runtime, so a test can stand in a zone ahead of UTC. The zone
 // holds until the work is done - for async work, until its promise settles, or an await inside
@@ -43,6 +44,7 @@ function inZone<T> (tz: string, run: () => T): T {
 // Shared mocks accessible to tests (vi.hoisted ensures they're available before vi.mock runs)
 const mockRouterPush = vi.hoisted(() => vi.fn())
 const mockRouterReplace = vi.hoisted(() => vi.fn())
+const mockPushFaroEvent = vi.hoisted(() => vi.fn())
 const mockQuery = vi.hoisted(() => {
   const { reactive } = require('vue')
   return reactive({ date: undefined as string | undefined })
@@ -64,6 +66,11 @@ vi.mock('@grafana/faro-web-sdk', () => ({
   getWebInstrumentations: vi.fn(() => []),
   initializeFaro: vi.fn(() => ({ api: { pushEvent: vi.fn(), startUserAction: vi.fn(() => ({ end: vi.fn() })) } })),
   TransportItemType: { LOG: 'log' },
+}))
+
+vi.mock('@/plugins/faro', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/plugins/faro')>()),
+  pushFaroEvent: mockPushFaroEvent,
 }))
 
 vi.mock('leaflet', () => ({
@@ -1080,6 +1087,71 @@ describe('[id].vue', () => {
     it('matches no day when none is selected', () => {
       (wrapper.vm as any).selectedDate = undefined
       expect((wrapper.vm as any).isOnSelectedDay(new Date('1918-06-27T12:00:00Z'))).toBe(false)
+    })
+  })
+
+  describe('diary-entry-viewed event', () => {
+    const viewedEvents = () =>
+      mockPushFaroEvent.mock.calls.filter(([name]) => name === 'diary-entry-viewed')
+
+    it('reports the diary, day and entries shown when the page opens', async () => {
+      await flushPromises()
+
+      expect(viewedEvents()).toEqual([[
+        'diary-entry-viewed',
+        {
+          diaryId,
+          diaryTitle: 'Test Diary',
+          entryDate: entryTime(diaryEntry.date).format('YYYY-MM-DD'),
+          entryCount: '1',
+          entryIds: 'entry-id',
+        },
+      ]])
+    })
+
+    it('does not count the same day again when it is reloaded', async () => {
+      await flushPromises()
+
+      useApiStatusStore().recoveryCount++
+      await flushPromises()
+      await (wrapper.vm as any).selectDate(new Date())
+      await flushPromises()
+
+      expect(viewedEvents()).toHaveLength(1)
+    })
+
+    it('counts moving to another day as a new view', async () => {
+      await flushPromises()
+      const other = new DiaryEntry(diaryId, new Date('1918-06-27T12:00:00Z'), 'Elsewhere', 'Other', { diaryEntryId: 'other-id' })
+      vi.mocked(diaryEntryAPI.searchDiaryEntryForDay).mockResolvedValue([other])
+
+      await (wrapper.vm as any).selectDate(new Date(1918, 5, 27))
+      await flushPromises()
+
+      expect(viewedEvents()).toHaveLength(2)
+      expect(viewedEvents()[1][1]).toMatchObject({ entryDate: '1918-06-27', entryIds: 'other-id' })
+    })
+
+    it('does not report a day with no entries', async () => {
+      await flushPromises()
+      vi.mocked(diaryEntryAPI.searchDiaryEntryForDay).mockResolvedValue([])
+
+      await (wrapper.vm as any).selectDate(new Date(1918, 5, 27))
+      await flushPromises()
+
+      expect(viewedEvents()).toHaveLength(1)
+    })
+
+    it('still reports the view, without a title, when the diary fails to load', async () => {
+      await flushPromises()
+      wrapper.unmount()
+      mockPushFaroEvent.mockClear()
+      vi.mocked(diaryAPI.getDiary).mockRejectedValue(new Error('down'))
+      wrapper = mount(Component, { global: { plugins: [vuetify] } })
+      await flushPromises()
+
+      expect(viewedEvents()).toHaveLength(1)
+      expect(viewedEvents()[0][1]).toMatchObject({ diaryId, diaryTitle: '' })
     })
   })
 })

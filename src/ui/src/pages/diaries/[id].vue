@@ -266,7 +266,7 @@
   import dayjs from 'dayjs'
   import { entryTime, toEntryDate } from '@/utils/entryTime'
   import { useApiStatusStore } from '@/stores/apiStatus'
-  import { endFaroUserAction, startFaroUserAction } from '@/plugins/faro'
+  import { endFaroUserAction, pushFaroEvent, startFaroUserAction } from '@/plugins/faro'
   import { useSearchDebounce } from '@/composables/useSearchDebounce'
 
   const authStore = useAuthStore()
@@ -430,6 +430,28 @@
 
   async function loadDiary (diaryId: string) {
     diary.value = await diaryAPI.getDiary(diaryId)
+  }
+
+  let diaryReady: Promise<void> = Promise.resolve()
+  let lastViewedDay: string | undefined
+
+  // One event per day a reader lands on, so Grafana can rank the most-read diaries and entries.
+  // Reloading the day already shown (after an edit, a delete or an API recovery) is not a new
+  // view, so it is not counted again.
+  async function trackEntryView (entries: DiaryEntry[]) {
+    if (entries.length === 0) return
+    const entryDate = entryTime(entries[0].date).format('YYYY-MM-DD')
+    if (entryDate === lastViewedDay) return
+    lastViewedDay = entryDate
+    // The title loads alongside the first day; wait for it rather than send the event without it.
+    await diaryReady
+    pushFaroEvent('diary-entry-viewed', {
+      diaryId,
+      diaryTitle: diary.value?.title ?? '',
+      entryDate,
+      entryCount: String(entries.length),
+      entryIds: entries.map(e => e.diaryEntryId ?? '').join(','),
+    })
   }
 
   function normalizeMonth (month: number) : number {
@@ -652,6 +674,7 @@
     loading.value = true
     try {
       diaryEntries.value = await diaryEntryAPI.searchDiaryEntryForDay(diaryId, date.getFullYear(), date.getMonth() + 1, date.getDate())
+      void trackEntryView(diaryEntries.value ?? [])
     } catch {
       // API unavailable — ApiStatusBanner surfaces this to the user
     } finally {
@@ -775,7 +798,8 @@
 
   function loadDiaryData () {
     loading.value = true
-    loadDiary(diaryId)
+    // A failed load is surfaced by ApiStatusBanner; here it only means the event has no title.
+    diaryReady = loadDiary(diaryId).catch(() => undefined)
     loadCalendar(diaryId).then(async x => {
       const startDate = resolveDateFromParam(route.query.date, x, maxDate.value) ??
         resolveDateFromStorage(diaryId, x, maxDate.value) ??
