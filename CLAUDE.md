@@ -445,6 +445,8 @@ Organization `cookingcode`. Quality gate failure blocks CI (`qualitygate.wait=tr
 | **UI** | `cookingcode_ccDiary_ui` | `src/ui/src/`, `src/ui/tests/` | `sonar-project.properties` |
 | **Infra** | `cookingcode_ccDiary_infra` | `deploy/`, `scripts/`, `data/`, `*.ps1` | `sonar-project-infra.properties` |
 
+The infra project sets `sonar.coverage.exclusions=**/*`: it has no tests, and once SonarCloud began counting PowerShell lines as coverable, its new-code coverage condition failed on a commit that changed no infra file. Rules and issue detection still run in full.
+
 Pick the project key matching the directory you are working in. After fixing issues, don't re-query `search_sonar_issues_in_projects` to verify — the server won't reflect the change yet.
 
 **An accepted finding is marked “Won’t fix” on the issue in SonarCloud — not suppressed in code.** An in-file `// NOSONAR` comment does nothing for the `azureresourcemanager` (Bicep) analyser: it was tried on S6329 and S6380, and both raised again on the very commit that added it. The marker beside `resourceGroup.bicep`'s `identity: 'None'` only looks like it works because that issue is separately resolved as Won't fix in SonarCloud — the comment is documentation, not a suppression. A rule waiver in `sonar-project-infra.properties` does work, but it disables the rule for a whole file and hides future occurrences, so prefer the per-issue transition and leave a comment in the template saying why the design is deliberate.
