@@ -161,7 +161,7 @@ Rolling back a bad deploy means uploading a previous release's `func-package.zip
 
 | Model | Table | Notes |
 |---|---|---|
-| `DiaryDto` | Diary | DiaryId (Guid PK), Title (5–50), Author (≤50), Description, **OwnerId** |
+| `DiaryDto` | Diary | DiaryId (Guid PK), Title (5–50), Author (≤50), Description, **OwnerId**, `IsHidden` |
 | `DiaryEntryDto` | DiaryEntry | Date, Location, Entry, map fields, journey fields, `Images` (up to 10, base64 inline; `ImageData`/`ImageContentType` repeat the first), DiaryId FK |
 | `AppUserDto` | AppUser | EntraObjectId (the `oid`), DisplayName, Email, `AppRole` |
 | `AccessRequestDto` | AccessRequest | Registration requests + `RequestStatus`, invite redeem URL |
@@ -176,7 +176,8 @@ Dates are stored and returned as UTC via `UtcDateTimeJsonConverter` on the stora
 
 - Route pattern: `api/v{version:apiVersion}/[controller]/[action]`, current version `1.0`
 - Controllers: Diary, DiaryEntry, DiaryArchive, Admin (`DiaryAdmin` policy), AccessRequest, User, MapTile, AppInfo
-- Read actions require authentication; writes require the `DiaryContributor` policy
+- Diary and entry reads are anonymous (archive export needs a signed-in caller); writes require the `DiaryContributor` policy
+- **Hidden diaries:** `DiaryDto.IsHidden` hides a diary and everything in it from the public. Every read of a hidden diary — the diary, its entries, dates, text search and archive export — answers **404** unless the caller is an admin or the contributor who owns it (`OwnerId` matches their `oid` and they still hold `DiaryContributor`); other contributors are treated like the public. The diary list drops it before paging and counting. The rule lives in `IDiaryVisibility`, which turns the caller into a per-diary predicate once per request; `[RequireVisibleDiary]` applies it to actions keyed by a `diaryId` route value, and `DiaryEntry/Get/{diaryEntryId}` checks the entry's diary inline. **A new read endpoint keyed by a diary must carry `[RequireVisibleDiary]`** — `HiddenDiaryIntegrationTest` lists every read URL and is where to add it. It works on anonymous endpoints because the UI sends its token on every call.
 - `DiaryArchive/Import` requires the `ArchiveImport` policy outside the local environments (it can overwrite any diary it names): an admin, or the application's own app-only token, which is how the deploy pipeline seeds each environment before its end-to-end run. Locally it stays anonymous so an archive loads without a token
 - Swagger at `/swagger`, Steeltoe actuators at `/actuator`, assembly info at `/api/assembly-info`
 

@@ -106,7 +106,7 @@ namespace ccDiaryApi.Services
         }
 
         /// <inheritdoc/>
-        public async Task<PagedResultDto<DiaryDto>> GetDiariesAsync(int page, int pageSize, string? search = null)
+        public async Task<PagedResultDto<DiaryDto>> GetDiariesAsync(int page, int pageSize, string? search = null, Func<DiaryDto, bool>? canSeeHidden = null)
         {
             // The Table filter grammar has no substring operator, so the search and the
             // paging both happen here rather than server-side.
@@ -119,6 +119,9 @@ namespace ccDiaryApi.Services
                 .Where(d => d != null)
                 .Select(d => d!)
                 .AsEnumerable();
+
+            // Before the count and the paging, so neither reveals that a hidden diary exists.
+            diaries = diaries.Where(d => !d.IsHidden || (canSeeHidden?.Invoke(d) ?? false));
 
             if (!string.IsNullOrWhiteSpace(search))
             {

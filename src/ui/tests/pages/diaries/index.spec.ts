@@ -98,7 +98,7 @@ describe('pages/diaries/index.vue', () => {
   })
 
   it('should add a new diary', async () => {
-    const payload = { title: 'New Diary', author: 'Test User2', description: 'New Description' }
+    const payload = { title: 'New Diary', author: 'Test User2', description: 'New Description', isHidden: false }
     wrapper.vm.editedItem.diaryId = undefined
     await wrapper.vm.onAddDiary(payload)
     expect(diaryAPI.createDiary).toHaveBeenCalledWith({
@@ -106,13 +106,14 @@ describe('pages/diaries/index.vue', () => {
       title: 'New Diary',
       author: 'Test User2',
       description: 'New Description',
+      isHidden: false,
     })
     expect(diaryAPI.getDiaries).toHaveBeenCalled()
     expect(wrapper.vm.dialog).toBe(false)
   })
 
   it('should update an existing diary', async () => {
-    const payload = { title: 'Updated Diary', author: 'Test User', description: 'Updated Description' }
+    const payload = { title: 'Updated Diary', author: 'Test User', description: 'Updated Description', isHidden: true }
     wrapper.vm.editedItem.diaryId = '1'
     await wrapper.vm.onAddDiary(payload)
     expect(diaryAPI.updateDiary).toHaveBeenCalledWith({
@@ -120,6 +121,7 @@ describe('pages/diaries/index.vue', () => {
       title: 'Updated Diary',
       author: 'Test User',
       description: 'Updated Description',
+      isHidden: true,
     })
     expect(diaryAPI.getDiaries).toHaveBeenCalled()
     expect(wrapper.vm.dialog).toBe(false)
@@ -177,6 +179,25 @@ describe('pages/diaries/index.vue', () => {
     expect(wrapper.find('div').exists()).toBe(true)
     // Check table row is rendered
     expect(wrapper.html()).toContain('Diary 1')
+  })
+
+  it('marks a hidden diary, and only that one, as Hidden', async () => {
+    const mockDiaries = [
+      { diaryId: '1', title: 'Hidden Diary', author: 'Author 1', description: 'Description 1', isHidden: true },
+      { diaryId: '2', title: 'Public Diary', author: 'Author 2', description: 'Description 2' },
+    ];
+    (diaryAPI.getDiaries as any).mockResolvedValueOnce({ items: mockDiaries, totalCount: 2, page: 1, pageSize: 12 })
+
+    const wrapper = mount(Index, { global: { plugins: [vuetify] } })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await wrapper.vm.$nextTick()
+
+    const chips = wrapper.findAll('.hidden-diary-chip')
+    expect(chips).toHaveLength(1)
+    expect(chips[0].text()).toBe('Hidden')
+    const cards = wrapper.findAll('.diary-card')
+    expect(cards[0].find('.hidden-diary-chip').exists()).toBe(true)
+    expect(cards[1].find('.hidden-diary-chip').exists()).toBe(false)
   })
 
   it('search button renders in header row', () => {

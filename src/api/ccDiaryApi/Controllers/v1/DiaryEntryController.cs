@@ -6,6 +6,7 @@ namespace ccDiaryApi.Controllers.v1
 {
     using System.ComponentModel;
     using Asp.Versioning;
+    using ccDiaryApi.Authorization;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Extensions;
     using ccDiaryApi.Services;
@@ -22,18 +23,22 @@ namespace ccDiaryApi.Controllers.v1
     {
         private readonly IDiaryEntryService _diaryEntryService;
         private readonly IDiaryService _diaryService;
+        private readonly IDiaryVisibility _visibility;
         private readonly ILogger<DiaryEntryController> _logger;
 
         public DiaryEntryController(
             IDiaryEntryService diaryEntryService,
             IDiaryService diaryService,
+            IDiaryVisibility visibility,
             ILogger<DiaryEntryController>? logger = null)
         {
             _diaryEntryService = diaryEntryService;
             _diaryService = diaryService;
+            _visibility = visibility;
             _logger = logger ?? NullLogger<DiaryEntryController>.Instance;
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
@@ -44,6 +49,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(years);
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}/{year:int}")]
         [AllowAnonymous]
         [HttpGet]
@@ -55,6 +61,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(months);
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}/{year:int}/{month:int}")]
         [AllowAnonymous]
         [HttpGet]
@@ -66,6 +73,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(days);
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}/{year:int}/{month:int}/{day:int}")]
         [AllowAnonymous]
         [HttpGet]
@@ -88,9 +96,16 @@ namespace ccDiaryApi.Controllers.v1
                 return NotFound();
             }
 
+            // Keyed by the entry, so the filter cannot see the diary; check it here instead.
+            if (!await _visibility.CanViewAsync(User, await _diaryService.GetDiaryAsync(diaryEntry.DiaryId)))
+            {
+                return NotFound();
+            }
+
             return Ok(diaryEntry);
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
@@ -182,6 +197,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok();
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
@@ -204,6 +220,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(results);
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]
@@ -213,6 +230,7 @@ namespace ccDiaryApi.Controllers.v1
             return Ok(date);
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}")]
         [AllowAnonymous]
         [HttpGet]

@@ -83,12 +83,13 @@ ccDiary/
 - Versioning: Asp.Versioning 8.1.0 (URL segment-based: `/api/v{version}/`)
 - Route pattern: `api/v{version}/{Controller}/{Action}`
 - Current version: v1
+- **Hidden diaries:** `DiaryDto.IsHidden` hides a diary and everything in it from the public. Every read of a hidden diary — the diary, its entries, dates, text search and archive export — answers **404** unless the caller is an admin or the contributor who owns it (`OwnerId` matches their `oid` and they still hold `DiaryContributor`); other contributors are treated like the public. The diary list drops it before paging and counting. The rule lives in `IDiaryVisibility`, which turns the caller into a per-diary predicate once per request; `[RequireVisibleDiary]` applies it to actions keyed by a `diaryId` route value, and `DiaryEntry/Get/{diaryEntryId}` checks the entry's diary inline. **A new read endpoint keyed by a diary must carry `[RequireVisibleDiary]`** — `HiddenDiaryIntegrationTest` lists every read URL and is where to add it. It works on anonymous endpoints because the UI sends its token on every call.
 
 ### Database Models
 
 | Model | Table | Key Fields |
 |---|---|---|
-| DiaryDto | Diary | DiaryId (Guid PK), Title (5-50 chars), Author (5-50 chars), Description |
+| DiaryDto | Diary | DiaryId (Guid PK), Title (5-50 chars), Author (5-50 chars), Description, OwnerId, IsHidden |
 | DiaryEntryDto | DiaryEntry | DiaryEntryId (Guid PK), Date, Location, Entry, DiaryId (FK) |
 | DiaryArchiveDto | (composite) | Diary + List\<DiaryEntryDto\> |
 

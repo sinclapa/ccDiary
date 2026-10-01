@@ -55,6 +55,7 @@
           :add-mode="editedItem?.diaryId == undefined"
           :author="editedItem?.author"
           :description="editedItem?.description"
+          :is-hidden="editedItem?.isHidden ?? false"
           :title="editedItem?.title"
           @close="close"
           @submit="onAddDiary"
@@ -122,6 +123,7 @@
         >
           <v-card-title class="text-primary">{{ item.title }}</v-card-title>
           <v-card-subtitle>{{ item.author }}</v-card-subtitle>
+          <HiddenDiaryChip v-if="item.isHidden" class="ms-4 mt-2" />
           <v-card-text class="diary-description">{{ item.description }}</v-card-text>
           <v-card-actions v-if="canEdit(item)" class="px-4 pb-3">
             <v-spacer />
@@ -201,10 +203,11 @@
     return authStore.isContributor && item.ownerId === authStore.appUser?.entraObjectId
   }
 
-  async function onAddDiary (payload : {title: string, author: string, description: string}) {
+  async function onAddDiary (payload : {title: string, author: string, description: string, isHidden: boolean}) {
     editedItem.value.title = payload.title
     editedItem.value.author = payload.author
     editedItem.value.description = payload.description
+    editedItem.value.isHidden = payload.isHidden
     if (editedItem.value.diaryId === undefined) {
       await diaryAPI.createDiary(editedItem.value)
     } else {

@@ -143,6 +143,20 @@ describe('[id].vue', () => {
     expect(wrapper.text()).toContain('Test Author')
   })
 
+  it('marks the diary as Hidden only when it is hidden', async () => {
+    await flushPromises()
+    expect(wrapper.find('.hidden-diary-chip').exists()).toBe(false)
+
+    wrapper.unmount()
+    const hidden = new Diary('Test Diary', 'Test Author', 'Test Desc', diaryId)
+    hidden.isHidden = true
+    vi.mocked(diaryAPI.getDiary).mockResolvedValue(hidden)
+    wrapper = mount(Component, { global: { plugins: [vuetify] } })
+    await flushPromises()
+
+    expect(wrapper.find('.hidden-diary-chip').text()).toBe('Hidden')
+  })
+
   it('shows Add button only when authenticated as contributor or admin', async () => {
     await flushPromises()
     expect(wrapper.html()).not.toContain('Add')
