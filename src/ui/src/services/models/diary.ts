@@ -4,6 +4,7 @@ export interface DiaryInterface {
   author: string;
   description: string;
   ownerId?: string;
+  isHidden?: boolean;
 }
 
 export default class Diary implements DiaryInterface {
@@ -12,6 +13,7 @@ export default class Diary implements DiaryInterface {
   author: string
   description: string
   ownerId?: string
+  isHidden?: boolean
 
   constructor (title: string, author: string, description: string, diaryId?: string, ownerId?: string) {
     this.diaryId = diaryId

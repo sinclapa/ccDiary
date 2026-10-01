@@ -5,6 +5,7 @@
 namespace ccDiaryApi.Controllers.v1
 {
     using Asp.Versioning;
+    using ccDiaryApi.Authorization;
     using ccDiaryApi.Data.Model;
     using ccDiaryApi.Extensions;
     using ccDiaryApi.Services;
@@ -20,11 +21,13 @@ namespace ccDiaryApi.Controllers.v1
     public class DiaryController : ControllerBase
     {
         private readonly IDiaryService _diaryService;
+        private readonly IDiaryVisibility _visibility;
         private readonly ILogger<DiaryController> _logger;
 
-        public DiaryController(IDiaryService diaryService, ILogger<DiaryController>? logger = null)
+        public DiaryController(IDiaryService diaryService, IDiaryVisibility visibility, ILogger<DiaryController>? logger = null)
         {
             _diaryService = diaryService;
+            _visibility = visibility;
             _logger = logger ?? NullLogger<DiaryController>.Instance;
         }
 
@@ -38,7 +41,8 @@ namespace ccDiaryApi.Controllers.v1
             var diaries = await _diaryService.GetDiariesAsync(
                 PagingLimits.ClampPage(page),
                 PagingLimits.ClampPageSize(pageSize),
-                search);
+                search,
+                canSeeHidden: await _visibility.CanSeeHiddenAsync(User));
             return Ok(diaries);
         }
 
@@ -48,6 +52,11 @@ namespace ccDiaryApi.Controllers.v1
         public async Task<ActionResult<DiaryDto>> Get(Guid diaryId)
         {
             var diary = await _diaryService.GetDiaryAsync(diaryId);
+            if (!await _visibility.CanViewAsync(User, diary))
+            {
+                return NotFound();
+            }
+
             return Ok(diary);
         }
 

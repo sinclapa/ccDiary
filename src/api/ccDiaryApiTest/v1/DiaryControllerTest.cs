@@ -83,7 +83,7 @@ namespace ccDiaryApiTest.v1
                 new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Paul1", Title = "Paul's 1st Diary" },
                 new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Paul2", Title = "Paul's 2nd Diary" },
                 new DiaryDto { DiaryId = Guid.NewGuid(), Author = "Paul3", Title = "Paul's 3rd Diary" });
-            _diaryService.Setup(x => x.GetDiariesAsync(1, 12, null)).ReturnsAsync(page);
+            _diaryService.Setup(x => x.GetDiariesAsync(1, 12, null, It.IsAny<Func<DiaryDto, bool>?>())).ReturnsAsync(page);
             var controller = CreateController();
 
             // Act
@@ -98,10 +98,46 @@ namespace ccDiaryApiTest.v1
         }
 
         [TestMethod]
+        [DataRow(false, false)]
+        [DataRow(true, true)]
+        public async Task Get_PassesTheCallersHiddenDiaryRuleToTheList(bool isAdmin, bool seesOthersHiddenDiary)
+        {
+            // Arrange
+            Func<DiaryDto, bool>? canSeeHidden = null;
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<Func<DiaryDto, bool>?>()))
+                .Callback<int, int, string?, Func<DiaryDto, bool>?>((_, _, _, rule) => canSeeHidden = rule)
+                .ReturnsAsync(NewPage());
+            var controller = CreateController(oid: "someone", isAdmin: isAdmin);
+
+            // Act
+            await controller.Get();
+
+            // Assert
+            Assert.IsNotNull(canSeeHidden);
+            var othersHiddenDiary = new DiaryDto { Title = "Hidden diary", Author = "Author", OwnerId = "someone-else", IsHidden = true };
+            Assert.AreEqual(seesOthersHiddenDiary, canSeeHidden(othersHiddenDiary));
+        }
+
+        [TestMethod]
+        public async Task GetById_AHiddenDiary_IsNotFoundForThePublic()
+        {
+            // Arrange
+            var diaryId = Guid.NewGuid();
+            _diaryService.Setup(x => x.GetDiaryAsync(diaryId))
+                .ReturnsAsync(new DiaryDto { DiaryId = diaryId, Title = "Hidden diary", Author = "Author", IsHidden = true });
+
+            // Act
+            var response = await CreateController().Get(diaryId);
+
+            // Assert
+            Assert.IsInstanceOfType(response.Result, typeof(NotFoundResult));
+        }
+
+        [TestMethod]
         public async Task GetNone()
         {
             // Arrange
-            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>()))
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<Func<DiaryDto, bool>?>()))
                 .ReturnsAsync(NewPage());
             var controller = CreateController();
 
@@ -148,21 +184,21 @@ namespace ccDiaryApiTest.v1
         public async Task Get_PassesSearchTermThrough()
         {
             // Arrange
-            _diaryService.Setup(x => x.GetDiariesAsync(1, 12, "World War")).ReturnsAsync(NewPage());
+            _diaryService.Setup(x => x.GetDiariesAsync(1, 12, "World War", It.IsAny<Func<DiaryDto, bool>?>())).ReturnsAsync(NewPage());
             var controller = CreateController();
 
             // Act
             await controller.Get(search: "World War");
 
             // Assert
-            _diaryService.Verify(x => x.GetDiariesAsync(1, 12, "World War"), Times.Once);
+            _diaryService.Verify(x => x.GetDiariesAsync(1, 12, "World War", It.IsAny<Func<DiaryDto, bool>?>()), Times.Once);
         }
 
         [TestMethod]
         public async Task Get_ClampsPageSizeToMaximum()
         {
             // Arrange
-            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>()))
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<Func<DiaryDto, bool>?>()))
                 .ReturnsAsync(NewPage());
             var controller = CreateController();
 
@@ -170,14 +206,14 @@ namespace ccDiaryApiTest.v1
             await controller.Get(page: 1, pageSize: 5000);
 
             // Assert
-            _diaryService.Verify(x => x.GetDiariesAsync(1, PagingLimits.MaxPageSize, null), Times.Once);
+            _diaryService.Verify(x => x.GetDiariesAsync(1, PagingLimits.MaxPageSize, null, It.IsAny<Func<DiaryDto, bool>?>()), Times.Once);
         }
 
         [TestMethod]
         public async Task Get_ClampsNonPositivePageAndPageSize()
         {
             // Arrange
-            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>()))
+            _diaryService.Setup(x => x.GetDiariesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<Func<DiaryDto, bool>?>()))
                 .ReturnsAsync(NewPage());
             var controller = CreateController();
 
@@ -185,7 +221,7 @@ namespace ccDiaryApiTest.v1
             await controller.Get(page: 0, pageSize: 0);
 
             // Assert
-            _diaryService.Verify(x => x.GetDiariesAsync(1, 1, null), Times.Once);
+            _diaryService.Verify(x => x.GetDiariesAsync(1, 1, null, It.IsAny<Func<DiaryDto, bool>?>()), Times.Once);
         }
 
         [TestMethod]
@@ -196,7 +232,7 @@ namespace ccDiaryApiTest.v1
             page.TotalCount = 15;
             page.Page = 2;
             page.PageSize = 5;
-            _diaryService.Setup(x => x.GetDiariesAsync(2, 5, null)).ReturnsAsync(page);
+            _diaryService.Setup(x => x.GetDiariesAsync(2, 5, null, It.IsAny<Func<DiaryDto, bool>?>())).ReturnsAsync(page);
             var controller = CreateController();
 
             // Act
@@ -375,7 +411,7 @@ namespace ccDiaryApiTest.v1
                 claims.Add(new Claim(ClaimTypes.Role, "DiaryAdmin"));
             }
 
-            return new DiaryController(_diaryService.Object)
+            return new DiaryController(_diaryService.Object, TestDiaryVisibility.Create())
             {
                 ControllerContext = new ControllerContext
                 {

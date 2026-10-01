@@ -111,6 +111,7 @@ builder.Services.AddAuthorizationBuilder()
         AppRole.DiaryContributor.ToString()))
     .AddPolicy(ArchiveImportRequirement.PolicyName, p => p.AddRequirements(new ArchiveImportRequirement()));
 builder.Services.AddSingleton<IAuthorizationHandler, ArchiveImportHandler>();
+builder.Services.AddScoped<IDiaryVisibility, DiaryVisibility>();
 
 // Add services to the container.
 builder.Services.AddScoped<IDiaryService, DiaryService>();
