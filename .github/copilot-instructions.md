@@ -249,6 +249,8 @@ SonarCloud organization (`cookingcode`)
 | `cookingcode_ccDiary_ui` | `src/ui/src/`, `src/ui/tests/` | `sonar-project.properties` (repo root) |
 | `cookingcode_ccDiary_infra` | `deploy/`, `scripts/`, `data/`, `*.ps1` | `sonar-project-infra.properties` (repo root) |
 
+The infra project sets `sonar.coverage.exclusions=**/*`: it has no tests, and once SonarCloud began counting PowerShell lines as coverable, its new-code coverage condition failed on a commit that changed no infra file. Rules and issue detection still run in full.
+
 ---
 
 **Last Updated**: 2026-09-12
