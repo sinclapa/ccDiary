@@ -62,6 +62,38 @@ describe('DiaryEditor', () => {
         title: 'New Title',
         author: 'New Author',
         description: 'New Description',
+        isHidden: false,
+      },
+    ])
+  })
+
+  test('Starts from the hidden flag and submits the toggled value', async () => {
+    const wrapper = mount(DiaryEditor, {
+      props: {
+        title: 'Original Title',
+        author: 'Original Author',
+        description: 'Original Description',
+        addMode: false,
+        isHidden: true,
+      },
+      global: {
+        plugins: [vuetify],
+      },
+    })
+
+    const toggle = wrapper.find('#isHidden')
+    expect((toggle.element as HTMLInputElement).checked).toBe(true)
+
+    await toggle.setValue(false)
+    wrapper.find('#save').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.emitted().submit[0]).toEqual([
+      {
+        title: 'Original Title',
+        author: 'Original Author',
+        description: 'Original Description',
+        isHidden: false,
       },
     ])
   })

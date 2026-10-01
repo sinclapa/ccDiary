@@ -27,7 +27,7 @@ namespace ccDiaryApiTest.v1
             var diaryEntry = new DiaryEntryDto { DiaryEntryId = id, DiaryId = Guid.NewGuid(), Date = DateTime.UtcNow, Location = "London", Entry = "Some text." };
             diaryEntryServiceMock.Setup(x => x.GetDiaryEntryAsync(id)).ReturnsAsync(diaryEntry);
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var response = await controller.Get(id);
@@ -45,7 +45,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var response = await controller.Get(Guid.NewGuid());
@@ -78,7 +78,7 @@ namespace ccDiaryApiTest.v1
                 .ReturnsAsync(new List<int> { 2022, 2023 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var id = Guid.NewGuid();
@@ -115,7 +115,7 @@ namespace ccDiaryApiTest.v1
                 .ReturnsAsync(new List<int> { 04, 05, 08 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var id = Guid.NewGuid();
@@ -152,7 +152,7 @@ namespace ccDiaryApiTest.v1
                 .ReturnsAsync(new List<int> { 7, 13, 23, 30 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var id = Guid.NewGuid();
@@ -187,7 +187,7 @@ namespace ccDiaryApiTest.v1
                 .ReturnsAsync(new List<int> { 7, 13, 23, 24 });
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act — BST offset (+60 min): local May starts at UTC April 30 23:00
             var id = Guid.NewGuid();
@@ -227,7 +227,7 @@ namespace ccDiaryApiTest.v1
                 .ReturnsAsync(new List<DiaryEntryDto> { diaryEntry });
 
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var id = Guid.NewGuid();
@@ -482,7 +482,7 @@ namespace ccDiaryApiTest.v1
                 .Setup(x => x.TextSearchDiaryEntriesAsync(diaryId, "Menin", 1, 20))
                 .ReturnsAsync(paged);
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var response = await controller.TextSearch(diaryId, "Menin");
@@ -513,7 +513,7 @@ namespace ccDiaryApiTest.v1
                 .Setup(x => x.TextSearchDiaryEntriesAsync(diaryId, "Passchendaele", 1, 20))
                 .ReturnsAsync(paged);
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var response = await controller.TextSearch(diaryId, "Passchendaele");
@@ -531,7 +531,7 @@ namespace ccDiaryApiTest.v1
             // Arrange
             var diaryEntryServiceMock = new Mock<IDiaryEntryService>();
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var response = await controller.TextSearch(Guid.NewGuid(), "   ");
@@ -558,7 +558,7 @@ namespace ccDiaryApiTest.v1
                 .Setup(x => x.TextSearchDiaryEntriesAsync(diaryId, "zzznomatch", 1, 20))
                 .ReturnsAsync(emptyPaged);
             var diaryServiceMock = new Mock<IDiaryService>();
-            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object);
+            var controller = new DiaryEntryController(diaryEntryServiceMock.Object, diaryServiceMock.Object, TestDiaryVisibility.Create());
 
             // Act
             var response = await controller.TextSearch(diaryId, "zzznomatch");
@@ -584,7 +584,7 @@ namespace ccDiaryApiTest.v1
                 claims.Add(new Claim(ClaimTypes.Role, "DiaryAdmin"));
             }
 
-            var controller = new DiaryEntryController(entryService, diaryService);
+            var controller = new DiaryEntryController(entryService, diaryService, TestDiaryVisibility.Create());
             controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext

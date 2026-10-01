@@ -29,6 +29,7 @@ namespace ccDiaryApi.Controllers.v1
             _logger = logger ?? NullLogger<DiaryArchiveController>.Instance;
         }
 
+        [RequireVisibleDiary]
         [Route("{diaryId:guid}")]
         [HttpGet]
         public async Task<ActionResult<DiaryArchiveDto>> Export(Guid diaryId)

@@ -37,6 +37,16 @@
             label="Description"
             rows="3"
           />
+
+          <v-switch
+            id="isHidden"
+            v-model="isHidden"
+            color="primary"
+            hint="Only you and admins can see a hidden diary and its entries."
+            inset
+            label="Hidden from public view"
+            persistent-hint
+          />
         </v-card-text>
         <v-divider />
 
@@ -72,19 +82,16 @@
 <script setup lang="ts">
   import { SubmitEventPromise } from 'vuetify'
 
-  const props = defineProps<{title: string, author: string, description: string, addMode: boolean}>()
+  const props = defineProps<{title: string, author: string, description: string, addMode: boolean, isHidden?: boolean}>()
   const title = ref<string>(props.title)
   const author = ref<string>(props.author)
   const description = ref<string>(props.description)
+  const isHidden = ref<boolean>(props.isHidden ?? false)
   const addMode = ref<boolean>(props.addMode)
-  const emit = defineEmits({
-    submit (payload: { title: string, author: string, description: string }) {
-      return payload
-    },
-    close () {
-      return true
-    },
-  })
+  const emit = defineEmits<{
+    submit: [payload: { title: string, author: string, description: string, isHidden: boolean }]
+    close: []
+  }>()
   const titleRules = [
     (v:string) => !!v || 'Title is required',
     (v:string) => (v && v.length >= 5) || 'Title must be at least 5 characters',
@@ -102,7 +109,7 @@
   async function submit (submitEventPromise: SubmitEventPromise) {
     const { valid } = await submitEventPromise
     if (valid) {
-      emit('submit', { title: title.value, author: author.value, description: description.value })
+      emit('submit', { title: title.value, author: author.value, description: description.value, isHidden: isHidden.value })
     }
   }
 </script>

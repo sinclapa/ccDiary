@@ -25,5 +25,15 @@ namespace ccDiaryApi.Data.Model
         public string? Description { get; set; }
 
         public string? OwnerId { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the diary is hidden from public view.
+        /// </summary>
+        /// <remarks>
+        /// A hidden diary, and every entry in it, can be read only by an admin or the contributor
+        /// who owns it; anyone else gets 404, as if it did not exist. See <c>IDiaryVisibility</c>. A row
+        /// written before this existed reads back as false, so nothing becomes hidden on its own.
+        /// </remarks>
+        public bool IsHidden { get; set; }
     }
 }

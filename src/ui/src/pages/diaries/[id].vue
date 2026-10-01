@@ -12,6 +12,7 @@
       <v-col class="py-0">
         <span class="title">{{ diary?.title }}&nbsp;</span>
         <span class="author">&nbsp;by {{ diary?.author }}</span>
+        <HiddenDiaryChip v-if="diary?.isHidden" class="ms-2" />
       </v-col>
       <v-col class="py-0 flex-grow-0 d-flex align-center" style="gap: 0">
         <v-expand-x-transition>
