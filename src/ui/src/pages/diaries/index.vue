@@ -219,12 +219,12 @@
 
   function close () {
     dialog.value = false
-    nextTick(() => {
+    void nextTick(() => {
       editedItem.value = { ...defaultItem.value }
     })
   }
 
-  async function editItem (item?: Diary) {
+  function editItem (item?: Diary) {
     if (item === undefined) {
       editedItem.value = { ...defaultItem.value }
     } else {
@@ -233,14 +233,14 @@
     dialog.value = true
   }
 
-  async function deleteItem (item: Diary) {
+  function deleteItem (item: Diary) {
     editedItem.value = { ...item }
     dialogDelete.value = true
   }
 
   function closeDelete () {
     dialogDelete.value = false
-    nextTick(() => {
+    void nextTick(() => {
       editedItem.value = { ...defaultItem.value }
     })
   }
@@ -266,12 +266,12 @@
     }
   }
 
-  useSearchDebounce(searchTerm, () => { currentPage.value = 1; data() })
+  useSearchDebounce(searchTerm, () => { currentPage.value = 1; void data() })
 
   watch(currentPage, () => data())
 
   watch(() => apiStatus.recoveryCount, count => {
-    if (count > 0) data()
+    if (count > 0) void data()
   })
 
   onMounted(async () => {

@@ -355,7 +355,7 @@
         const comma = dataUrl.indexOf(',')
         resolve({ data: dataUrl.slice(comma + 1), contentType: file.type })
       }
-      reader.onerror = () => reject(reader.error)
+      reader.onerror = () => reject(reader.error ?? new Error(`Could not read ${file.name}`))
       reader.readAsDataURL(file)
     })
   }
@@ -377,12 +377,12 @@
 
   function handleDrop (event: DragEvent) {
     isDragging.value = false
-    addFiles(Array.from(event.dataTransfer?.files ?? []))
+    void addFiles(Array.from(event.dataTransfer?.files ?? []))
   }
 
   function handleFileSelect (event: Event) {
     const input = event.target as HTMLInputElement
-    addFiles(Array.from(input.files ?? []))
+    void addFiles(Array.from(input.files ?? []))
     // Choosing the same file again must still fire change.
     input.value = ''
   }
@@ -416,7 +416,7 @@
       .filter(item => item.type.startsWith('image/'))
       .map(item => item.getAsFile())
       .filter((file): file is File => file !== null)
-    addFiles(files)
+    void addFiles(files)
   }
 
   onMounted(() => {

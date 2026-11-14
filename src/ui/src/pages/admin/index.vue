@@ -270,7 +270,7 @@
   }
 
   function copyLink (url: string) {
-    navigator.clipboard.writeText(url)
+    void navigator.clipboard.writeText(url)
   }
 
   watch(tab, clearFeedback)

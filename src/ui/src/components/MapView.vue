@@ -76,11 +76,11 @@
   }
 
   onMounted(() => {
-    initMap()
+    void initMap()
   })
 
   watch(() => props.location, () => {
-    initMap()
+    void initMap()
   })
 </script>
 

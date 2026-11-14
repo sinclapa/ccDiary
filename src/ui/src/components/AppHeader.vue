@@ -136,7 +136,7 @@
     if (router.currentRoute.value.path.startsWith('/admin')) {
       await router.replace('/')
     }
-    logout()
+    await logout()
   }
 
   const initialize = async () => {

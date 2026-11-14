@@ -47,7 +47,7 @@
 
   const router = useRouter()
   watch(() => state.isAuthenticated, isAuth => {
-    if (isAuth) router.replace('/')
+    if (isAuth) void router.replace('/')
   }, { immediate: true })
 
   const form = ref()

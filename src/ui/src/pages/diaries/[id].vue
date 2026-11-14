@@ -507,7 +507,7 @@
 
   function close () {
     dialog.value = false
-    nextTick(() => {
+    void nextTick(() => {
       editedItem.value = { ...defaultItem.value }
     })
   }
@@ -519,7 +519,7 @@
       entryTime(entryDate).format('YYYY-MM-DD') === dayjs(selectedDate.value).format('YYYY-MM-DD')
   }
 
-  async function editItem (item?: DiaryEntry) {
+  function editItem (item?: DiaryEntry) {
     if (item === undefined) {
       // the calendar and "now" are on the viewer's clock; an entry's date is the diarist's
       let date = toEntryDate(selectedDate.value ?? new Date())
@@ -554,12 +554,12 @@
     await loadCalendar(diaryId)
     await refreshMarkedDaysForVisibleMonth()
     if (isOnSelectedDay(editedItem.value.date)) {
-      selectDate(selectedDate.value)
+      void selectDate(selectedDate.value)
     }
     close()
   }
 
-  async function deleteItem (item: DiaryEntry) {
+  function deleteItem (item: DiaryEntry) {
     editedItem.value = { ...item }
     dialogDelete.value = true
   }
@@ -642,7 +642,7 @@
 
   function closeDelete () {
     dialogDelete.value = false
-    nextTick(() => {
+    void nextTick(() => {
       editedItem.value = { ...defaultItem.value }
     })
   }
@@ -653,7 +653,7 @@
       await loadCalendar(diaryId)
       await refreshMarkedDaysForVisibleMonth()
       if (isOnSelectedDay(editedItem.value.date)) {
-        selectDate(selectedDate.value)
+        void selectDate(selectedDate.value)
       }
     }
     closeDelete()
@@ -665,9 +665,9 @@
     localStorage.setItem(`diary.${route.params.id}.lastDate`, dateStr)
     const query = { ...route.query, date: dateStr }
     if (replace) {
-      router.replace({ query })
+      void router.replace({ query })
     } else {
-      router.push({ query })
+      void router.push({ query })
     }
   }
 
@@ -688,14 +688,14 @@
     setDateInUrl(date, false)
   }
 
-  async function updateMonth (month: number | string | undefined) {
+  function updateMonth (month: number | string | undefined) {
     if (month === undefined) {
       return
     }
     calendarMonth.value = Number(month)
   }
 
-  async function updateYear (year: number | string | undefined) {
+  function updateYear (year: number | string | undefined) {
     if (year === undefined) {
       return
     }
@@ -729,12 +729,12 @@
     setDateInUrl(date, false)
   }
 
-  useSearchDebounce(entrySearch, () => { searchPage.value = 1; runEntrySearch() })
+  useSearchDebounce(entrySearch, () => { searchPage.value = 1; void runEntrySearch() })
 
   watch(searchPage, () => runEntrySearch())
   watch(searchPageSize, () => {
     searchPage.value = 1
-    runEntrySearch()
+    void runEntrySearch()
   })
 
   watch([calendarYear, calendarMonth], async ([year, month]) => {
@@ -746,7 +746,7 @@
     await refreshMarkedDays(visibleYear.value, visibleMonth.value)
   })
 
-  watch(selectedDate, async newDate => {
+  watch(selectedDate, newDate => {
     if (newDate === undefined) {
       return
     }

@@ -42,7 +42,7 @@
 
   onMounted(() => {
     apiStatus.registerFetchInterceptor()
-    apiStatus.checkHealth()
+    void apiStatus.checkHealth()
   })
 
   onUnmounted(() => {
