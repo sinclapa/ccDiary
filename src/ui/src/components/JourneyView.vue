@@ -136,19 +136,19 @@
   }
 
   onMounted(() => {
-    initMap()
+    void initMap()
   })
 
   watch(() => props.fromLocation, () => {
-    initMap()
+    void initMap()
   })
 
   watch(() => props.toLocation, () => {
-    initMap()
+    void initMap()
   })
 
   watch(() => props.journeyMode, () => {
-    initMap()
+    void initMap()
   })
 </script>
 
