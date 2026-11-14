@@ -1,20 +1,13 @@
 name: Bump and Tag Version
 description: Calculates next semver from commit message and pushes a tag.
+# The tag is pushed with the workflow's own GITHUB_TOKEN, which actions/checkout persists into
+# the git config — the calling job needs `contents: write`. No personal token is involved:
+# nothing triggers on a tag push (prod is started by an explicit workflow_dispatch from
+# create-release), and no ruleset targets tags, so the built-in token is sufficient.
 inputs:
-  bot-token:
-    description: Token used to push git tags.
-    required: true
   commit-message:
     description: Commit message used to determine semver bump level.
     required: true
-  bot-name:
-    description: Git user.name for tagging commit.
-    required: false
-    default: sinclapa-bot
-  bot-email:
-    description: Git user.email for tagging commit.
-    required: false
-    default: sinclapa-bot@users.noreply.github.com
 outputs:
   current_version:
     description: Current version before bump.
@@ -66,25 +59,9 @@ runs:
     - name: Create and push tag
       shell: bash
       env:
-        BOT_TOKEN: ${{ inputs.bot-token }}
         NEW_VERSION: ${{ steps.bump.outputs.next_version }}
-        BOT_NAME: ${{ inputs.bot-name }}
-        BOT_EMAIL: ${{ inputs.bot-email }}
       run: |
         set -euo pipefail
-
-        TOKEN_LOGIN=$(curl -sS -H "Authorization: Bearer ${BOT_TOKEN}" -H "Accept: application/vnd.github+json" https://api.github.com/user | sed -n 's/.*"login"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-        if [ -z "$TOKEN_LOGIN" ]; then
-          echo "Unable to resolve BOT_TOKEN identity from GitHub API. Check token validity/expiration and SSO authorization." >&2
-          exit 1
-        fi
-
-        echo "BOT_TOKEN resolves to: ${TOKEN_LOGIN}"
-
-        if [ "$TOKEN_LOGIN" = "github-actions[bot]" ]; then
-          echo "BOT_TOKEN resolves to github-actions[bot]. Use a PAT/App token for your bot user with repository write permissions instead of GITHUB_TOKEN." >&2
-          exit 1
-        fi
 
         TAG="v${NEW_VERSION}"
 
@@ -93,20 +70,16 @@ runs:
           exit 0
         fi
 
-        git config user.name "$BOT_NAME"
-        git config user.email "$BOT_EMAIL"
-
+        # A lightweight tag carries no tagger identity, so no git user needs configuring.
         git tag "$TAG"
-
-        git remote set-url origin "https://x-access-token:${BOT_TOKEN}@github.com/${{ github.repository }}.git"
 
         if ! TAG_PUSH_OUTPUT=$(git push origin "$TAG" 2>&1); then
           echo "$TAG_PUSH_OUTPUT"
           if echo "$TAG_PUSH_OUTPUT" | grep -q "403"; then
-            echo "Tag push was denied (403). Ensure token owner '${TOKEN_LOGIN}' has Write access to the repository and, if needed, SSO is authorized for the token." >&2
+            echo "Tag push was denied (403). The calling job needs 'permissions: contents: write', and actions/checkout must keep persist-credentials enabled." >&2
           fi
           if echo "$TAG_PUSH_OUTPUT" | grep -q "GH013"; then
-            echo "Push blocked by repository rules (GH013). Ensure BOT_TOKEN identity is added as a ruleset bypass for main and required checks policy allows this automation path." >&2
+            echo "Tag push blocked by repository rules (GH013). A tag ruleset now covers v* tags; GitHub Actions needs to be a bypass actor on it." >&2
           fi
           exit 1
         fi

@@ -1,10 +1,13 @@
 name: Release to prod
 
 on:
+  # A release published by hand. The ones CI publishes use GITHUB_TOKEN, which raises no
+  # event, so create-release dispatches this workflow from the release's tag instead.
   release:
     types: [published]
-  # Rollback path: re-run this workflow against an earlier tag to put that release's
-  # already-tested artefacts back in prod, rather than hand-deploying a package.
+  # Dispatched from a release tag by create-release (the normal path), or from main with an
+  # earlier tag to put that release's already-tested artefacts back in prod — the rollback
+  # path, rather than hand-deploying a package.
   workflow_dispatch:
     inputs:
       tag:
@@ -30,11 +33,15 @@ jobs:
     # the ref it runs for and executes composite actions from it, so dispatching from an
     # arbitrary branch would run that branch's code beside the prod credentials. Which tag is
     # deployed is the `tag` input, not the ref, so restricting this costs the rollback path
-    # nothing. (Deployment branch policies on the prod environment are the durable fix; this
-    # condition is what the workflow itself can enforce, and both are now set.)
+    # nothing. A dispatch from a tag must name that same tag, so it can only deploy a
+    # release with the code that built it. (Deployment branch policies on the prod
+    # environment are the durable fix; this condition is what the workflow itself can
+    # enforce, and both are now set.)
     if: >-
       ${{ (github.event_name == 'release' && startsWith(github.ref_name, 'v'))
-        || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
+        || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        || (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v')
+            && inputs.tag == github.ref_name) }}
 
     runs-on: ubuntu-latest
 
